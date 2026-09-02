@@ -375,10 +375,27 @@ function insights(app) {
       stale.map(function (h) { return h.source; }).join(", ") +
       " bayat. Buradaki her grafik eksik veri gösteriyor olabilir."]);
   }
+  // Koşuyor ama hiç ölçüm yazmıyor: kaynak gerçekten boş olabilir (yayınlanmamış
+  // uygulama), konektör sessizce boş dönüyor da olabilir. Hiç koşmamış olanlar
+  // (runs_total = 0) buraya girmez — onlar henüz denenmemiş, bir bulgu değil.
+  var mute = state.data.health.filter(function (h) {
+    return h.app_slug === app && h.never_measured && Number(h.runs_total) > 0;
+  });
+  if (mute.length) {
+    out.push(["warn", "Çalışıyor ama tek satır veri üretmiyor",
+      mute.map(function (h) { return h.source + " (" + h.runs_total + " koşu)"; }).join(" · ") +
+      ". İki ihtimal var ve zıtlar: kaynakta gerçekten veri yok (yayınlanmamış " +
+      "uygulamanın mağaza analitiği boştur), ya da konektör sessizce boş dönüyor."]);
+  }
+
+  // Kapalı kaynaklar ÖZETTE yalnız sayılır. Sebepleri Veri sağlığı sekmesinde
+  // tam metniyle duruyor; buraya on satır sebep dökmek, üstündeki iki gerçek
+  // bulguyu görünmez yapıyordu.
   var blocked = state.data.blocked.filter(function (b) { return b.slug === app; });
   if (blocked.length) {
-    out.push(["warn", "Kapalı kaynak: " + blocked.map(function (b) { return b.source; }).join(", "),
-      blocked.map(function (b) { return b.source + " — " + (b.blocked_on || "sebep yazılmamış"); }).join(" | ")]);
+    out.push(["warn", blocked.length + " kaynak kapalı",
+      blocked.map(function (b) { return b.source; }).join(" · ") +
+      ". Her birinin neden kapalı olduğu Veri sağlığı sekmesinde yazılı."]);
   }
 
   if (!out.length) {
@@ -498,9 +515,30 @@ function tabAso(app) {
   h += "</div>";
 
   var gaps = state.data.gaps.filter(function (g) { return g.slug === app; });
-  h += "<h2>Kelime kelime</h2><div class='card scroll'><table>" +
-    "<tr><th>Terim</th><th>Ülke</th><th class='num'>Talep</th><th class='num'>Δ</th><th>Karar</th></tr>";
-  if (!gaps.length) h += "<tr><td colspan='5' class='muted'>Bu uygulama için ölçülmüş fırsat/ölü kelime yok.</td></tr>";
+
+  // Talep sayılarının ölçüm tarihi GÖRÜNMELİ: bu rakamlar elle toplanıyor
+  // (Apple Search Ads popülerliğini otomatik çeken konektör henüz yok). Tarihsiz
+  // gösterilen eski bir sayı, canlı veriyle birebir aynı görünür — panelin en
+  // eyleme dönük sekmesi sessizce eskir.
+  var gapDates = gaps.map(function (g) { return g.measured_on; })
+    .filter(Boolean).sort();
+  var newestGap = gapDates[gapDates.length - 1];
+  var gapAgeDays = newestGap
+    ? Math.floor((Date.now() - new Date(newestGap).getTime()) / 86400000)
+    : null;
+
+  h += "<h2>Kelime kelime</h2>";
+  if (newestGap) {
+    h += "<p class='muted'>Talep verisi elle toplanıyor. En yeni ölçüm: " +
+      esc(day(newestGap)) + (gapAgeDays != null ? " (" + gapAgeDays + " gün önce)" : "") +
+      (gapAgeDays != null && gapAgeDays > 45
+        ? " — <b>yenilenmeli</b>, bu sayılar artık bugünü anlatmıyor olabilir."
+        : "") + "</p>";
+  }
+  h += "<div class='card scroll'><table>" +
+    "<tr><th>Terim</th><th>Ülke</th><th class='num'>Talep</th><th class='num'>Δ</th>" +
+    "<th>Ölçüm</th><th>Karar</th></tr>";
+  if (!gaps.length) h += "<tr><td colspan='6' class='muted'>Bu uygulama için ölçülmüş fırsat/ölü kelime yok.</td></tr>";
   gaps.forEach(function (g) {
     var chip = g.verdict === "GAP" ? '<span class="chip warn">EKLE</span>' : '<span class="chip bad">ÇIKAR</span>';
     var d = g.demand_delta;
@@ -508,6 +546,7 @@ function tabAso(app) {
     var dcls = d == null ? "flat" : (Number(d) > 0 ? "up" : (Number(d) < 0 ? "down" : "flat"));
     h += "<tr><td>" + esc(g.term) + "</td><td>" + esc((g.country || "").toUpperCase()) +
       "</td><td class='num'>" + fmt(g.demand) + "</td><td class='num " + dcls + "'>" + dtxt +
+      "</td><td class='muted'>" + esc(g.measured_on ? day(g.measured_on) : "-") +
       "</td><td>" + chip + "</td></tr>";
   });
   h += "</table></div>";
@@ -549,12 +588,18 @@ function tabSaglik() {
   var h = "<h2>Kaynaklar</h2><div class='card scroll'><table>" +
     "<tr><th>Uygulama</th><th>Kaynak</th><th>Durum</th><th class='num'>Saat</th><th>Son koşu</th></tr>";
   state.data.health.forEach(function (c) {
-    var cls = c.is_stale ? "bad" : (c.status === "HEALTHY" ? "ok" : "warn");
+    // Üç ayrı durum, üç ayrı renk: BAYAT (veri üretmiş, eskimiş) kırmızı;
+    // VERİ YOK (hiç ölçüm yazmamış) sarı — bozuk da olabilir, kaynak gerçekten
+    // boş da olabilir; geri kalanı durum alanına göre.
+    var cls = c.is_stale ? "bad" : (c.never_measured ? "warn" : (c.status === "HEALTHY" ? "ok" : "warn"));
+    var tag = c.is_stale ? " · BAYAT" : (c.never_measured ? " · VERİ YOK" : "");
     h += "<tr><td>" + esc(c.app_slug) + "</td><td>" + esc(c.source) +
-      "</td><td><span class='chip " + cls + "'>" + esc(c.status) + (c.is_stale ? " · BAYAT" : "") +
+      "</td><td><span class='chip " + cls + "'>" + esc(c.status) + tag +
       "</span></td><td class='num'>" + (c.hours_since_data == null ? "-" : fmt(c.hours_since_data)) +
       "</td><td class='muted'>" + esc(String(c.last_run_at || "").slice(0, 16).replace("T", " ")) +
-      (c.last_run_quality ? " · " + esc(c.last_run_quality) : "") + "</td></tr>";
+      (c.last_run_quality ? " · " + esc(c.last_run_quality) : "") +
+      (c.never_measured ? " · " + fmt(c.runs_total) + " koşu, 0 ölçüm" : "") +
+      "</td></tr>";
   });
   h += "</table></div>";
 
