@@ -95,6 +95,7 @@
   h2 { font-size: 14px; margin: 20px 0 8px; color: var(--ink-2); letter-spacing: .02em; text-transform: uppercase; }
   h3 { font-size: 15px; margin: 0 0 6px; }
   p { margin: 6px 0; color: var(--ink-2); }
+  p, td, th, h3, .kpi { overflow-wrap: anywhere; min-width: 0; }
   .muted { color: var(--ink-3); font-size: 13px; }
 
   .chip {
@@ -156,6 +157,7 @@ function esc(s) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
   });
 }
+function day(d) { return String(d == null ? "" : d).slice(0, 10); }
 function fmt(n) {
   if (n == null) return "-";
   var v = Number(n);
@@ -194,13 +196,25 @@ function load() {
     return r.json();
   }).then(function (d) {
     state.data = d; state.err = null; state.loading = false;
-    if (!state.app) state.app = (d.apps[0] || {}).slug || null;
+    // Açılışta EN ÇOK VERİSİ OLAN uygulama seçilir, alfabetik ilki değil.
+    // Boş bir ekranla karşılaşmak, panelin bozuk olduğunu düşündürür.
+    if (!state.app) state.app = busiestApp(d);
     render();
   }).catch(function (e) {
     state.err = e.message; state.loading = false;
     if (!localStorage.getItem(KEY)) return renderGate();
     render();
   });
+}
+
+function busiestApp(d) {
+  var score = {};
+  d.flows.forEach(function (f) { score[f.slug] = (score[f.slug] || 0) + Number(f.cur || 0); });
+  var best = null;
+  d.apps.forEach(function (a) {
+    if (best === null || (score[a.slug] || 0) > (score[best] || 0)) best = a.slug;
+  });
+  return best;
 }
 
 function renderGate() {
@@ -388,6 +402,13 @@ function tabOzet(app) {
   h += kpi("Sayfa → indirme", conv == null ? "-" : pct(conv));
   h += "</div>";
 
+  if (imp === 0 && pv === 0 && dl === 0) {
+    h += "<div class='card'><h3>Bu uygulama için mağaza trafiği yok</h3>" +
+      "<p>İndirme/gösterim yalnız App Store Connect analytics'ten gelir ve o da " +
+      "uygulama YAYINDAYSA üretilir. Yayınlanmamış bir uygulamada bu sayıların " +
+      "sıfır olması bir arıza değil, beklenen durum — ASO sekmesindeki anahtar " +
+      "kelime hazırlığı bu dönemin işidir.</p></div>";
+  }
   var maxV = Math.max(imp, pv, dl, 1);
   h += '<h2>Nerede kayboluyorlar</h2><div class="card"><div class="funnel">';
   [["Gösterim", imp], ["Sayfa", pv], ["İndirme", dl]].forEach(function (s) {
@@ -430,18 +451,29 @@ function tabOzet(app) {
     h += "</table></div>";
   }
 
-  var st = state.data.stocks.filter(function (s) {
-    return s.slug === app && s.metric.indexOf("store_rating") === 0;
-  });
-  if (st.length) {
-    h += "<h2>Mağaza puanı</h2><div class='card scroll'><table><tr><th>Ülke</th><th>Metrik</th><th class='num'>Değer</th><th>Ölçüm</th></tr>";
-    st.forEach(function (s) {
-      h += "<tr><td>" + esc((s.country || "-").toUpperCase()) + "</td><td>" + esc(metricTitle(s.metric)) +
-        "</td><td class='num'>" + fmt(s.value) + "</td><td class='muted'>" + esc(s.day) + "</td></tr>";
-    });
-    h += "</table></div>";
-  }
+  h += ratingTable(app, true, "Mağaza puanımız");
+  h += ratingTable(app, false, "Rakip puanları");
   return h;
+}
+
+// Puan tablosu. `mine` bizim satırlarımızı rakiplerinkinden AYIRIR: ikisi aynı
+// metrikte, aynı tabloda duruyor ve karıştırılırsa rakibin puanı bizimmiş gibi
+// okunur.
+function ratingTable(app, mine, title) {
+  var rows = state.data.stocks.filter(function (s) {
+    return s.slug === app && s.metric.indexOf("store_rating") === 0 &&
+      ((s.subject === "self") === mine);
+  });
+  if (!rows.length) return "";
+  var h = "<h2>" + esc(title) + "</h2><div class='card scroll'><table><tr>" +
+    (mine ? "" : "<th>Uygulama</th>") +
+    "<th>Ülke</th><th>Metrik</th><th class='num'>Değer</th><th>Ölçüm</th></tr>";
+  rows.forEach(function (s) {
+    h += "<tr>" + (mine ? "" : "<td>" + esc(s.subject_name || s.subject) + "</td>") +
+      "<td>" + esc((s.country || "-").toUpperCase()) + "</td><td>" + esc(metricTitle(s.metric)) +
+      "</td><td class='num'>" + fmt(s.value) + "</td><td class='muted'>" + esc(day(s.day)) + "</td></tr>";
+  });
+  return h + "</table></div>";
 }
 
 function metricTitle(m) {
@@ -486,7 +518,7 @@ function tabAso(app) {
   }
   ranks.forEach(function (r) {
     h += "<tr><td>" + esc(r.term) + "</td><td>" + esc((r.country || "").toUpperCase()) +
-      "</td><td class='num'>" + fmt(r.rank) + "</td><td class='muted'>" + esc(r.day) + "</td></tr>";
+      "</td><td class='num'>" + fmt(r.rank) + "</td><td class='muted'>" + esc(day(r.day)) + "</td></tr>";
   });
   h += "</table></div>";
   return h;
