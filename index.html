@@ -123,6 +123,8 @@
   .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 7px; flex: none; background: var(--ink-3); }
   .dot.bad { background: var(--down); } .dot.warn { background: var(--warn); } .dot.ok { background: var(--up); }
 
+  summary { cursor: pointer; font-weight: 600; color: var(--ink-2); }
+  summary::marker { color: var(--ink-3); }
   .gate { max-width: 380px; margin: 18vh auto; }
   input[type=password] {
     width: 100%; font: inherit; padding: 12px 14px; border-radius: 12px;
@@ -566,13 +568,16 @@ function tabSaglik() {
     h += "</div>";
   }
 
-  h += "<h2>Metrik sözlüğü</h2><div class='card'>";
+  // Sözlük KAPALI açılır: 29 metriğin tanımı, her açılışta 20 ekran boyu kaydırma
+  // demekti. Kapalı bir bölüm okunabilir, uzun bir sayfa okunmaz.
+  h += "<h2>Metrik sözlüğü</h2><div class='card'><details><summary>" +
+    state.data.dict.length + " metriğin tanımı ve ne yapılacağı</summary><div style='margin-top:8px'>";
   state.data.dict.slice().sort(function (a, b) { return a.metric < b.metric ? -1 : 1; }).forEach(function (m) {
     h += '<div class="insight"><div class="dot"></div><div><h3>' + esc(m.title) +
       ' <span class="muted">' + esc(m.metric) + "</span></h3><p>" + esc(m.definition) +
       "</p><p><b>Ne yapmalı:</b> " + esc(m.action_note || "-") + "</p></div></div>";
   });
-  h += "</div>";
+  h += "</div></details></div>";
   return h;
 }
 
