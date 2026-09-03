@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
+<!-- CSP: panelin okuma anahtarı localStorage'da ve github.io TÜM Pages
+     projeleriyle ORTAK origin — buradan çıkacak bir istek başka bir yere
+     gidememeli. `connect-src` tek bir Supabase kökenine kilitli: bir XSS
+     bulunsa bile anahtar dışarı taşınamaz.
+     `unsafe-inline` şart: sayfa tek dosya, script ve stil satır içi (kabuk
+     GitHub Pages'te, derleme adımı yok). Yine de yüzeyi daraltıyor —
+     script-src 'self' dış bir kaynaktan kod yüklenmesini engelliyor.
+     Fontlar için googleapis (stil) + gstatic (dosya) ayrı ayrı gerekiyor. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://hcjhvrhgbziyemhnfejy.supabase.co; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
 <meta name="theme-color" content="#e8eaed" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#101416" media="(prefers-color-scheme: dark)">
 <title>App Cockpit</title>
