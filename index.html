@@ -978,9 +978,18 @@
           </div>
           <div class="kpi-val tnum" id="upAsn">–</div>
         </div>
+        <!-- DÜZELTME (2026-09-04): burada eskiden "kohort/retention backend'de
+             yok, veri olmadan kart açılmaz" yazıyordu. YANLIŞTI. RevenueCat
+             Charts API `customers_active` (kendi tanımıyla DAU/WAU/MAU),
+             `subscription_retention`, `cohort_explorer`, `ltv_per_customer`
+             serilerini zaten hesaplıyor — RC SDK'sı her açılışta müşteriyi
+             gördüğü için Spendy tarafında yeni bir instrumentasyon GEREKMİYOR.
+             Eksik olan tek şey `revenuecat` konektörünün bu chart'ları da
+             çekmesi. Doğrulama: docs/audit-2026-09-03-para-merkezli.md §2. -->
         <div class="c12" style="font-size:11.5px;color:var(--ink-3)">
-          Kohort/retention (DAU-WAU, N. gün aktiflik) burada YOK — backend'de kohort hesaplaması
-          yok, veri olmadan kart açılmaz (bkz. docs/backlog.md round 2).
+          Aktif kullanıcı (DAU/WAU), retention ve kohort LTV henüz burada değil — ama veri
+          <b>var</b>: RevenueCat bu serileri hazır hesaplıyor, eksik olan konektörün onları
+          çekmesi. Uygulamaya yeni bir ölçüm kodu eklemek gerekmiyor.
         </div>
       </div>
     </div>
