@@ -1196,7 +1196,7 @@
                  <div class="card-sub">son 30 gün · mağaza sıralamasıyla aynı olmak zorunda değil</div></div>
           </div>
           <div class="tw" style="max-height:420px"><table class="dt" id="paCtryTable"></table></div>
-          <div class="funnel-note">eCPM ülkeden ülkeye kat kat değişir; en çok indirme gelen ülke en çok para getiren ülke olmayabilir. Mağaza tarafındaki ülke tablosu Özet'te, gösterime göre sıralı.</div>
+          <div class="funnel-note">Her iki taraf da AYNI 30 günlük pencereden. Son iki sütun aynı toplamın payları: gelir payı indirme payından belirgin düşükse (kırmızı) o ülke kullanıcı getiriyor ama para getirmiyor; yüksekse (yeşil) az kullanıcıdan çok para geliyor. <b>Bilerek yok:</b> "indirme başına gelir" — o ülkedeki gelir aylar önce indirenler dahil TÜM kullanıcılardan gelirken payda yalnız son 30 günün indirmeleri olurdu; iki farklı kohortu bölmek birim ekonomi gibi görünen ama hiçbir şeyin oranı olmayan bir sayı üretir. Reklam ülkesi cihazın bulunduğu yer, mağaza ülkesi ise hesabın vitrini — çoğunlukla aynı, her zaman değil.</div>
         </div>
 
         <div class="c12 region-label">Abonelik</div>
@@ -2689,18 +2689,53 @@ function renderPara(){
   // DEĞİL). Başlıkta böyle yazıyor; kartın kendi penceresini gizlemek panelin
   // yapabileceği en sinsi yalan olurdu.
   const cRows=(D.adByCountry||[]).filter(r=>r.slug===APP);
+
+  // Mağaza tarafı AYNI 30 günlük pencereden. Backend `adByCountry`'yi
+  // current_date-30 ile sınırlıyor; mağaza sayılarını aralık seçicisinden
+  // alsaydık iki sütun FARKLI pencereleri gösterir ve yan yana konunca
+  // birbirine oranlanabilir görünürdü — panelin yapabileceği en sinsi yalan.
+  const cutoff=(()=>{const d=new Date(Date.now()-30*86400000);return d.toISOString().slice(0,10);})();
+  const store={};
+  (D.byCountryDaily||[]).filter(r=>r.slug===APP && r.day>=cutoff).forEach(r=>{
+    const o=store[r.country]||(store[r.country]={imp:0,dl:0});
+    if(r.metric===METRIC.imp) o.imp+=Number(r.v||0);
+    else if(r.metric===METRIC.dl) o.dl+=Number(r.v||0);
+  });
+
   const ctries=[...new Set(cRows.map(r=>r.country))];
-  const cAgg=ctries.map(c=>({c, a:adAgg(cRows.filter(r=>r.country===c))}))
+  const cAgg=ctries.map(c=>({c, a:adAgg(cRows.filter(r=>r.country===c)), s:store[c]||{imp:0,dl:0}}))
                    .filter(x=>x.a.req>0)
                    .sort((x,y)=>y.a.earn-x.a.earn);
   const cTot=cAgg.reduce((s,x)=>s+x.a.earn,0);
+  const dlTot=cAgg.reduce((s,x)=>s+x.s.dl,0);
+
+  // NEDEN "gelir / indirme" diye bir sütun YOK: o ülkedeki gelir, TÜM
+  // kullanıcılardan geliyor (aylar önce indirenler dahil), payda ise yalnız
+  // son 30 günün indirmeleri. İki farklı kohortu bölmek birim ekonomi gibi
+  // görünen ama hiçbir şeyin oranı olmayan bir sayı üretirdi.
+  //
+  // Bunun yerine İKİ PAY yan yana: gelirin yüzde kaçı ve indirmelerin yüzde
+  // kaçı bu ülkeden. İkisi de AYNI toplamın payı, karşılaştırılabilir — ve
+  // aradaki fark tam olarak aranan bilgi: "çok indirme geliyor ama para
+  // gelmiyor" ya da tersi.
   el('paCtryTable').innerHTML=
-    `<thead><tr><th>Ülke</th><th class="num">Gösterim</th><th class="num">eCPM</th>
-      <th class="num">Kazanç</th><th class="num">Pay</th></tr></thead><tbody>`
-    + cAgg.map(({c,a})=>`<tr><td>${FLAG[c]||"🏳️"} ${esc(String(c).toUpperCase())}</td>
-        <td class="num">${num(a.imp)}</td><td class="num">${a.rpm==null?'–':money2(a.rpm)}</td>
-        <td class="num">${money2(a.earn)}</td>
-        <td class="num">${cTot?((a.earn/cTot*100).toFixed(1)+'%'):'–'}</td></tr>`).join('')
+    `<thead><tr><th>Ülke</th><th class="num">Kazanç</th><th class="num">eCPM</th>
+      <th class="num">Reklam gösterimi</th><th class="num">Mağaza gösterimi</th>
+      <th class="num">İndirme</th><th class="num">Gelir payı</th><th class="num">İndirme payı</th></tr></thead><tbody>`
+    + cAgg.map(({c,a,s})=>{
+        const rShare=cTot? a.earn/cTot*100 : null;
+        const dShare=dlTot? s.dl/dlTot*100 : null;
+        // Fark belirgin ve her iki taraf da anlamlı hacimdeyse vurgula.
+        const gap=(rShare!=null&&dShare!=null&&(s.dl>=3||a.earn>0))?rShare-dShare:null;
+        const mark=gap==null?'':(gap<=-10?' style="color:var(--down);font-weight:600"'
+                              : gap>=10?' style="color:var(--up);font-weight:600"':'');
+        return `<tr><td>${FLAG[c]||"🏳️"} ${esc(String(c).toUpperCase())}</td>
+        <td class="num">${money2(a.earn)}</td><td class="num">${a.rpm==null?'–':money2(a.rpm)}</td>
+        <td class="num">${num(a.imp)}</td><td class="num">${s.imp?num(s.imp):'–'}</td>
+        <td class="num">${s.dl?num(s.dl):'–'}</td>
+        <td class="num"${mark}>${rShare==null?'–':rShare.toFixed(1)+'%'}</td>
+        <td class="num"${mark}>${dShare==null?'–':dShare.toFixed(1)+'%'}</td></tr>`;
+      }).join('')
     + `</tbody>`;
 
   // Abonelik — yeni veri yok, mevcut RC stok değerleri. Buradaki değer sayının
