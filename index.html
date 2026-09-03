@@ -111,6 +111,12 @@
     .c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}
     .c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:span 12}}
 
+  /* === bölge başlığı === bkz. docs/backlog.md round 5/6 B1 — ekranı sekmeye
+     bölmeden gruplamak; yeni içerik her zaman bir bölgenin altına girer. */
+  .region-label{font:600 11px/1 Sora,sans-serif;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-3);padding:2px 2px 0;margin-top:6px}
+  .region-label:first-child{margin-top:0}
+
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:20px 22px;
     box-shadow:var(--sh-card);min-width:0;transition:box-shadow .18s ease,transform .18s ease}
   .card:hover{box-shadow:0 2px 4px rgba(16,20,24,.05),0 20px 40px -24px rgba(16,20,24,.45)}
@@ -127,6 +133,19 @@
   .kpi-name{font-weight:600;font-size:14px;line-height:1.25}
   .kpi-val{font-family:Sora,sans-serif;font-weight:700;font-size:34px;letter-spacing:-.025em;line-height:1}
   .kpi-foot{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--ink-3)}
+
+  /* === mobil kompakt KPI === <680px: 7 KPI kartı tek sütunda iki ekran
+     yüksekliği ediyordu (bkz. docs/backlog.md round 5/6, B2/B3) — 2 kolona
+     düşür, dolguyu/ikonu küçült, açıklama satırını gizle. */
+  @media (max-width:679.98px){
+    .grid>.c3.card{grid-column:span 1;padding:14px}
+    .c3.card .kpi-ic{width:28px;height:28px;border-radius:9px}
+    .c3.card .kpi-ic svg{width:14px;height:14px}
+    .c3.card .kpi-top{gap:8px;margin-bottom:8px}
+    .c3.card .kpi-name .card-sub{display:none}
+    .c3.card .kpi-val{font-size:22px}
+    .c3.card .kpi-foot{margin-top:4px;font-size:11px}
+  }
   .chip{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill)}
   .chip.up{background:var(--up-soft);color:var(--up)}
   .chip.down{background:var(--down-soft);color:var(--down)}
@@ -170,6 +189,11 @@
   .tag.cov{background:var(--up-soft);color:var(--up)}
   .tag.dead{background:var(--down-soft);color:var(--down)}
   .tag.nod,.tag.unm{background:var(--canvas);color:var(--ink-3)}
+  /* === tazelik rozeti (primitif) === Veri sağlığı sekmesiyle aynı renk sözlüğü:
+     ≤7g nötr, 8-14g amber, >14g kırmızı. bkz. docs/backlog.md round 6, B1/B3. */
+  .tag.fresh-ok{background:var(--canvas);color:var(--ink-3)}
+  .tag.fresh-warn{background:var(--amber-soft);color:var(--amber)}
+  .tag.fresh-bad{background:var(--down-soft);color:var(--down)}
   .up{color:var(--up)}.down{color:var(--down)}.flat{color:var(--ink-3)}
 
   /* === bayrak kutucukları === */
@@ -320,6 +344,8 @@
     <div class="view" id="v-ozet">
     <div class="grid">
 
+      <div class="c12 region-label">Trafik</div>
+
       <div class="card c3">
         <div class="kpi-top">
           <span class="kpi-ic" style="background:linear-gradient(145deg,#7679e4,#4f53c9)">
@@ -454,6 +480,8 @@
         <div class="tw" style="max-height:340px"><table class="dt" id="ctryTable"></table></div>
       </div>
 
+      <div class="c12 region-label">Kelimeler</div>
+
       <!-- kelimeler -->
       <div class="card c8">
         <div class="card-head">
@@ -485,6 +513,8 @@
           <div style="flex:1;display:grid;gap:9px" id="ringLegend"></div>
         </div>
       </div>
+
+      <div class="c12 region-label">Rekabet &amp; yorumlar</div>
 
       <!-- puan -->
       <div class="card c5">
@@ -756,19 +786,41 @@ const stocksFor=()=> (D.stocks||[]).filter(r=>r.slug===APP);
 
 /* ---------- KPI ---------- */
 function pctDelta(cur,prev){ if(!prev) return null; return (cur-prev)/prev*100; }
-function chip(d){
+function chip(d,n){
   if(d==null) return `<span class="chip flat">önceki dönem yok</span>`;
   const r=Math.round(Math.abs(d));
+  // WHY: küçük örneklemde bir % değişim gürültüden ayrılamaz — Poisson sayım
+  // varsayımıyla bağıl SE ≈ 1/√n; |Δ| bu belirsizliğin altındaysa yön iddia
+  // etmeden "belirsiz" göster (bkz. docs/backlog.md round 6, A1).
+  if(n!=null && n>0){
+    const se=100/Math.sqrt(n);
+    if(Math.abs(d)<2*se) return `<span class="chip flat" title="örneklem küçük (n=${n}) — güvenilir değişim eşiği aşılmadı">• ${r}%</span>`;
+  }
   return d>=0 ? `<span class="chip up">▲ ${r}%</span>` : `<span class="chip down">▼ ${r}%</span>`;
+}
+
+/* === tazelik rozeti (primitif) ===
+   Manuel/gecikmeli beslenen HER karta uygulanabilir tek bileşen — Veri sağlığı
+   sekmesiyle aynı eşikler: ≤7g nötr, 8-14g amber, >14g kırmızı.
+   `iso`: son güncelleme ISO tarihi/timestamp'i. `label`: rozetin önüne konan
+   kısa etiket (ör. "Talep verisi"), opsiyonel. */
+function freshBadge(iso,label){
+  if(!iso) return '';
+  const days=Math.floor((Date.now()-new Date(iso).getTime())/86400000);
+  if(days<0) return '';
+  const cls=days<=7?'fresh-ok':days<=14?'fresh-warn':'fresh-bad';
+  const txt=days===0?'bugün':days===1?'1g önce':`${days}g önce`;
+  const pre=label?esc(label)+' · ':'';
+  return `<span class="tag ${cls}" title="son güncelleme: ${esc(iso)}">${pre}${txt}</span>`;
 }
 function drawKpis(){
   const days=rangeDays(), prev=prevRangeDays();
   const cur={imp:sumMetric(days,'imp'),pv:sumMetric(days,'pv'),dl:sumMetric(days,'dl')};
   const old={imp:sumMetric(prev,'imp'),pv:sumMetric(prev,'pv'),dl:sumMetric(prev,'dl')};
   const conv = cur.imp ? cur.dl/cur.imp*100 : 0;
-  el('kImp').textContent=num(cur.imp); el('kImpD').innerHTML=chip(pctDelta(cur.imp,old.imp));
-  el('kPv').textContent=num(cur.pv);   el('kPvD').innerHTML=chip(pctDelta(cur.pv,old.pv));
-  el('kDl').textContent=num(cur.dl);   el('kDlD').innerHTML=chip(pctDelta(cur.dl,old.dl));
+  el('kImp').textContent=num(cur.imp); el('kImpD').innerHTML=chip(pctDelta(cur.imp,old.imp),cur.imp);
+  el('kPv').textContent=num(cur.pv);   el('kPvD').innerHTML=chip(pctDelta(cur.pv,old.pv),cur.pv);
+  el('kDl').textContent=num(cur.dl);   el('kDlD').innerHTML=chip(pctDelta(cur.dl,old.dl),cur.dl);
   el('kConv').textContent=(conv||0).toFixed(1)+"%";
   el('gaugeVal').textContent=(conv||0).toFixed(1)+"%";
   el('gaugeLb').textContent=`${num(cur.imp)} gösterim → ${num(cur.dl)} indirme`;
