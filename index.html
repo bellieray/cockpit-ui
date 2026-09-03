@@ -465,6 +465,7 @@
       <div class="nav">
         <button class="on" data-view="ozet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Özet</button>
         <button data-view="aso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>ASO &amp; kelimeler</button>
+        <button data-view="urun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/></svg>Ürün sağlığı</button>
         <button data-view="yorum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Yorumlar</button>
         <button data-view="saglik"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>Veri sağlığı</button>
       </div>
@@ -500,7 +501,7 @@
       </div>
     </div>
 
-    <nav class="tabs"><button class="on" data-view="ozet">Özet</button><button data-view="aso">ASO</button><button data-view="yorum">Yorumlar</button><button data-view="saglik">Veri sağlığı</button></nav>
+    <nav class="tabs"><button class="on" data-view="ozet">Özet</button><button data-view="aso">ASO</button><button data-view="urun">Ürün sağlığı</button><button data-view="yorum">Yorumlar</button><button data-view="saglik">Veri sağlığı</button></nav>
 
     <!-- mobil sabit şerit: aralık seçici + bölge çıpaları. Masaüstünde gizli
          (aralık seçici orada başlıkta duruyor, sayfa da o kadar uzun değil).
@@ -878,6 +879,57 @@
           <div class="card-head"><div><div class="card-title">Arama sırası</div>
             <div class="card-sub">ilk 100'e giren terimler</div></div></div>
           <div class="tw" style="max-height:300px"><table class="dt" id="aRanks"></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= ÜRÜN SAĞLIĞI ================= -->
+    <!-- bkz. docs/decisions.md ADR-0035. app_export'un gelir bandı/huniye
+         GİRMEYEN geri kalanı — çökme, RC olayları, ASN iadeleri, alışkanlık
+         derinliği. Backend değişikliği yok, hepsi zaten grain='stock' olarak
+         akıyor (stockValue() ile okunuyor, revenue band'la aynı desen). -->
+    <div class="view" id="v-urun" style="display:none">
+      <div class="grid">
+        <div class="c12 region-label">Ürün sağlığı</div>
+        <div class="card c3">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+            </span>
+            <span class="kpi-name">Çökme<br><span class="card-sub" id="upCrashSub">son 7 gün</span></span>
+          </div>
+          <div class="kpi-val tnum" id="upCrash">–</div>
+        </div>
+        <div class="card c3">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>
+            </span>
+            <span class="kpi-name">Alışkanlık derinliği<br><span class="card-sub">toplam işlem / aktif hane</span></span>
+          </div>
+          <div class="kpi-val tnum" id="upDepth">–</div>
+        </div>
+        <div class="card c3">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/></svg>
+            </span>
+            <span class="kpi-name">RevenueCat olayları<br><span class="card-sub" id="upRcSub">son 7 gün</span></span>
+          </div>
+          <div class="kpi-val tnum" id="upRc">–</div>
+        </div>
+        <div class="card c3">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            </span>
+            <span class="kpi-name">Apple ASN<br><span class="card-sub" id="upAsnSub">son 7 gün</span></span>
+          </div>
+          <div class="kpi-val tnum" id="upAsn">–</div>
+        </div>
+        <div class="c12" style="font-size:11.5px;color:var(--ink-3)">
+          Kohort/retention (DAU-WAU, N. gün aktiflik) burada YOK — backend'de kohort hesaplaması
+          yok, veri olmadan kart açılmaz (bkz. docs/backlog.md round 2).
         </div>
       </div>
     </div>
@@ -1752,7 +1804,7 @@ function renderAll(){
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
   el('crumb').innerHTML=`${esc(a?.name||APP)} · App Store · ${span}${versionChip()}`;
   fillSelects(); drawPrelaunch(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
-  if(VIEW==='aso') renderAso(); else if(VIEW==='yorum') renderYorum(); else if(VIEW==='saglik') renderSaglik();
+  if(VIEW==='aso') renderAso(); else if(VIEW==='urun') renderUrun(); else if(VIEW==='yorum') renderYorum(); else if(VIEW==='saglik') renderSaglik();
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
   // yukarıda değişiyor ve bazı region-label'lar görünür/gizli olabiliyor —
   // sekme değişmeden çıpa şeridi bayat kalmasın diye burada da yeniden kurulur.
@@ -1833,14 +1885,14 @@ function bind(){
 let VIEW = "ozet";
 function showView(v){
   VIEW = v;
-  ["ozet","aso","yorum","saglik"].forEach(k=>{
+  ["ozet","aso","urun","yorum","saglik"].forEach(k=>{
     const n=el("v-"+k); if(n) n.style.display = (k===v?"":"none");
   });
-  const titles={ozet:"Özet",aso:"ASO & kelimeler",yorum:"Yorumlar",saglik:"Veri sağlığı"};
+  const titles={ozet:"Özet",aso:"ASO & kelimeler",urun:"Ürün sağlığı",yorum:"Yorumlar",saglik:"Veri sağlığı"};
   el('pageTitle').textContent = titles[v]||v;
   document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on', b.dataset.view===v));
   buildAnchors();   /* çıpalar görünüme ait — sekme değişince yeniden türetilir */
-  if(v==="aso") renderAso(); else if(v==="yorum") renderYorum(); else if(v==="saglik") renderSaglik();
+  if(v==="aso") renderAso(); else if(v==="urun") renderUrun(); else if(v==="yorum") renderYorum(); else if(v==="saglik") renderSaglik();
 }
 
 /* ---------- ASO ---------- */
@@ -1919,6 +1971,28 @@ function drawAKw(){
         <td class="num pri"><span class="tag ${t[0]}">${t[1]}</span></td></tr>`;
     }).join(""):`<tr><td colspan="8" class="empty">Bu filtreyle eşleşen terim yok</td></tr>`)+`</tbody>`;
   el('aKwCount').textContent=`${rows.length} / ${all.length} terim`;
+}
+
+/* ---------- ÜRÜN SAĞLIĞI ---------- */
+// bkz. ADR-0035. Hepsi app_export'un `stock` metrikleri — revenue band'la
+// aynı desen (stockValue), backend değişikliği yok.
+function renderUrun(){
+  const c1=stockValue('app_export_crashes_1d'), c7=stockValue('app_export_crashes_7d'),
+        c30=stockValue('app_export_crashes_30d');
+  el('upCrash').textContent=num(c7);
+  el('upCrashSub').textContent=`son 7g · 1g: ${num(c1)} · 30g: ${num(c30)}`;
+
+  const tx=stockValue('app_export_total_transactions'), hh=stockValue('app_export_active_households');
+  el('upDepth').textContent=(hh&&tx!=null)?(tx/hh).toFixed(1):'–';
+
+  const rcE=stockValue('app_export_rc_events_7d'), rcP=stockValue('app_export_rc_purchases_7d'),
+        rcX=stockValue('app_export_rc_expirations_7d');
+  el('upRc').textContent=num(rcE);
+  el('upRcSub').textContent=`son 7g · satın alma: ${num(rcP)} · iptal: ${num(rcX)}`;
+
+  const asnE=stockValue('app_export_asn_events_7d'), asnR=stockValue('app_export_asn_refunds_7d');
+  el('upAsn').textContent=num(asnE);
+  el('upAsnSub').textContent=`son 7g · iade: ${num(asnR)}`;
 }
 
 /* ---------- YORUMLAR ---------- */
