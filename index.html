@@ -2359,11 +2359,12 @@ function renderUrun(){
   const mau=stockValue('rc_active_users_28d'), newCust=stockValue('rc_new_customers_28d');
   el('upMau').textContent=num(mau);
   el('upNewCust').textContent=num(newCust);
-  // Kayıtlı kullanıcıyla kıyas: "86 aktif" tek başına iyi mi kötü mü belli
-  // değil; kayıtlının kaçta kaçı olduğu belli.
-  el('upMauSub').textContent=(users&&mau!=null)
-    ? `kayıtlı ${num(users)} kişinin %${Math.round(mau/users*100)}'i`
-    : 'RevenueCat · güncel';
+  // WHY oran YOK: bu sayı `app_export_total_users`'a BÖLÜNEMEZ. RevenueCat'in
+  // "müşteri"si uygulamayı açan HERKES (hesap açmamış anonim kimlikler dahil),
+  // bizim "kayıtlı kullanıcı"mız ise hesabı olan. Farklı kitleler — biri
+  // diğerinin alt kümesi değil, RC'nin sayısı kayıtlıyı AŞABİLİR. Bölünce
+  // çıkan yüzde bir katılım oranı gibi okunur ama değildir; %100'ü de geçebilir.
+  el('upMauSub').textContent='RevenueCat · uygulamayı açan (kayıt şart değil)';
 
   const c1=stockValue('app_export_crashes_1d'), c7=stockValue('app_export_crashes_7d'),
         c30=stockValue('app_export_crashes_30d');
