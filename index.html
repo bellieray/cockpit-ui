@@ -151,6 +151,13 @@
   .region-label{font:600 11px/1 Sora,sans-serif;letter-spacing:.08em;text-transform:uppercase;
     color:var(--ink-3);padding:2px 2px 0;margin-top:6px}
   .region-label:first-child{margin-top:0}
+  /* Kaynak sağlığı dar bir kartta (c4) 4 sütun taşıyor. Durum rozeti üç
+     sınıfa ayrılınca metin uzadı ("Lansman bekliyor") ve sağdan kırpılıyordu —
+     kırpılan rozet, olmayan rozetten kötü: yarısı görünen bir etiket yanlış
+     okunur. Rozet artık kırpılmıyor; yerine kaynak adı (zaten
+     "app/source" biçiminde, sonu tahmin edilebilir) elipse dönüyor. */
+  #hTable td:first-child{max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #hTable td:last-child{white-space:nowrap;width:1%}
   /* sinyal listesi — bkz. renderSignals() */
   .siglist{display:flex;flex-direction:column;gap:2px}
   .sig{display:flex;gap:11px;align-items:flex-start;padding:11px 2px;border-top:1px solid var(--line)}
