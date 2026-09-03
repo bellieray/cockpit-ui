@@ -229,6 +229,15 @@
   .mk.edge-l{transform:none;align-items:flex-start}
   .mk.edge-r{transform:none;align-items:flex-end;left:auto!important;right:0}
   .mnote{font-size:11.5px;color:var(--ink-3);margin-top:8px;min-height:18px}
+  /* === deney görünümü === marker'a dokununca öncesi/sonrası karşılaştırma —
+     bkz. docs/backlog.md round 2, "değiştir → ölç → öğren" döngüsü. */
+  .mdelta{margin-top:2px}
+  .mdelta-title{font-size:11px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
+  .mdelta table{width:100%;border-collapse:collapse;font-size:12.5px}
+  .mdelta th{font-weight:600;color:var(--ink-3);font-size:11px;text-align:right;padding:3px 6px}
+  .mdelta th:first-child{text-align:left}
+  .mdelta td{padding:5px 6px;border-top:1px solid var(--line)}
+  .mdelta td.num{text-align:right;font-variant-numeric:tabular-nums}
 
   /* === filtreler === */
   .filters{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:14px}
@@ -675,6 +684,7 @@
           <div class="mband" id="chartMarks"></div>
           <div class="xaxis" id="chartX"></div></div>
         <div class="mnote" id="chartMarkNote"></div>
+        <div class="mdelta" id="chartMarkDelta"></div>
       </div>
 
       <!-- gauge -->
@@ -1154,9 +1164,44 @@ function versionMarks(){
   return Object.keys(by).map(v=>({day:by[v],label:'v'+v,version:v}))
     .sort((a,b)=>a.day<b.day?-1:a.day>b.day?1:0);
 }
+// Deney görünümü: bir marker'a dokununca o günün öncesi/sonrası N gün için
+// Gösterim/Sayfa/İndirme/Dönüşüm karşılaştırması. `sumMetric`/`chip` zaten
+// var olan yardımcılar — pencereler `allDays()`'in gerçekten ölçülmüş
+// günleriyle kırpılıyor, veri kısaysa (örn. sürüm 3 gün önce çıktıysa)
+// "sonrası" 14 değil kaç gün varsa onu gösterir, uydurma gün eklenmez.
+function experimentDelta(markerDay){
+  const all=allDays();
+  let anchor=all.indexOf(markerDay);
+  if(anchor<0) anchor=all.findIndex(d=>d>=markerDay);
+  if(anchor<0) return null;
+  const beforeDays=all.slice(Math.max(0,anchor-14),anchor);
+  const afterDays=all.slice(anchor,Math.min(all.length,anchor+14));
+  if(!beforeDays.length||!afterDays.length) return null;
+  const rows=[['imp','Gösterim'],['pv','Ürün sayfası'],['dl','İndirme']].map(([k,label])=>{
+    const before=sumMetric(beforeDays,k), after=sumMetric(afterDays,k);
+    return {label, before, after, delta:pctDelta(after,before)};
+  });
+  const impB=rows[0].before, impA=rows[0].after, dlB=rows[2].before, dlA=rows[2].after;
+  const convB=impB?dlB/impB*100:null, convA=impA?dlA/impA*100:null;
+  return {beforeDays, afterDays, rows, convB, convA};
+}
+function renderDelta(markerDay,label){
+  const host=el('chartMarkDelta'); if(!host) return;
+  const d=experimentDelta(markerDay);
+  if(!d){ host.innerHTML=''; return; }
+  const rowHtml=r=>`<tr><td>${esc(r.label)}</td><td class="num">${num(r.before)}</td>
+    <td class="num">${num(r.after)}</td><td class="num">${chip(r.delta,r.after)}</td></tr>`;
+  const convTxt=v=>v==null?'–':v.toFixed(1)+'%';
+  host.innerHTML=`<div class="mdelta-title">${esc(label)} — ${d.beforeDays.length}g önce · ${d.afterDays.length}g sonra</div>
+    <table><thead><tr><th></th><th>önce</th><th>sonra</th><th>Δ</th></tr></thead><tbody>
+    ${d.rows.map(rowHtml).join('')}
+    <tr><td>Dönüşüm</td><td class="num">${convTxt(d.convB)}</td><td class="num">${convTxt(d.convA)}</td><td class="num">–</td></tr>
+    </tbody></table>`;
+}
 function drawMarkers(bandId, noteId, days, marks){
   const band=el(bandId), note=noteId?el(noteId):null;
   if(note) note.textContent='';
+  if(el('chartMarkDelta')) el('chartMarkDelta').innerHTML='';
   if(!band) return;
   if(days.length<2||!marks.length){ band.innerHTML=''; return; }
   const first=days[0], last=days[days.length-1];
@@ -1175,6 +1220,7 @@ function drawMarkers(bandId, noteId, days, marks){
     band.querySelectorAll('.mk').forEach(x=>x.classList.toggle('on',x===b));
     const m=marks[+b.dataset.i];
     if(note) note.textContent=`${m.label} · ${dShort(m.day)} tarihinde App Store'da yayınlandı (kaynak: iTunes yayın tarihi).`;
+    renderDelta(m.day,m.label);
   };
 }
 
