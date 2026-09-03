@@ -540,7 +540,7 @@
       <!-- kelimeler -->
       <div class="card c8">
         <div class="card-head">
-          <div><div class="card-title">Anahtar kelimeler</div><div class="card-sub">Talep elle toplandı · en yeni ölçüm 2 Eyl 2026</div></div>
+          <div><div class="card-title">Anahtar kelimeler</div><div class="card-sub">Talep elle toplandı <span id="kwFresh"></span></div></div>
         </div>
         <div class="filters">
           <select id="kwCountry"></select>
@@ -1042,7 +1042,16 @@ function drawHealth(){
 
 /* ---------- kelimeler ---------- */
 let kwVerdict="ALL";
+// ASA talep verisi elle çekiliyor (bkz. docs/backlog.md — asa_popularity
+// kalıcı DISABLED, cookie-session API otomatikleştirilemiyor). Panel bunun
+// yaşını `panel.connector.config->>'last_manual_run'`'dan okuyor — tek
+// tazelik primitifi (freshBadge), Veri sağlığı ile aynı sözlük.
+function asaFreshness(){
+  const b=(D.blocked||[]).find(x=>x.slug===APP && x.source==='asa_popularity');
+  return b?freshBadge(b.last_manual_run,'ASA talep'):'';
+}
 function drawKw(){
+  el('kwFresh').innerHTML='· '+(asaFreshness()||'tarih yok');
   const all=gapsFor();
   const c=el('kwCountry').value, q=el('kwSearch').value.trim().toLowerCase(), s=el('kwSort').value;
   let rows=all.filter(r=>(!c||r.country===c)&&(kwVerdict==='ALL'||r.verdict===kwVerdict)&&(!q||r.term.toLowerCase().includes(q)));
@@ -1232,7 +1241,7 @@ function renderAso(){
       cs.map(x=>`<option value="${x}">${FLAG[x]||"🏳️"} ${x.toUpperCase()}</option>`).join("");
 
   const newest=all.map(r=>r.measured_on).filter(Boolean).sort().pop();
-  el('aKwSub').textContent=`${all.length} terim · ${cs.length} ülke · en yeni ölçüm ${newest||"–"}`;
+  el('aKwSub').innerHTML=`${all.length} terim · ${cs.length} ülke · en yeni ölçüm ${newest||"–"} ${asaFreshness()}`;
 
   drawAKw();
 
