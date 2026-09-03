@@ -229,6 +229,11 @@
   .mk.edge-l{transform:none;align-items:flex-start}
   .mk.edge-r{transform:none;align-items:flex-end;left:auto!important;right:0}
   .mnote{font-size:11.5px;color:var(--ink-3);margin-top:8px;min-height:18px}
+  /* === büyüme sparkline'ı === app_export bugün kuruldu, geçmiş yok — bu
+     yüzden <2 gün varken sahte düz çizgi yerine dürüst bir not basılıyor;
+     grafik veri biriktikçe kendiliğinden dolar. */
+  .spark{width:100%;height:26px;color:var(--brand);margin-top:8px;display:block}
+  .spark-note{font-size:10.5px;color:var(--ink-3);margin-top:8px;height:26px;display:flex;align-items:center}
   /* === deney görünümü === marker'a dokununca öncesi/sonrası karşılaştırma —
      bkz. docs/backlog.md round 2, "değiştir → ölç → öğren" döngüsü. */
   .mdelta{margin-top:2px}
@@ -902,6 +907,7 @@
             <span class="kpi-name">Toplam kullanıcı<br><span class="card-sub">tüm zamanlar, kayıtlı</span></span>
           </div>
           <div class="kpi-val tnum" id="upUsers">–</div>
+          <div id="upUsersSpark"></div>
         </div>
         <div class="card c3">
           <div class="kpi-top">
@@ -911,6 +917,7 @@
             <span class="kpi-name">Aktif hane<br><span class="card-sub" id="upHhSub">toplam hanenin %</span></span>
           </div>
           <div class="kpi-val tnum" id="upActiveHh">–</div>
+          <div id="upActiveHhSpark"></div>
         </div>
         <div class="card c3">
           <div class="kpi-top">
@@ -920,6 +927,7 @@
             <span class="kpi-name">Yeni kullanıcı (bugün)<br><span class="card-sub" id="upNewSub">son 7g · son 30g</span></span>
           </div>
           <div class="kpi-val tnum" id="upNewToday">–</div>
+          <div id="upNewSpark"></div>
         </div>
         <div class="card c3">
           <div class="kpi-top">
@@ -929,6 +937,7 @@
             <span class="kpi-name">Toplam işlem<br><span class="card-sub">tüm zamanlar, kayıtlı</span></span>
           </div>
           <div class="kpi-val tnum" id="upTx">–</div>
+          <div id="upTxSpark"></div>
         </div>
 
         <div class="c12 region-label">Ürün sağlığı</div>
@@ -2017,17 +2026,39 @@ function drawAKw(){
 /* ---------- ÜRÜN SAĞLIĞI ---------- */
 // bkz. ADR-0035. Hepsi app_export'un `stock` metrikleri — revenue band'la
 // aynı desen (stockValue), backend değişikliği yok.
+function stockSeriesFor(metric){
+  return (D.stockSeries||[]).filter(r=>r.slug===APP&&r.metric===metric)
+    .map(r=>({day:r.day,v:Number(r.value)})).sort((a,b)=>a.day<b.day?-1:a.day>b.day?1:0);
+}
+// app_export bugün kuruldu — 1-2 günlük geçmişle bir çizgi çizmek sahte bir
+// trend izlenimi verir (bkz. round 5/6 gürültü/dürüstlük ilkesi). En az 3
+// gün birikene kadar dürüst bir bekleme notu basılır.
+function sparkline(metric){
+  const pts=stockSeriesFor(metric);
+  if(pts.length<3) return `<div class="spark-note">geçmiş birikiyor · ${pts.length} gün ölçüldü</div>`;
+  const vals=pts.map(p=>p.v), min=Math.min(...vals), max=Math.max(...vals), w=100, h=26;
+  const path=pts.map((p,i)=>{
+    const x=i/(pts.length-1)*w, y=max>min?h-((p.v-min)/(max-min))*h:h/2;
+    return `${i===0?'M':'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <path d="${path}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
 function renderUrun(){
   const users=stockValue('app_export_total_users'), totalHh=stockValue('app_export_total_households'),
         activeHh=stockValue('app_export_active_households'), tx=stockValue('app_export_total_transactions'),
         nu1=stockValue('app_export_new_users_1d'), nu7=stockValue('app_export_new_users_7d'),
         nu30=stockValue('app_export_new_users_30d');
   el('upUsers').textContent=num(users);
+  el('upUsersSpark').innerHTML=sparkline('app_export_total_users');
   el('upActiveHh').textContent=num(activeHh);
+  el('upActiveHhSpark').innerHTML=sparkline('app_export_active_households');
   el('upHhSub').textContent=(totalHh&&activeHh!=null)?`${num(activeHh)}/${num(totalHh)} hane (%${Math.round(activeHh/totalHh*100)})`:'toplam hanenin %';
   el('upNewToday').textContent=num(nu1);
+  el('upNewSpark').innerHTML=sparkline('app_export_new_users_7d');
   el('upNewSub').textContent=`son 7g: ${num(nu7)} · son 30g: ${num(nu30)}`;
   el('upTx').textContent=num(tx);
+  el('upTxSpark').innerHTML=sparkline('app_export_total_transactions');
 
   const c1=stockValue('app_export_crashes_1d'), c7=stockValue('app_export_crashes_7d'),
         c30=stockValue('app_export_crashes_30d');
