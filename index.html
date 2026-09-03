@@ -157,7 +157,12 @@
      okunur. Rozet artık kırpılmıyor; yerine kaynak adı (zaten
      "app/source" biçiminde, sonu tahmin edilebilir) elipse dönüyor. */
   #hTable td:first-child{max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #hTable td:last-child{white-space:nowrap;width:1%}
+  /* Koşu/Saat birkaç karakter; auto genişlikte gereğinden fazla yer kaplayıp
+     kaynak adını "astroscope/a…" gibi tanınmaz hâle getiriyorlardı. İçeriğe
+     daraltılınca artan yer ada gidiyor. */
+  #hTable td:nth-child(2),#hTable th:nth-child(2),
+  #hTable td:nth-child(3),#hTable th:nth-child(3),
+  #hTable td:last-child,#hTable th:last-child{white-space:nowrap;width:1%}
   /* sinyal listesi — bkz. renderSignals() */
   .siglist{display:flex;flex-direction:column;gap:2px}
   .sig{display:flex;gap:11px;align-items:flex-start;padding:11px 2px;border-top:1px solid var(--line)}
