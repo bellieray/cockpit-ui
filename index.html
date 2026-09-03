@@ -2293,7 +2293,12 @@ const SIG={
 };
 function signalsFor(){
   const out=[];
-  const add=(sev,rank,hd,bd,amt)=>out.push({sev,rank,hd,bd,amt});
+  // `tier` ŞART: sıralama tek bir sayı olamaz çünkü sinyaller FARKLI
+  // BİRİMLERDE (dolar, gösterim adedi, saat). "$6.74 kayıp" ile "92 gösterim"
+  // aynı skalada karşılaştırılamaz; öyle yapınca en pahalı sorun bir bakım
+  // notunun altında kalıyordu. Önce katman (1=para, 2=büyüme, 3=bakım),
+  // katman içinde kendi birimiyle sıralanır.
+  const add=(tier,sev,rank,hd,bd,amt)=>out.push({tier,sev,rank,hd,bd,amt});
 
   /* --- 1. Reklam: dolu gelen envanter basılmıyor --------------------- */
   const fmtRows=(D.adByFormat||[]).filter(r=>r.slug===APP);
@@ -2304,8 +2309,11 @@ function signalsFor(){
     // olarak anlamsız — tek bir kullanıcının davranışı oranı uçurur.
     if(a.matched<50 || a.showRate==null || a.showRate>=0.5) return;
     const lost=missedValue(a);
-    add(a.showRate===0?SIG.RED:SIG.AMBER, lost==null?a.missed*0.001:lost,
-      `${f}: dolu reklamın %${(a.showRate*100).toFixed(0)}'ı ekrana geliyor`,
+    // eCPM'i bilinmeyen format da PARA katmanında kalır — kaybı ölçülemiyor
+    // ama sıfır değil; bakım notlarının altına düşürmek onu görünmez yapardı.
+    // Katman içi sırası kaçan ADEDİNE göre (tek ortak ölçü).
+    add(1, a.showRate===0?SIG.RED:SIG.AMBER, lost==null?a.missed*0.002:lost,
+      `${f}: show rate %${(a.showRate*100).toFixed(0)} — dolu reklam ekrana gelmiyor`,
       lost==null
         ? `${num(a.matched)} dolu istek geldi, ${num(a.missed)} tanesi hiç gösterilmedi. Bu format hiç gösterim almadığı için eCPM'i bilinmiyor — kaybın parasal karşılığı ölçülemiyor, sıfır değil.`
         : `${num(a.matched)} dolu istek geldi, ${num(a.missed)} tanesi hiç gösterilmedi. Bu formatın eCPM'i ${money2(a.rpm)} — en değerli envanter basılmıyor.`,
@@ -2328,11 +2336,11 @@ function signalsFor(){
     // büyük hesapta hiçbirini yakalar.
     if(c.imp<50 || c.imp < totImp*0.05) return;
     if(c.pv===0){
-      add(SIG.AMBER, c.imp,
+      add(2, SIG.AMBER, c.imp,
         `${FLAG[cc]||'🏳️'} ${String(cc).toUpperCase()}: ${num(c.imp)} gösterim, 0 ürün sayfası`,
         `Uygulama aramada çıkıyor ama kimse sayfaya girmiyor. İkon, başlık ya da ilk ekran görüntüsü o pazarda tutmuyor olabilir.`, null);
     } else if(c.dl===0){
-      add(SIG.AMBER, c.imp*0.8,
+      add(2, SIG.AMBER, c.imp*0.8,
         `${FLAG[cc]||'🏳️'} ${String(cc).toUpperCase()}: ${num(c.pv)} sayfa ziyareti, 0 indirme`,
         `Sayfaya giriyorlar, indirmiyorlar. Sayfa içeriği (görseller, açıklama, puan) o pazarda ikna etmiyor.`, null);
     }
@@ -2345,7 +2353,7 @@ function signalsFor(){
     const d=conv.reduce((s,r)=>s+Number(r.den||0),0);
     // Kapı: en az 50 yeni müşteri. Altında "%0 dönüşüm" normal.
     if(d>=50 && n===0){
-      add(SIG.RED, 1e6,
+      add(1, SIG.RED, 1e6,
         `${num(d)} yeni müşteriden hiçbiri ödemedi`,
         `Ölçülen ${conv.length} kohortun tamamında ödemeye dönüşüm %0. Reklam tek gelir kaynağı.`, '%0');
     }
@@ -2354,11 +2362,11 @@ function signalsFor(){
   /* --- 4. Konektör sağlığı ------------------------------------------ */
   (D.health||[]).filter(r=>r.app_slug===APP&&r.enabled).forEach(r=>{
     if(r.is_stale){
-      add(SIG.AMBER, 500,
+      add(3, SIG.AMBER, 500,
         `${r.source}: veri bayat`,
         `Son ölçümün üstünden ${Math.round(Number(r.hours_since_data||0))} saat geçti. Bu kaynağın beslediği kartlar eski veriyi gösteriyor.`, null);
     } else if(r.never_measured && Number(r.runs_total||0)>0){
-      add(SIG.AMBER, 400,
+      add(3, SIG.AMBER, 400,
         `${r.source}: koştu ama veri üretmedi`,
         `${num(r.runs_total)} koşu yapıldı, hiç ölçüm yazılmadı. Ya kaynak gerçekten boş ya da ayrıştırma sessizce başarısız.`, null);
     }
@@ -2371,7 +2379,7 @@ function signalsFor(){
     // Kapı: önceki hafta en az 20 kişi VE düşüş en az %30. Küçük sayılarda
     // ±%50 dalgalanma normal, sinyal değil.
     if(prev>=20 && last < prev*0.7){
-      add(SIG.RED, 900,
+      add(2, SIG.RED, 1e6,
         `Haftalık aktif kullanıcı ${num(prev)} → ${num(last)}`,
         `Son tamamlanmış hafta bir öncekine göre %${Math.round((1-last/prev)*100)} düştü.`,
         `−%${Math.round((1-last/prev)*100)}`);
@@ -2383,12 +2391,12 @@ function signalsFor(){
   const life=stockValue('store_rating_avg');
   // Kapı: son 30 günde en az 5 yazılı yorum VE en az 0.5 yıldız fark.
   if(rr && rr.n30>=5 && life!=null && rr.avg30!=null && life-rr.avg30>=0.5){
-    add(SIG.AMBER, 600,
+    add(3, SIG.AMBER, 600,
       `Son 30 günün puanı ${rr.avg30} — ömür boyu ${life.toFixed(2)}`,
       `Son ${num(rr.n30)} yazılı yorumun ortalaması genel puanın altında. Yeni bir sürüm bir şeyi bozmuş olabilir.`, null);
   }
 
-  return out.sort((a,b)=>b.rank-a.rank);
+  return out.sort((a,b)=> a.tier-b.tier || b.rank-a.rank);
 }
 
 function renderSignals(){
