@@ -151,6 +151,16 @@
   .region-label{font:600 11px/1 Sora,sans-serif;letter-spacing:.08em;text-transform:uppercase;
     color:var(--ink-3);padding:2px 2px 0;margin-top:6px}
   .region-label:first-child{margin-top:0}
+  /* sinyal listesi — bkz. renderSignals() */
+  .siglist{display:flex;flex-direction:column;gap:2px}
+  .sig{display:flex;gap:11px;align-items:flex-start;padding:11px 2px;border-top:1px solid var(--line)}
+  .sig:first-child{border-top:0}
+  .sig .dot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:5px}
+  .sig .txt{flex:1;min-width:0}
+  .sig .hd{font:600 13.5px/1.35 Sora,sans-serif}
+  .sig .bd{font-size:12px;color:var(--ink-2);margin-top:3px;line-height:1.45}
+  .sig .amt{font:600 13px/1 Sora,sans-serif;white-space:nowrap;margin-left:auto;padding-left:10px}
+  .sig-none{font-size:12.5px;color:var(--ink-3);padding:6px 2px}
 
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:20px 22px;
     box-shadow:var(--sh-card);min-width:0;transition:box-shadow .18s ease,transform .18s ease}
@@ -586,6 +596,18 @@
           <button class="viewall" data-view="aso">Kelimelere git →</button>
           <button class="viewall" data-view="yorum">Rakip yorumlarına git →</button>
         </div>
+      </div>
+
+      <!-- SİNYALLER — panelin "bak buraya" dediği tek yer.
+           Kural tabanlı, tamamen mevcut veriden türetiliyor; yeni bir sorgu
+           ya da tahmin motoru YOK. Her kuralın bir HACİM KAPISI var: küçük
+           sayılardan sinyal üretmek, listeyi gürültüye boğup okunmaz hâle
+           getirir ve o an gerçekten önemli olanı gizler. Hiçbir kural
+           tetiklenmezse liste "işaretlenecek bir şey yok" der — dolgu
+           üretmez. -->
+      <div class="c12 region-label" id="sigLabel">Sinyaller</div>
+      <div class="card c12" id="sigCard">
+        <div class="siglist" id="sigList"></div>
       </div>
 
       <div class="c12 region-label" data-store-only>Gelir</div>
@@ -2011,7 +2033,7 @@ function renderAll(){
   el('v-ozet').classList.toggle('pre',pre);
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
   el('crumb').innerHTML=`${esc(a?.name||APP)} · App Store · ${span}${versionChip()}`;
-  fillSelects(); drawPrelaunch(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
+  fillSelects(); renderSignals(); drawPrelaunch(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   if(VIEW==='aso') renderAso(); else if(VIEW==='para') renderPara(); else if(VIEW==='urun') renderUrun(); else if(VIEW==='yorum') renderYorum(); else if(VIEW==='saglik') renderSaglik();
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
   // yukarıda değişiyor ve bazı region-label'lar görünür/gizli olabiliyor —
@@ -2248,6 +2270,138 @@ function adAgg(rows){
    eCPM'i varsa. Hiç gösterim almamış bir formatın (native) eCPM'i
    bilinmiyor; başka formatın eCPM'ini ödünç alıp sayı uydurmuyoruz. */
 function missedValue(a){ return a.rpm==null?null:a.missed*a.rpm/1000; }
+
+/* =====================================================================
+   SİNYALLER
+   Panelin tek "bak buraya" yüzeyi. Tamamen mevcut veriden türetilir.
+
+   TASARIM KARARLARI — hepsi gürültüyü önlemek için:
+
+   (a) HER kuralın bir HACİM KAPISI var. 3 istekten 3'ü kaçtı diye sinyal
+       basmak listeyi doldurur ve o an gerçekten önemli olanı gizler. Az
+       veriyle konuşmamak, panelin susmasından daha kötü değil.
+   (b) Sinyaller PARAYA ya da BÜYÜKLÜĞE göre sıralanır, kronolojiye değil.
+       Okuyanın ilk satırı en pahalı sorun olmalı.
+   (c) Hiçbir kural tetiklenmezse liste bunu AÇIKÇA söyler. Dolgu sinyal
+       üretmek (ör. "her şey normal" diye üç madde) listeyi değersizleştirir;
+       bir daha kimse bakmaz.
+   (d) Hiçbir sinyal ölçülmemiş bir şeyi sayıya çevirmez. eCPM'i bilinmeyen
+       formatın kaybı "$0" değil, adet olarak söylenir.
+   ===================================================================== */
+const SIG={
+  RED:'var(--down)', AMBER:'var(--amber)', INFO:'var(--ink-3)',
+};
+function signalsFor(){
+  const out=[];
+  const add=(sev,rank,hd,bd,amt)=>out.push({sev,rank,hd,bd,amt});
+
+  /* --- 1. Reklam: dolu gelen envanter basılmıyor --------------------- */
+  const fmtRows=(D.adByFormat||[]).filter(r=>r.slug===APP);
+  const formats=[...new Set(fmtRows.map(r=>r.format))];
+  formats.forEach(f=>{
+    const a=adAgg(fmtRows.filter(r=>r.format===f));
+    // Kapı: en az 50 eşleşmiş istek. Altında "show rate" istatistiksel
+    // olarak anlamsız — tek bir kullanıcının davranışı oranı uçurur.
+    if(a.matched<50 || a.showRate==null || a.showRate>=0.5) return;
+    const lost=missedValue(a);
+    add(a.showRate===0?SIG.RED:SIG.AMBER, lost==null?a.missed*0.001:lost,
+      `${f}: dolu reklamın %${(a.showRate*100).toFixed(0)}'ı ekrana geliyor`,
+      lost==null
+        ? `${num(a.matched)} dolu istek geldi, ${num(a.missed)} tanesi hiç gösterilmedi. Bu format hiç gösterim almadığı için eCPM'i bilinmiyor — kaybın parasal karşılığı ölçülemiyor, sıfır değil.`
+        : `${num(a.matched)} dolu istek geldi, ${num(a.missed)} tanesi hiç gösterilmedi. Bu formatın eCPM'i ${money2(a.rpm)} — en değerli envanter basılmıyor.`,
+      lost==null?null:`~${money2(lost)}`);
+  });
+
+  /* --- 2. Ülke: mağaza gösterimi var, ürün sayfası yok --------------- */
+  const days=new Set(rangeDays());
+  const cAgg={};
+  (D.byCountryDaily||[]).filter(r=>r.slug===APP&&days.has(r.day)).forEach(r=>{
+    const c=cAgg[r.country]||(cAgg[r.country]={imp:0,pv:0,dl:0});
+    if(r.metric===METRIC.imp) c.imp+=Number(r.v||0);
+    else if(r.metric===METRIC.pv) c.pv+=Number(r.v||0);
+    else if(r.metric===METRIC.dl) c.dl+=Number(r.v||0);
+  });
+  const totImp=Object.values(cAgg).reduce((s,c)=>s+c.imp,0);
+  Object.entries(cAgg).forEach(([cc,c])=>{
+    // Kapı: en az 50 gösterim VE toplamın en az %5'i. İkisi birden şart —
+    // yalnız mutlak eşik küçük hesapta her ülkeyi, yalnız oransal eşik
+    // büyük hesapta hiçbirini yakalar.
+    if(c.imp<50 || c.imp < totImp*0.05) return;
+    if(c.pv===0){
+      add(SIG.AMBER, c.imp,
+        `${FLAG[cc]||'🏳️'} ${String(cc).toUpperCase()}: ${num(c.imp)} gösterim, 0 ürün sayfası`,
+        `Uygulama aramada çıkıyor ama kimse sayfaya girmiyor. İkon, başlık ya da ilk ekran görüntüsü o pazarda tutmuyor olabilir.`, null);
+    } else if(c.dl===0){
+      add(SIG.AMBER, c.imp*0.8,
+        `${FLAG[cc]||'🏳️'} ${String(cc).toUpperCase()}: ${num(c.pv)} sayfa ziyareti, 0 indirme`,
+        `Sayfaya giriyorlar, indirmiyorlar. Sayfa içeriği (görseller, açıklama, puan) o pazarda ikna etmiyor.`, null);
+    }
+  });
+
+  /* --- 3. Ödemeye dönüşüm sıfır ------------------------------------- */
+  const conv=(D.stockSeries||[]).filter(r=>r.slug===APP&&r.metric==='rc_initial_conversion');
+  if(conv.length){
+    const n=conv.reduce((s,r)=>s+Number(r.num||0),0);
+    const d=conv.reduce((s,r)=>s+Number(r.den||0),0);
+    // Kapı: en az 50 yeni müşteri. Altında "%0 dönüşüm" normal.
+    if(d>=50 && n===0){
+      add(SIG.RED, 1e6,
+        `${num(d)} yeni müşteriden hiçbiri ödemedi`,
+        `Ölçülen ${conv.length} kohortun tamamında ödemeye dönüşüm %0. Reklam tek gelir kaynağı.`, '%0');
+    }
+  }
+
+  /* --- 4. Konektör sağlığı ------------------------------------------ */
+  (D.health||[]).filter(r=>r.app_slug===APP&&r.enabled).forEach(r=>{
+    if(r.is_stale){
+      add(SIG.AMBER, 500,
+        `${r.source}: veri bayat`,
+        `Son ölçümün üstünden ${Math.round(Number(r.hours_since_data||0))} saat geçti. Bu kaynağın beslediği kartlar eski veriyi gösteriyor.`, null);
+    } else if(r.never_measured && Number(r.runs_total||0)>0){
+      add(SIG.AMBER, 400,
+        `${r.source}: koştu ama veri üretmedi`,
+        `${num(r.runs_total)} koşu yapıldı, hiç ölçüm yazılmadı. Ya kaynak gerçekten boş ya da ayrıştırma sessizce başarısız.`, null);
+    }
+  });
+
+  /* --- 5. Haftalık aktif kullanıcı düşüşü --------------------------- */
+  const wau=stockSeriesFor('rc_active_customers_7d');
+  if(wau.length>=2){
+    const last=wau[wau.length-1].v, prev=wau[wau.length-2].v;
+    // Kapı: önceki hafta en az 20 kişi VE düşüş en az %30. Küçük sayılarda
+    // ±%50 dalgalanma normal, sinyal değil.
+    if(prev>=20 && last < prev*0.7){
+      add(SIG.RED, 900,
+        `Haftalık aktif kullanıcı ${num(prev)} → ${num(last)}`,
+        `Son tamamlanmış hafta bir öncekine göre %${Math.round((1-last/prev)*100)} düştü.`,
+        `−%${Math.round((1-last/prev)*100)}`);
+    }
+  }
+
+  /* --- 6. Son 30 günün yorum puanı, ömür boyu puanın altında -------- */
+  const rr=(D.reviewRecent||[]).find(r=>r.slug===APP&&r.subject==='self');
+  const life=stockValue('store_rating_avg');
+  // Kapı: son 30 günde en az 5 yazılı yorum VE en az 0.5 yıldız fark.
+  if(rr && rr.n30>=5 && life!=null && rr.avg30!=null && life-rr.avg30>=0.5){
+    add(SIG.AMBER, 600,
+      `Son 30 günün puanı ${rr.avg30} — ömür boyu ${life.toFixed(2)}`,
+      `Son ${num(rr.n30)} yazılı yorumun ortalaması genel puanın altında. Yeni bir sürüm bir şeyi bozmuş olabilir.`, null);
+  }
+
+  return out.sort((a,b)=>b.rank-a.rank);
+}
+
+function renderSignals(){
+  const host=el('sigList'); if(!host) return;
+  const sigs=signalsFor();
+  host.innerHTML = sigs.length
+    ? sigs.map(s=>`<div class="sig">
+        <span class="dot" style="background:${s.sev}"></span>
+        <span class="txt"><span class="hd">${esc(s.hd)}</span><div class="bd">${esc(s.bd)}</div></span>
+        ${s.amt?`<span class="amt" style="color:${s.sev}">${esc(s.amt)}</span>`:''}
+      </div>`).join('')
+    : `<div class="sig-none">İşaretlenecek bir şey yok — kurallar hacim eşiğinin altında kaldı ya da hiçbiri tetiklenmedi.</div>`;
+}
 
 /* Günlük gelir çubukları + kümülatif çizgi.
    Çubuklar SEÇİLİ aralığı, kümülatif çizgi o aralığın İÇİNDEKİ birikimi
