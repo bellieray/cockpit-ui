@@ -1079,7 +1079,7 @@
         <div class="card c12">
           <div class="card-head">
             <div><div class="card-title">Uygulamalar</div>
-                 <div class="card-sub">her uygulama kendi tüm geçmişiyle · aralık seçicisinden bağımsız</div></div>
+                 <div class="card-sub">her uygulama kendi ÖLÇÜLEN geçmişiyle · aralık seçicisinden bağımsız</div></div>
             <select id="pfSort" style="font:inherit;font-size:12.5px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
               <option value="lost">Masadaki para</option>
               <option value="rev">Gelir</option>
@@ -2504,7 +2504,12 @@ function renderPortfoy(){
     + `</tbody>`;
 
   const totLost=rows.reduce((s,r)=>s+r.lost,0), totRev=rows.reduce((s,r)=>s+r.rev,0);
+  // WHY "ölçülen": sayılar uygulamanın ömrünü değil, KONEKTÖRÜN ölçmeye
+  // başladığı andan bugüne kadarını kapsıyor. Spendy'nin mağaza verisi
+  // 2026-08-28'de, reklam verisi 07-30'da başlıyor; öncesi panelde YOK.
+  // "Tüm geçmiş" demek, eksik bir toplamı tam gibi göstermek olurdu.
   el('pfNote').textContent=`Portföy toplamı: ${money2(totRev)} kazanç · en az ~${money2(totLost)} masada. `
+    + `Sayılar uygulamanın ömrünü değil, ilgili konektörün ölçmeye başladığı günden bugüne kadarını kapsıyor. `
     + `"Masadaki", dolu gelen ama ekrana basılmayan reklam envanterinin o formatın kendi eCPM'iyle karşılığı; `
     + `eCPM'i hiç ölçülmemiş formatlar bu toplama katılMIYOR, yani gerçek rakam daha yüksek.`;
 
