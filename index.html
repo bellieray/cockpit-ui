@@ -278,10 +278,10 @@
     <div>
       <div class="nav-label">MENÜ</div>
       <div class="nav">
-        <button class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Özet</button>
-        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>ASO &amp; kelimeler</button>
-        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Yorumlar</button>
-        <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>Veri sağlığı</button>
+        <button class="on" data-view="ozet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Özet</button>
+        <button data-view="aso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>ASO &amp; kelimeler</button>
+        <button data-view="yorum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Yorumlar</button>
+        <button data-view="saglik"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>Veri sağlığı</button>
       </div>
     </div>
 
@@ -299,7 +299,7 @@
   <main class="main">
     <div class="page-head">
       <div>
-        <h1>Özet</h1>
+        <h1 id="pageTitle">Özet</h1>
         <div class="crumb" id="crumb">…</div>
       </div>
       <div class="head-actions">
@@ -315,8 +315,9 @@
       </div>
     </div>
 
-    <nav class="tabs"><button class="on">Özet</button><button>ASO</button><button>Yorumlar</button><button>Veri sağlığı</button></nav>
+    <nav class="tabs"><button class="on" data-view="ozet">Özet</button><button data-view="aso">ASO</button><button data-view="yorum">Yorumlar</button><button data-view="saglik">Veri sağlığı</button></nav>
 
+    <div class="view" id="v-ozet">
     <div class="grid">
 
       <div class="card c3">
@@ -511,6 +512,154 @@
       </div>
 
     </div>
+    </div>
+
+    <!-- ================= ASO ================= -->
+    <div class="view" id="v-aso" style="display:none">
+      <div class="grid">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#22bfa3,#0c8571)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v18M3 12h18"/></svg></span>
+          <span class="kpi-name">Fırsat<br><span class="card-sub">talep var, bizde yok</span></span></div>
+          <div class="kpi-val tnum" id="aGap">–</div></div>
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#3fbf7a,#17864f)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg></span>
+          <span class="kpi-name">Kapsanan<br><span class="card-sub">metadata'da var</span></span></div>
+          <div class="kpi-val tnum" id="aCov">–</div></div>
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#e8705f,#c33a2b)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+          <span class="kpi-name">Ölü ağırlık<br><span class="card-sub">yer kaplıyor, talep yok</span></span></div>
+          <div class="kpi-val tnum" id="aDead">–</div></div>
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#8f96a3,#5f6773)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/></svg></span>
+          <span class="kpi-name">Ölçülmemiş<br><span class="card-sub">talep verisi yok</span></span></div>
+          <div class="kpi-val tnum" id="aUnm">–</div></div>
+
+        <div class="card c8">
+          <div class="card-head"><div><div class="card-title">Tüm terimler</div>
+            <div class="card-sub" id="aKwSub">–</div></div></div>
+          <div class="filters">
+            <select id="aKwCountry"></select>
+            <button class="fchip on" data-av="ALL">Hepsi</button>
+            <button class="fchip" data-av="GAP">Fırsat</button>
+            <button class="fchip" data-av="COVERED">Kapsanan</button>
+            <button class="fchip" data-av="DEAD_WEIGHT">Ölü</button>
+            <button class="fchip" data-av="NO_DEMAND">Talep yok</button>
+            <button class="fchip" data-av="UNMEASURED">Ölçülmemiş</button>
+            <input id="aKwSearch" placeholder="Terim ara…">
+            <select id="aKwSort"><option value="demand">Talep ↓</option><option value="delta">Değişim ↓</option>
+              <option value="term">Terim A-Z</option><option value="country">Ülke</option></select>
+            <span class="fcount" id="aKwCount"></span>
+          </div>
+          <div class="tw" style="max-height:560px"><table class="dt" id="aKwTable"></table></div>
+        </div>
+
+        <div class="card c4">
+          <div class="card-head"><div><div class="card-title">Ülke bazında kelime</div>
+            <div class="card-sub">fırsat / kapsanan / ölü</div></div></div>
+          <div class="tw" style="max-height:300px"><table class="dt" id="aByCountry"></table></div>
+        </div>
+
+        <div class="card c6">
+          <div class="card-head"><div><div class="card-title">Talep değişimi</div>
+            <div class="card-sub">iki ölçüm arası hareket eden terimler</div></div></div>
+          <div class="tw" style="max-height:300px"><table class="dt" id="aMovers"></table></div>
+        </div>
+
+        <div class="card c6">
+          <div class="card-head"><div><div class="card-title">Arama sırası</div>
+            <div class="card-sub">ilk 100'e giren terimler</div></div></div>
+          <div class="tw" style="max-height:300px"><table class="dt" id="aRanks"></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= YORUMLAR ================= -->
+    <div class="view" id="v-yorum" style="display:none">
+      <div class="grid">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#22bfa3,#0c8571)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.6 5.6 6.4.8-4.7 4.3 1.2 6.3L12 17l-5.5 3 1.2-6.3L3 9.4l6.4-.8z"/></svg></span>
+          <span class="kpi-name">Bizim puanımız<br><span class="card-sub">iTunes ortalaması</span></span></div>
+          <div class="kpi-val tnum" id="yRating">–</div><div class="kpi-foot" id="yVotes"></div></div>
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#7679e4,#4f53c9)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="kpi-name">Bizim yorum<br><span class="card-sub">toplanan</span></span></div>
+          <div class="kpi-val tnum" id="ySelf">–</div></div>
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#8f96a3,#5f6773)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/></svg></span>
+          <span class="kpi-name">Rakip yorum<br><span class="card-sub">izlenen rakiplerden</span></span></div>
+          <div class="kpi-val tnum" id="yRival">–</div></div>
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#e8705f,#c33a2b)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v5M12 16v.5"/><circle cx="12" cy="12" r="9"/></svg></span>
+          <span class="kpi-name">Rakip şikâyeti<br><span class="card-sub">1–2 yıldız · yol haritan</span></span></div>
+          <div class="kpi-val tnum" id="yLow">–</div></div>
+
+        <div class="card c4">
+          <div class="card-head"><div><div class="card-title">Yıldız dağılımı</div>
+            <div class="card-sub" id="yDistSub">–</div></div>
+            <select id="yDistWho" style="font:inherit;font-size:12.5px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
+              <option value="">Biz + rakip</option><option value="self">Yalnız biz</option><option value="rival">Yalnız rakip</option></select>
+          </div>
+          <div id="yDist"></div>
+        </div>
+
+        <div class="card c8">
+          <div class="card-head"><div><div class="card-title">Tüm yorumlar</div>
+            <div class="card-sub" id="yMeta">–</div></div></div>
+          <div class="filters">
+            <select id="yWho"><option value="">Biz + rakip</option><option value="self">Yalnız biz</option><option value="rival">Yalnız rakip</option></select>
+            <select id="ySrc"><option value="">Tüm uygulamalar</option></select>
+            <select id="yStar"><option value="">Tüm puanlar</option><option value="5">5 yıldız</option><option value="4">4</option>
+              <option value="3">3</option><option value="2">2</option><option value="1">1</option><option value="low">1–2 (şikâyet)</option></select>
+            <select id="yCountry"><option value="">Tüm ülkeler</option></select>
+            <input id="ySearch" placeholder="Metinde ara…">
+            <span class="fcount" id="yCount"></span>
+          </div>
+          <div class="revlist" style="max-height:620px" id="yList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= VERİ SAĞLIĞI ================= -->
+    <div class="view" id="v-saglik" style="display:none">
+      <div class="grid">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#3fbf7a,#17864f)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg></span>
+          <span class="kpi-name">Sağlıklı<br><span class="card-sub">veri akıyor</span></span></div>
+          <div class="kpi-val tnum" id="sOk">–</div></div>
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#eeb04a,#d18e18)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6"/></svg></span>
+          <span class="kpi-name">Veri yok<br><span class="card-sub">açık ama hiç yazmamış</span></span></div>
+          <div class="kpi-val tnum" id="sNd">–</div></div>
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#e8705f,#c33a2b)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 7v6M12 17v.5"/><circle cx="12" cy="12" r="9"/></svg></span>
+          <span class="kpi-name">Bayat<br><span class="card-sub">veri eskimiş</span></span></div>
+          <div class="kpi-val tnum" id="sSt">–</div></div>
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#8f96a3,#5f6773)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+          <span class="kpi-name">Kapalı<br><span class="card-sub">gerekçesi yazılı</span></span></div>
+          <div class="kpi-val tnum" id="sOff">–</div></div>
+
+        <div class="card c7">
+          <div class="card-head"><div><div class="card-title">Tüm konektörler</div>
+            <div class="card-sub" id="sMeta">–</div></div></div>
+          <div class="filters">
+            <select id="sApp"><option value="">Tüm uygulamalar</option></select>
+            <select id="sStatus"><option value="">Tüm durumlar</option><option value="ok">Sağlıklı</option>
+              <option value="nodata">Veri yok</option><option value="stale">Bayat</option><option value="off">Kapalı</option></select>
+            <input id="sSearch" placeholder="Kaynak ara…">
+            <span class="fcount" id="sCount"></span>
+          </div>
+          <div class="tw" style="max-height:520px"><table class="dt" id="sTable"></table></div>
+        </div>
+
+        <div class="card c5">
+          <div class="card-head"><div><div class="card-title">Kapalı kaynaklar</div>
+            <div class="card-sub">neyi ölçmüyoruz ve neden</div></div></div>
+          <div class="tw" style="max-height:520px" id="sBlocked"></div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 </div>
@@ -875,6 +1024,7 @@ function renderAll(){
   const a=(D.apps||[]).find(x=>x.slug===APP);
   el('crumb').textContent=`${a?.name||APP} · App Store · ${days[0]||"?"} – ${days[days.length-1]||"?"}`;
   fillSelects(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
+  if(VIEW==='aso') renderAso(); else if(VIEW==='yorum') renderYorum(); else if(VIEW==='saglik') renderSaglik();
 }
 
 /* ---------- olaylar ---------- */
@@ -901,12 +1051,222 @@ function bind(){
       g.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
       if(b.dataset.range!=null){ RANGE=+b.dataset.range; renderAll(); }
     })));
-  document.querySelectorAll('nav.tabs').forEach(g=>g.querySelectorAll('button').forEach(b=>
-    b.addEventListener('click',()=>{g.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on')})));
+  bindViews();
   el('themeBtn').addEventListener('click',()=>{
     const r=document.documentElement;
     r.setAttribute('data-theme', r.getAttribute('data-theme')==='dark'?'light':'dark');
   });
+}
+
+/* =====================================================================
+   Diğer görünümler. Hepsi AYNI payload'ı okur (tek istek), yalnız
+   farklı kesitini gösterir — sekme değişimi ağ isteği yapmaz.
+   ===================================================================== */
+let VIEW = "ozet";
+function showView(v){
+  VIEW = v;
+  ["ozet","aso","yorum","saglik"].forEach(k=>{
+    const n=el("v-"+k); if(n) n.style.display = (k===v?"":"none");
+  });
+  const titles={ozet:"Özet",aso:"ASO & kelimeler",yorum:"Yorumlar",saglik:"Veri sağlığı"};
+  el('pageTitle').textContent = titles[v]||v;
+  document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on', b.dataset.view===v));
+  if(v==="aso") renderAso(); else if(v==="yorum") renderYorum(); else if(v==="saglik") renderSaglik();
+}
+
+/* ---------- ASO ---------- */
+let aKwVerdict="ALL";
+function renderAso(){
+  const all=gapsFor();
+  const c={GAP:0,COVERED:0,DEAD_WEIGHT:0,NO_DEMAND:0,UNMEASURED:0};
+  all.forEach(r=>{if(c[r.verdict]!=null)c[r.verdict]++});
+  el('aGap').textContent=c.GAP; el('aCov').textContent=c.COVERED;
+  el('aDead').textContent=c.DEAD_WEIGHT; el('aUnm').textContent=c.UNMEASURED;
+
+  const cs=[...new Set(all.map(r=>r.country))].sort();
+  if(!el('aKwCountry').options.length)
+    el('aKwCountry').innerHTML=`<option value="">Tüm ülkeler</option>`+
+      cs.map(x=>`<option value="${x}">${FLAG[x]||"🏳️"} ${x.toUpperCase()}</option>`).join("");
+
+  const newest=all.map(r=>r.measured_on).filter(Boolean).sort().pop();
+  el('aKwSub').textContent=`${all.length} terim · ${cs.length} ülke · en yeni ölçüm ${newest||"–"}`;
+
+  drawAKw();
+
+  /* ülke bazında kırılım */
+  const byC={};
+  all.forEach(r=>{byC[r.country]=byC[r.country]||{cc:r.country,GAP:0,COVERED:0,DEAD_WEIGHT:0,NO_DEMAND:0,UNMEASURED:0,top:null,topD:-1};
+    if(byC[r.country][r.verdict]!=null) byC[r.country][r.verdict]++;
+    const d=r.demand==null?-1:Number(r.demand);
+    if(r.verdict==='GAP'&&d>byC[r.country].topD){byC[r.country].topD=d;byC[r.country].top=r.term}});
+  const rowsC=Object.values(byC).sort((a,b)=>b.GAP-a.GAP);
+  el('aByCountry').innerHTML=
+    `<thead><tr><th>Ülke</th><th>Fırsat</th><th>Kaps.</th><th>Ölü</th><th>En yüksek talepli fırsat</th></tr></thead><tbody>`+
+    rowsC.map(r=>`<tr><td>${FLAG[r.cc]||"🏳️"} ${r.cc.toUpperCase()}</td>
+      <td class="num">${r.GAP}</td><td class="num">${r.COVERED}</td><td class="num">${r.DEAD_WEIGHT}</td>
+      <td class="num">${r.top?esc(r.top)+(r.topD>=0?` <span class="lb-sub">${r.topD}</span>`:""):"–"}</td></tr>`).join("")+`</tbody>`;
+
+  /* talep hareketi */
+  const mov=all.filter(r=>r.demand_delta!=null&&Number(r.demand_delta)!==0)
+    .sort((a,b)=>Math.abs(Number(b.demand_delta))-Math.abs(Number(a.demand_delta)));
+  el('aMovers').innerHTML=
+    `<thead><tr><th>Terim</th><th>Ülke</th><th>Önce</th><th>Şimdi</th><th>Δ</th></tr></thead><tbody>`+
+    (mov.length?mov.map(r=>{const d=Number(r.demand_delta);
+      return `<tr><td>${esc(r.term)}</td><td>${FLAG[r.country]||"🏳️"} ${r.country.toUpperCase()}</td>
+        <td class="num">${r.prev_demand??"–"}</td><td class="num">${r.demand??"–"}</td>
+        <td class="num ${d>0?'up':'down'}">${d>0?"+":""}${d}</td></tr>`}).join("")
+      :`<tr><td colspan="5" class="empty">İki ölçüm arası hareket eden terim yok — ikinci ölçüm henüz alınmamış olabilir</td></tr>`)+`</tbody>`;
+
+  /* arama sırası */
+  const rk=(D.ranks||[]).filter(r=>r.slug===APP);
+  el('aRanks').innerHTML=
+    `<thead><tr><th>Terim</th><th>Ülke</th><th>Sıra</th><th>Ölçüm</th></tr></thead><tbody>`+
+    (rk.length?rk.sort((a,b)=>Number(a.rank)-Number(b.rank)).map(r=>
+      `<tr><td>${esc(r.term)}</td><td>${FLAG[r.country]||"🏳️"} ${String(r.country).toUpperCase()}</td>
+        <td class="num">${r.rank}</td><td class="num">${r.day||"–"}</td></tr>`).join("")
+      :`<tr><td colspan="4" class="empty">Hiçbir terimde ilk 100'e girilmemiş. Sıra satırı YOK demek, sahte bir sıra yazmaktan iyidir.</td></tr>`)+`</tbody>`;
+}
+function drawAKw(){
+  const all=gapsFor();
+  const c=el('aKwCountry').value, q=el('aKwSearch').value.trim().toLowerCase(), s=el('aKwSort').value;
+  let rows=all.filter(r=>(!c||r.country===c)&&(aKwVerdict==='ALL'||r.verdict===aKwVerdict)&&(!q||r.term.toLowerCase().includes(q)));
+  rows=[...rows].sort((a,b)=>{
+    const dA=a.demand==null?-1:Number(a.demand), dB=b.demand==null?-1:Number(b.demand);
+    const eA=a.demand_delta==null?-999:Number(a.demand_delta), eB=b.demand_delta==null?-999:Number(b.demand_delta);
+    if(s==='demand') return dB-dA; if(s==='delta') return eB-eA;
+    if(s==='term') return a.term.localeCompare(b.term); return a.country.localeCompare(b.country)||dB-dA;
+  });
+  el('aKwTable').innerHTML=
+    `<thead><tr><th>Terim</th><th>Ülke</th><th>Talep</th><th>Δ</th><th>Metadata</th><th>Kaynak</th><th>Ölçüm</th><th>Karar</th></tr></thead><tbody>`+
+    (rows.length?rows.map(r=>{
+      const dl=r.demand_delta==null?null:Number(r.demand_delta);
+      const t=VTAG[r.verdict]||["unm",r.verdict];
+      return `<tr><td>${esc(r.term)}</td><td>${FLAG[r.country]||"🏳️"} ${String(r.country).toUpperCase()}</td>
+        <td class="num">${r.demand==null?"–":r.demand}</td>
+        <td class="num ${dl==null?'flat':dl>0?'up':'down'}">${dl==null?"–":(dl>0?"+":"")+dl}</td>
+        <td class="num">${r.in_metadata?"✓":"–"}</td><td class="num">${esc(r.origin||"–")}</td>
+        <td class="num">${r.measured_on||"–"}</td>
+        <td class="num"><span class="tag ${t[0]}">${t[1]}</span></td></tr>`;
+    }).join(""):`<tr><td colspan="8" class="empty">Bu filtreyle eşleşen terim yok</td></tr>`)+`</tbody>`;
+  el('aKwCount').textContent=`${rows.length} / ${all.length} terim`;
+}
+
+/* ---------- YORUMLAR ---------- */
+function renderYorum(){
+  const all=reviewsFor();
+  const self=all.filter(r=>r.subject==='self'), rival=all.filter(r=>r.subject!=='self');
+  el('ySelf').textContent=self.length; el('yRival').textContent=rival.length;
+  el('yLow').textContent=rival.filter(r=>Number(r.rating||0)<=2).length;
+  const st=stocksFor().filter(r=>(r.subject||'self')==='self');
+  const rat=st.filter(r=>r.metric==='store_rating_avg').map(r=>Number(r.value));
+  const vot=st.filter(r=>r.metric==='store_rating_count').map(r=>Number(r.value));
+  el('yRating').textContent=rat.length?Math.max(...rat).toFixed(2):"–";
+  el('yVotes').textContent=vot.length?`${num(Math.max(...vot))} oy`:"henüz oy yok";
+
+  const subs=[...new Set(all.map(r=>r.subject_name||r.subject))].sort();
+  if(el('ySrc').options.length<2)
+    el('ySrc').innerHTML=`<option value="">Tüm uygulamalar</option>`+subs.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");
+  const ccs=[...new Set(all.map(r=>r.country).filter(Boolean))].sort();
+  if(el('yCountry').options.length<2)
+    el('yCountry').innerHTML=`<option value="">Tüm ülkeler</option>`+ccs.map(x=>`<option value="${x}">${FLAG[x]||"🏳️"} ${x.toUpperCase()}</option>`).join("");
+
+  drawYDist(); drawYList();
+}
+function drawYDist(){
+  const who=el('yDistWho').value;
+  const rows=reviewsFor().filter(r=>who==='self'?r.subject==='self':who==='rival'?r.subject!=='self':true);
+  const c=[0,0,0,0,0];
+  rows.forEach(r=>{const v=Number(r.rating||0); if(v>=1&&v<=5) c[v-1]++});
+  const max=Math.max(1,...c);
+  el('yDist').innerHTML=[5,4,3,2,1].map(star=>{
+    const v=c[star-1], col=star>=4?"var(--up)":star===3?"var(--amber)":"var(--down)";
+    return `<div class="brk"><div class="brk-top"><span style="color:var(--amber)">${"★".repeat(star)}</span>
+      <span class="v">${v}</span><span class="p">${rows.length?Math.round(v/rows.length*100):0}%</span></div>
+      <div class="brk-track"><div class="brk-fill" style="width:${v/max*100}%;background:${col}"></div></div></div>`;
+  }).join("");
+  el('yDistSub').textContent=`${rows.length} yorum`;
+}
+function drawYList(){
+  const all=reviewsFor();
+  const who=el('yWho').value, src=el('ySrc').value, st=el('yStar').value,
+        cc=el('yCountry').value, q=el('ySearch').value.trim().toLowerCase();
+  const rows=all.filter(r=>{
+    const self=r.subject==='self';
+    if(who==='self'&&!self) return false; if(who==='rival'&&self) return false;
+    if(src&&(r.subject_name||r.subject)!==src) return false;
+    const rt=Number(r.rating||0);
+    if(st==='low'&&rt>2) return false; if(st&&st!=='low'&&rt!==+st) return false;
+    if(cc&&r.country!==cc) return false;
+    if(q&&!((r.title||"")+" "+(r.body||"")).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  el('yList').innerHTML=rows.length?rows.map(r=>{
+    const self=r.subject==='self', rt=Math.max(0,Math.min(5,Number(r.rating||0)));
+    return `<div class="rev"><div class="rev-top">
+      <span class="badge${self?'':' rival'}">${self?'BİZ':esc(r.subject_name||r.subject)}</span>
+      <span>${FLAG[r.country]||""}</span>
+      <span class="rev-star">${"★".repeat(rt)}${"☆".repeat(5-rt)}</span></div>
+      <div class="rev-title">${esc(r.title||"")}</div>
+      <div class="rev-body">${esc(r.body||"")}</div>
+      <div class="rev-date">${String(r.submitted_at||"").slice(0,10)}</div></div>`;
+  }).join(""):`<div class="empty">Bu filtreyle eşleşen yorum yok</div>`;
+  el('yCount').textContent=`${rows.length} / ${all.length}`;
+  el('yMeta').textContent=`${all.filter(r=>r.subject==='self').length} bizim · ${all.filter(r=>r.subject!=='self').length} rakip yorumu`;
+}
+
+/* ---------- VERİ SAĞLIĞI ---------- */
+const hcls=r=>!r.enabled?'off':(r.is_stale?'stale':(r.never_measured?'nodata':'ok'));
+function renderSaglik(){
+  const all=healthAll();
+  el('sOk').textContent=all.filter(r=>hcls(r)==='ok').length;
+  el('sNd').textContent=all.filter(r=>hcls(r)==='nodata').length;
+  el('sSt').textContent=all.filter(r=>hcls(r)==='stale').length;
+  el('sOff').textContent=all.filter(r=>hcls(r)==='off').length;
+  const apps=[...new Set(all.map(r=>r.app_slug))].sort();
+  if(el('sApp').options.length<2)
+    el('sApp').innerHTML=`<option value="">Tüm uygulamalar</option>`+
+      apps.map(a=>`<option value="${esc(a)}">${esc(a==='__global__'?'global':a)}</option>`).join("");
+  drawSTable();
+  const bl=(D.blocked||[]);
+  el('sBlocked').innerHTML=bl.length?bl.map(b=>`
+    <div class="brk"><div class="brk-top">
+      <span class="dot" style="background:var(--ink-3)"></span>
+      <b style="font-family:Sora">${esc(b.slug==='__global__'?'global':b.slug)}/${esc(b.source)}</b></div>
+      <div style="font-size:12.5px;color:var(--ink-2)">${esc(b.blocked_on||"sebep yazılmamış")}</div></div>`).join("")
+    :`<div class="empty">Kapalı kaynak yok</div>`;
+}
+function drawSTable(){
+  const all=healthAll();
+  const app=el('sApp').value, st=el('sStatus').value, q=el('sSearch').value.trim().toLowerCase();
+  const rows=all.filter(r=>(!app||r.app_slug===app)&&(!st||hcls(r)===st)&&(!q||r.source.toLowerCase().includes(q)));
+  el('sTable').innerHTML=
+    `<thead><tr><th>Kaynak</th><th>Ritim</th><th>Koşu</th><th>Saat</th><th>Son kalite</th><th>Hata</th><th>Durum</th></tr></thead><tbody>`+
+    (rows.length?rows.map(r=>{
+      const k=hcls(r);
+      const tag=k==='ok'?'<span class="tag cov">Sağlıklı</span>':k==='nodata'?'<span class="tag nod">Veri yok</span>'
+        :k==='stale'?'<span class="tag dead">Bayat</span>':'<span class="tag unm">Kapalı</span>';
+      return `<tr><td>${esc(r.app_slug==='__global__'?'global':r.app_slug)}/${esc(r.source)}</td>
+        <td class="num">${esc(r.cadence||"–")}</td><td class="num">${r.runs_total??"–"}</td>
+        <td class="num">${r.hours_since_data==null?"–":Number(r.hours_since_data).toFixed(1)}</td>
+        <td class="num">${esc(r.last_run_quality||"–")}</td>
+        <td class="num">${esc(r.last_failure_class||"–")}</td>
+        <td class="num">${tag}</td></tr>`;
+    }).join(""):`<tr><td colspan="7" class="empty">Eşleşen konektör yok</td></tr>`)+`</tbody>`;
+  el('sCount').textContent=`${rows.length} / ${all.length}`;
+  el('sMeta').textContent=`${all.filter(r=>r.enabled).length} açık · ${all.filter(r=>!r.enabled).length} kapalı`;
+}
+
+/* ---------- yeni görünümlerin olayları ---------- */
+function bindViews(){
+  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
+  ['aKwCountry','aKwSearch','aKwSort'].forEach(id=>el(id).addEventListener('input',drawAKw));
+  document.querySelectorAll('[data-av]').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('[data-av]').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); aKwVerdict=b.dataset.av; drawAKw();
+  }));
+  el('yDistWho').addEventListener('change',drawYDist);
+  ['yWho','ySrc','yStar','yCountry','ySearch'].forEach(id=>el(id).addEventListener('input',drawYList));
+  ['sApp','sStatus','sSearch'].forEach(id=>el(id).addEventListener('input',drawSTable));
 }
 
 /* ---------- yükleme ---------- */
