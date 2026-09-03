@@ -146,6 +146,15 @@
     .c3.card .kpi-val{font-size:22px}
     .c3.card .kpi-foot{margin-top:4px;font-size:11px}
   }
+
+  /* === gelir bandı === tek kart, 3 alt-istatistik; hero varyantı — bkz.
+     docs/backlog.md round 5/6, B1/B2. */
+  .rev-band{display:flex;flex-wrap:wrap;gap:28px}
+  .rev-item{flex:1;min-width:180px}
+  @media (max-width:679.98px){.rev-band{gap:18px}.rev-item{min-width:140px}
+    .rev-item .kpi-val{font-size:22px}.rev-item .kpi-name .card-sub{display:none}
+    .rev-item .kpi-top{gap:8px;margin-bottom:6px}}
+
   .chip{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill)}
   .chip.up{background:var(--up-soft);color:var(--up)}
   .chip.down{background:var(--down-soft);color:var(--down)}
@@ -343,6 +352,43 @@
 
     <div class="view" id="v-ozet">
     <div class="grid">
+
+      <div class="c12 region-label">Gelir</div>
+
+      <!-- gelir bandı: RC (stok, güncel anlık görüntü) + AdMob (akış, seçili
+           aralık) — bkz. docs/backlog.md round 5/6, B1/B2. NEDEN tek bir
+           "toplam" sayı YOK: iki kaynağın pencereleri farklı (biri anlık
+           görüntü, biri aralık toplamı), birleştirmek yanıltıcı olurdu
+           (round 5, A5). Her sayı kendi kaynağı/penceresiyle etiketli. -->
+      <div class="card c12 rev-band">
+        <div class="rev-item">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#c9a227,#8f6f0f)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </span>
+            <span class="kpi-name">MRR<br><span class="card-sub">RevenueCat · güncel</span></span>
+          </div>
+          <div class="kpi-val tnum" id="gMrr">–</div>
+        </div>
+        <div class="rev-item">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#c9a227,#8f6f0f)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </span>
+            <span class="kpi-name">Aktif abonelik<br><span class="card-sub">RevenueCat · güncel</span></span>
+          </div>
+          <div class="kpi-val tnum" id="gSubs" style="font-size:22px">–</div>
+        </div>
+        <div class="rev-item">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#c9a227,#8f6f0f)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><circle cx="12" cy="11" r="3"/></svg>
+            </span>
+            <span class="kpi-name">Reklam geliri<br><span class="card-sub" id="gAdRevLabel">AdMob · seçili aralık</span></span>
+          </div>
+          <div class="kpi-val tnum" id="gAdRev">–</div>
+        </div>
+      </div>
 
       <div class="c12 region-label">Trafik</div>
 
@@ -722,8 +768,16 @@ const VTAG={GAP:["gap","Fırsat"],COVERED:["cov","Kapsanan"],DEAD_WEIGHT:["dead"
 const SRCCOL=["var(--violet)","var(--brand)","var(--amber)","var(--ink-3)","var(--pink)","var(--up)"];
 const esc=s=>String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 const num=v=>v==null?"–":Number(v).toLocaleString("tr");
+const money=v=>v==null?"–":"$"+Number(v).toLocaleString("en-US",{maximumFractionDigits:0});
 const el=id=>document.getElementById(id);
-const METRIC={imp:"store_impression",pv:"store_page_view",dl:"downloads_first_time",tap:"store_tap"};
+const METRIC={imp:"store_impression",pv:"store_page_view",dl:"downloads_first_time",tap:"store_tap",rev:"ad_estimated_earnings"};
+// self (rakip değil) tekil "stock" ölçümü — RC'nin Overview API'sinden gelen
+// MRR/aktif abone gibi anlık görüntü değerleri. bkz. panel/index.ts stocks
+// sorgusu: grain='stock' zaten filtresiz dönüyor, backend değişikliği yok.
+function stockValue(metric){
+  const r=stocksFor().find(x=>x.metric===metric && x.subject==='self');
+  return r?Number(r.value):null;
+}
 
 /* ---------- tarih aralığı ---------- */
 function allDays(){
@@ -812,6 +866,13 @@ function freshBadge(iso,label){
   const txt=days===0?'bugün':days===1?'1g önce':`${days}g önce`;
   const pre=label?esc(label)+' · ':'';
   return `<span class="tag ${cls}" title="son güncelleme: ${esc(iso)}">${pre}${txt}</span>`;
+}
+function drawRevenue(){
+  const mrr=stockValue('rc_mrr'), subs=stockValue('rc_active_subscriptions'),
+        trials=stockValue('rc_active_trials'), adRev=sumMetric(rangeDays(),'rev');
+  el('gMrr').textContent=money(mrr);
+  el('gSubs').textContent=subs==null?'–':num(subs)+(trials?' · '+num(trials)+' deneme':'');
+  el('gAdRev').textContent=money(adRev);
 }
 function drawKpis(){
   const days=rangeDays(), prev=prevRangeDays();
@@ -1075,7 +1136,7 @@ function renderAll(){
   const days=rangeDays();
   const a=(D.apps||[]).find(x=>x.slug===APP);
   el('crumb').textContent=`${a?.name||APP} · App Store · ${days[0]||"?"} – ${days[days.length-1]||"?"}`;
-  fillSelects(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
+  fillSelects(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   if(VIEW==='aso') renderAso(); else if(VIEW==='yorum') renderYorum(); else if(VIEW==='saglik') renderSaglik();
 }
 
