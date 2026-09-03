@@ -155,7 +155,13 @@
     .rev-item .kpi-val{font-size:22px}.rev-item .kpi-name .card-sub{display:none}
     .rev-item .kpi-top{gap:8px;margin-bottom:6px}}
 
-  .chip{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill)}
+  /* nowrap ŞART: pill'in içinde satır atlayan metin hap görüntüsünü bozuyor,
+     mobilde 2 kolonlu KPI kartında üç satıra kadar çıkıyordu. */
+  .chip{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill);white-space:nowrap}
+  /* Δ açıklaması: masaüstünde çipin yanında, mobilde gizli — dar kartta
+     "önceki döneme göre" çipin kendisinden çok yer kaplıyordu. */
+  .dsuf{color:var(--ink-3)}
+  @media (max-width:679.98px){.dsuf{display:none}}
   .chip.up{background:var(--up-soft);color:var(--up)}
   .chip.down{background:var(--down-soft);color:var(--down)}
   .chip.flat{background:var(--canvas);color:var(--ink-3)}
@@ -296,6 +302,9 @@
   .lb.self .lb-av{background:var(--brand);color:#fff}
   .lb.self .lb-fill{background:var(--brand);opacity:1}
   .lb.self .lb-name,.lb.self .lb-star{color:var(--brand)}
+  /* son 14 günde sürüm çıkaran özne — "rakip hareketi" sinyali ayrı bir
+     karta değil, zaten baktığın satıra gömülü (bkz. round 6, A2). */
+  .lb-new{color:var(--amber);font-weight:700}
 
   /* === yorumlar === */
   .revlist{max-height:460px;overflow:auto;margin:0 -4px;padding:0 4px}
@@ -434,7 +443,7 @@
           <span class="kpi-name">Gösterim<br><span class="card-sub">App Store'da görüldü</span></span>
         </div>
         <div class="kpi-val tnum" id="kImp">–</div>
-        <div class="kpi-foot"><span id="kImpD"></span>önceki döneme göre</div>
+        <div class="kpi-foot"><span id="kImpD"></span></div>
       </div>
 
       <div class="card c3">
@@ -445,7 +454,7 @@
           <span class="kpi-name">Ürün sayfası<br><span class="card-sub">sayfayı açan</span></span>
         </div>
         <div class="kpi-val tnum" id="kPv">–</div>
-        <div class="kpi-foot"><span id="kPvD"></span>önceki döneme göre</div>
+        <div class="kpi-foot"><span id="kPvD"></span></div>
       </div>
 
       <div class="card c3">
@@ -456,7 +465,7 @@
           <span class="kpi-name">İndirme<br><span class="card-sub">ilk kez indiren</span></span>
         </div>
         <div class="kpi-val tnum" id="kDl">–</div>
-        <div class="kpi-foot"><span id="kDlD"></span>önceki döneme göre</div>
+        <div class="kpi-foot"><span id="kDlD"></span></div>
       </div>
 
       <div class="card c3">
@@ -603,9 +612,9 @@
       <!-- puan -->
       <div class="card c5">
         <div class="card-head">
-          <div><div class="card-title">Puan sıralaması</div><div class="card-sub">biz + 5 rakip</div></div>
+          <div><div class="card-title">Puan sıralaması</div><div class="card-sub">biz + rakipler · son 30g puanı ve sürüm hareketi</div></div>
           <select id="lbSort" style="font:inherit;font-size:12.5px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
-            <option value="rating">Puan</option><option value="votes">Oy</option><option value="size">Boyut</option>
+            <option value="rating">Puan</option><option value="votes">Oy</option><option value="size">Boyut</option><option value="rel">Son sürüm</option>
           </select>
         </div>
         <div id="lbList"></div>
@@ -692,8 +701,9 @@
       <div class="grid">
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#22bfa3,#0c8571)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.6 5.6 6.4.8-4.7 4.3 1.2 6.3L12 17l-5.5 3 1.2-6.3L3 9.4l6.4-.8z"/></svg></span>
-          <span class="kpi-name">Bizim puanımız<br><span class="card-sub">iTunes ortalaması</span></span></div>
-          <div class="kpi-val tnum" id="yRating">–</div><div class="kpi-foot" id="yVotes"></div></div>
+          <span class="kpi-name">Bizim puanımız<br><span class="card-sub">ömür boyu · tüm oylar</span></span></div>
+          <div class="kpi-val tnum" id="yRating">–</div><div class="kpi-foot" id="yVotes"></div>
+          <div class="kpi-foot" id="yRating30"></div></div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#7679e4,#4f53c9)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
           <span class="kpi-name">Bizim yorum<br><span class="card-sub">toplanan</span></span></div>
@@ -1000,9 +1010,11 @@ function drawKpis(){
   // "▲%1468" üretiyordu. Eksik pencerede yön iddia etmiyoruz; kaç gün
   // olduğunu söylüyoruz.
   const shortPrev = prev.length>0 && prev.length<days.length;
-  const dchip=(c,o)=> shortPrev
-    ? `<span class="chip flat" title="önceki dönemde yalnız ${prev.length} gün ölçüm var; ${days.length} günle karşılaştırmak yanıltıcı olurdu">önceki dönem eksik</span>`
-    : chip(pctDelta(c,o),c);
+  const dchip=(c,o)=>{
+    if(shortPrev) return `<span class="chip flat" title="önceki dönemde yalnız ${prev.length} gün ölçüm var; ${days.length} günle karşılaştırmak yanıltıcı olurdu">önceki dönem eksik</span>`;
+    const d=pctDelta(c,o);
+    return chip(d,c)+(d==null?'':'<span class="dsuf">önceki döneme göre</span>');
+  };
   el('kImp').textContent=num(cur.imp); el('kImpD').innerHTML=dchip(cur.imp,old.imp);
   el('kPv').textContent=num(cur.pv);   el('kPvD').innerHTML=dchip(cur.pv,old.pv);
   el('kDl').textContent=num(cur.dl);   el('kDlD').innerHTML=dchip(cur.dl,old.dl);
@@ -1223,29 +1235,61 @@ function drawRing(){
 }
 
 /* ---------- puan sıralaması ---------- */
+// A2 — rakip sürüm radarı (bkz. docs/backlog.md round 6, A2).
+// AYRI bir "rakip hareketi" kartı AÇMIYORUZ: "kim yeni sürüm çıkardı" sorusu
+// zaten rakip listesine bakarken soruluyor, cevabı da oraya yazmak round 6'nın
+// "yer açma protokolü" bütçesini hiç harcamıyor. Özne başına EN YENİ sürüm
+// (ülke kopyaları aynı tarihi taşır).
+function latestReleases(){
+  const by={};
+  (D.docs||[]).filter(d=>d.slug===APP&&d.version&&d.released_at).forEach(d=>{
+    const day=String(d.released_at).slice(0,10);
+    if(!by[d.subject]||by[d.subject].day<day) by[d.subject]={version:d.version,day};
+  });
+  return by;
+}
+const RECENT_RELEASE_DAYS=14;   /* bu yaşın altındaki sürüm "hareket" sayılır */
 function drawLb(){
-  const st=stocksFor(), s=el('lbSort').value;
+  const st=stocksFor(), s=el('lbSort').value, rel=latestReleases();
+  const r30=(D.reviewRecent||[]).filter(r=>r.slug===APP);
   const by={};
   st.forEach(r=>{
     const key=r.subject||"self";
-    by[key]=by[key]||{name:key==="self"?(D.apps.find(a=>a.slug===APP)?.name||"Biz")+" (biz)":(r.subject_name||key),self:key==="self",rating:null,votes:0,size:null};
+    by[key]=by[key]||{key,name:key==="self"?(D.apps.find(a=>a.slug===APP)?.name||"Biz")+" (biz)":(r.subject_name||key),self:key==="self",rating:null,votes:0,size:null};
     const v=Number(r.value);
     if(r.metric==="store_rating_avg") by[key].rating=Math.max(by[key].rating??0,v);
     if(r.metric==="store_rating_count") by[key].votes=Math.max(by[key].votes,v);
     if(r.metric==="store_binary_size") by[key].size=Math.round(v/1048576);
   });
   const rows=Object.values(by).filter(r=>r.rating!=null||r.votes>0);
+  rows.forEach(r=>{ r.rel=rel[r.key]||null; r.r30=r30.find(x=>x.subject===r.key)||null;
+    r.relAge=r.rel?Math.floor((Date.now()-new Date(r.rel.day+"T00:00:00Z").getTime())/86400000):null; });
   const idx={rating:"rating",votes:"votes",size:"size"};
-  rows.sort((a,b)=>(b[idx[s]]||0)-(a[idx[s]]||0));
+  if(s==='rel') rows.sort((a,b)=>(a.relAge==null?1e9:a.relAge)-(b.relAge==null?1e9:b.relAge));
+  else rows.sort((a,b)=>(b[idx[s]]||0)-(a[idx[s]]||0));
   const max=Math.max(1,...rows.map(r=>r[idx[s]]||0));
-  el('lbList').innerHTML=rows.length?rows.map(r=>`
+  // "Son sürüm"e göre sıralarken çubuk sayı değil TAZELİK gösteriyor: 90 günden
+  // eski = boş, bugün = dolu. Aksi halde çubuk anlamsız kalırdı.
+  const barW=r=>s==='rel'
+    ? (r.relAge==null?0:Math.max(0,100-Math.min(100,r.relAge/90*100)))
+    : (r[idx[s]]||0)/max*100;
+  el('lbList').innerHTML=rows.length?rows.map(r=>{
+    const bits=[`${num(r.votes)} oy`];
+    if(r.size) bits.push(`${r.size} MB`);
+    if(r.r30) bits.push(`son 30g ★ ${Number(r.r30.avg30).toFixed(2)} (${r.r30.n30})`);
+    if(r.rel){
+      const fresh=r.relAge!=null&&r.relAge<=RECENT_RELEASE_DAYS;
+      const age=r.relAge===0?'bugün':r.relAge===1?'dün':`${r.relAge}g önce`;
+      bits.push(`<span class="${fresh?'lb-new':''}" title="${esc(r.rel.day)} tarihinde yayınlandı">v${esc(r.rel.version)}, ${age}</span>`);
+    }
+    return `
     <div class="lb${r.self?' self':''}">
       <div class="lb-top"><span class="lb-av">${esc((r.name||"?")[0])}</span>
         <span style="flex:1;min-width:0"><span class="lb-name">${esc(r.name)}</span><br>
-          <span class="lb-sub">${num(r.votes)} oy${r.size?` · ${r.size} MB`:""}</span></span>
+          <span class="lb-sub">${bits.join(" · ")}</span></span>
         <span class="lb-star">${r.rating!=null?"★ "+Number(r.rating).toFixed(2):"–"}</span></div>
-      <div class="lb-track"><div class="lb-fill" style="width:${((r[idx[s]]||0)/max*100).toFixed(1)}%"></div></div>
-    </div>`).join("") : `<div class="empty">Bu uygulama için puan ölçümü yok</div>`;
+      <div class="lb-track"><div class="lb-fill" style="width:${barW(r).toFixed(1)}%"></div></div>
+    </div>`}).join("") : `<div class="empty">Bu uygulama için puan ölçümü yok</div>`;
 }
 
 /* ---------- yorumlar ---------- */
@@ -1439,7 +1483,16 @@ function renderYorum(){
   const rat=st.filter(r=>r.metric==='store_rating_avg').map(r=>Number(r.value));
   const vot=st.filter(r=>r.metric==='store_rating_count').map(r=>Number(r.value));
   el('yRating').textContent=rat.length?Math.max(...rat).toFixed(2):"–";
-  el('yVotes').textContent=vot.length?`${num(Math.max(...vot))} oy`:"henüz oy yok";
+  el('yVotes').textContent=vot.length?`${num(Math.max(...vot))} oy · tüm oylar`:"henüz oy yok";
+  // A3 — son 30 gün puanı, ömür boyunun YANINDA (bkz. docs/backlog.md round 5).
+  // WHY ok (▲/▼) YOK: iki sayı aynı kitleden değil. Ömür boyu puan yıldız-only
+  // oyları da içeriyor (iTunes), son 30 gün yalnız YAZILI yorumlardan geliyor —
+  // aralarında yön okumak sahte bir "düştü/çıktı" hikâyesi üretirdi. İkisi de
+  // kendi kitlesiyle etiketli, örneklem sayısı her zaman görünür.
+  const r30=(D.reviewRecent||[]).find(r=>r.slug===APP&&r.subject==='self');
+  el('yRating30').innerHTML = r30
+    ? `<span class="chip flat">son 30g ★ ${Number(r30.avg30).toFixed(2)}</span> ${r30.n30} yazılı yorum`
+    : `<span class="chip flat">son 30g yazılı yorum yok</span>`;
 
   const subs=[...new Set(all.map(r=>r.subject_name||r.subject))].sort();
   if(el('ySrc').options.length<2)
