@@ -50,6 +50,12 @@
   @media (min-width:1080px){
     .app{display:flex;align-items:stretch;max-width:1560px;margin:22px auto;min-height:calc(100vh - 44px)}
   }
+  /* overflow:hidden olan bir ata, position:sticky çocuğun kaydırma kabı olur;
+     .app'in kendisi kaydırmadığı için mobil şerit HİÇ yapışmazdı — kodda
+     görünmeyen, yalnız gerçek kaydırmada fark edilen bir hata. Yuvarlak köşe
+     kırpması yalnız kabuk YÜZDÜĞÜNDE (≥1080px, margin:22px auto) görünür;
+     altında zaten tam genişlik + margin:0, kırpılacak bir şey yok. */
+  @media (max-width:1079.98px){.app{overflow:visible}}
 
   /* === sidebar: kabuğun içinde, AÇIK renk === */
   .side{display:none}
@@ -101,6 +107,35 @@
     border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;cursor:pointer}
   nav.tabs button.on{color:var(--ink);border-color:var(--brand)}
   @media (min-width:1080px){nav.tabs{display:none}}
+
+  /* === mobil sabit şerit === bkz. docs/backlog.md round 4, B10.
+     Telefonda Özet tek uzun sayfa: aralık seçici başlıkla birlikte kayıp
+     gidiyordu (aralığı değiştirmek için tepeye dönmek gerekiyordu) ve hangi
+     bölümde olduğun kayboluyordu. İkisi de AYNI şeride giriyor — aralık
+     seçici + bölge çıpaları — ve şerit sayfanın tepesine yapışıyor.
+     NEDEN .page-head'in kendisi yapışmıyor: sticky yalnız EBEVEYNİNİN kutusu
+     boyunca tutunur; .page-head kısa, sayfa uzun. Bu şerit .main'in doğrudan
+     çocuğu, yani sayfa boyu tutunuyor.
+     Zemin kart değil tuval rengi: altından geçen içerik görünmesin diye
+     kenardan kenara (negatif margin) taşıyor — .main'in 16px dolgusu kadar. */
+  .mbar{display:none}
+  @media (max-width:1079.98px){
+    .mbar{display:flex;flex-direction:column;gap:7px;position:sticky;top:0;z-index:20;
+      margin:-18px -16px 14px;padding:8px 16px;background:var(--canvas);
+      box-shadow:0 1px 0 var(--line)}
+    /* başlıktaki aralık seçici mobilde şeride taşındı — iki kopya görünmesin */
+    .head-actions .seg{display:none}
+  }
+  /* çıpa şeridi: yatay kaydırılabilir, tek satır. Sığmayan bölge adı kesilir
+     ama erişilebilir kalır — sarmalamak şeridi iki satıra çıkarıp yapışkan
+     alanı büyütürdü. */
+  .anchors{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .anchors::-webkit-scrollbar{display:none}
+  .anchors[hidden]{display:none}
+  .anc{flex:none;border:0;background:var(--card);color:var(--ink-2);font:inherit;font-size:12px;
+    font-weight:600;line-height:22px;padding:8px 14px;border-radius:var(--r-pill);
+    white-space:nowrap;cursor:pointer;box-shadow:var(--sh-card)}
+  .anc:active{background:var(--brand-soft);color:var(--brand)}
 
   /* === ızgara === */
   .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--gap)}
@@ -220,6 +255,54 @@
   table.dt tbody tr:hover td{background:var(--canvas)}
   table.dt tfoot td{border-top:1px solid var(--line);font-weight:700;padding-top:11px}
   table.dt tfoot td.num{color:var(--brand)}
+
+  /* === dar ekranda tablo → liste kartı === bkz. docs/backlog.md round 4, B10.
+     5-8 kolonlu bir tablo telefonda yatay kaydırma demek; kaydırılan sütunlar
+     pratikte hiç okunmaz. `dt-cards` taşıyan tablolarda satır iki satırlık bir
+     karta dönüşür: ad + BİRİNCİL ölçü üstte, kalan ölçüler altta küçük/soluk.
+     Sütun başlığı td'nin `data-l`'sinden geliyor — thead gizlendiği için satır
+     kendi etiketini taşımak zorunda; etiketsiz bir sayı yanlış okunur.
+     `.tw-cards` iç kaydırmayı mobilde KAPATIR: yatay kaydırmayı dikey kaydırma
+     tuzağıyla değiştirmek aynı hatanın ikinci yüzü olurdu. Uzayan sayfayı
+     çıpa şeridi (.mbar) gezilebilir tutuyor — iki madde birbirini tamamlıyor. */
+  @media (max-width:679.98px){
+    .tw-cards{max-height:none!important;overflow:visible}
+    table.dt-cards,table.dt-cards tbody{display:block}
+    table.dt-cards thead{display:none}
+    table.dt-cards tbody tr{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;
+      padding:11px 2px;border-bottom:1px solid var(--line)}
+    table.dt-cards tbody tr:hover td{background:0}
+    table.dt-cards td{display:block;padding:0;border:0}
+    /* 1. satır: ad esner, birincil ölçü sağa yaslanır */
+    table.dt-cards td:first-child{flex:1;min-width:0;font-weight:600;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    table.dt-cards td.pri{text-align:right;font-family:Sora,sans-serif;font-weight:700}
+    /* thead gizliyken çıplak bir sayı hangi ölçü olduğunu söylemez; birincil
+       hücre de etiketini yanında taşıyor (etiketi olmayanlar — ör. karar
+       rozeti — kendi kendini anlatıyor). */
+    table.dt-cards td.pri[data-l]::after{content:" " attr(data-l);
+      font-family:"IBM Plex Sans",sans-serif;font-size:11px;font-weight:500;color:var(--ink-3)}
+    /* Satır kırma ZORUNLU: flex sığdıkça hepsini tek satıra dizer, yani
+       "ad + birincil / kalanlar" ayrımı kendiliğinden oluşmaz. `tr::after` bir
+       flex öğesidir (ebeveynin pseudo'su) — sıfır yükseklikli, tam genişlikli
+       bir ayraç olarak ikincilleri alta itiyor. `order` DOM sırasından bağımsız
+       çalışıyor, böylece hücre sırası tablonun sütun sırasına sadık kalıyor. */
+    table.dt-cards tbody tr::after{content:"";order:1;flex-basis:100%;height:0}
+    /* 2. satır: ikincil ölçüler, kendi etiketleriyle */
+    table.dt-cards td.sec{order:2;font-size:11.5px;color:var(--ink-3)}
+    /* etiketi olmayan ikincil hücre de var (ör. ülke bayrağı — kendi kendini
+       anlatıyor); boş data-l'de baştaki boşluğu basma */
+    table.dt-cards td.sec:not([data-l=""])::before{content:attr(data-l) " ";opacity:.7}
+    /* yön rengi ikincil satırda da kalsın: .up/.down tek sınıf, .sec'in
+       gri'sine özgüllükte yeniliyordu */
+    table.dt-cards td.sec.up{color:var(--up)}
+    table.dt-cards td.sec.down{color:var(--down)}
+    /* mobilde taşınmayan sütunlar — sıralama seçeneği olanlar KALIR, yoksa
+       liste sebepsiz sıralanmış görünür (bkz. rapor notu). */
+    table.dt-cards td.hide-m{display:none}
+    /* boş-durum satırı: colspan flex'te işlemez, hücre tam satırı kaplasın */
+    table.dt-cards td.empty{flex-basis:100%;font-weight:400;white-space:normal;padding:8px 0}
+  }
   .tag{font-size:11px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill);display:inline-block}
   .tag.gap{background:var(--brand-soft);color:var(--brand)}
   .tag.cov{background:var(--up-soft);color:var(--up)}
@@ -236,6 +319,11 @@
   .tag.st-ok{background:var(--brand-soft);color:var(--brand)}
   .tag.st-warn{background:var(--amber-soft);color:var(--amber)}
   .tag.st-bad{background:var(--down-soft);color:var(--down)}
+  /* === bölgesel düşüş rozeti === KPI ayağında, delta çipinin yanında duran
+     ikinci sınıf sinyal: amber "bak", kırmızı yalnız sert VE istatistiksel
+     olarak sağlam düşüşte (bkz. regionBadges). */
+  .tag.reg-warn{background:var(--amber-soft);color:var(--amber)}
+  .tag.reg-bad{background:var(--down-soft);color:var(--down)}
   .crumb .tag{margin-left:6px;vertical-align:1px}
   .up{color:var(--up)}.down{color:var(--down)}.flat{color:var(--ink-3)}
 
@@ -321,6 +409,15 @@
   .rev-body{color:var(--ink-2);font-size:13px;white-space:normal}
   .rev-date{font-size:11.5px;color:var(--ink-3);margin-top:4px}
 
+  /* === lansman öncesi mod === Mağazada henüz bulunmayan uygulamada (bkz.
+     `isPrelaunch`) Özet, mağaza/gelir kartlarını gizleyip lansman öncesi
+     bandını gösterir. Tek sınıf, iki yönlü kural: sınıf yoksa lansman
+     kartları, varsa mağaza kartları gizli — her kartın HTML'i tek yerde
+     duruyor, ikinci bir "boş durum" kopyası yok. Kartlar SARMALANMIYOR:
+     `.grid>*` sütun genişliklerini doğrudan çocuklara veriyor. */
+  #v-ozet.pre [data-store-only]{display:none}
+  #v-ozet:not(.pre) [data-prelaunch-only]{display:none}
+
   .empty{color:var(--ink-3);font-size:13px;padding:18px 0;text-align:center}
 </style></head>
 <body>
@@ -396,17 +493,93 @@
 
     <nav class="tabs"><button class="on" data-view="ozet">Özet</button><button data-view="aso">ASO</button><button data-view="yorum">Yorumlar</button><button data-view="saglik">Veri sağlığı</button></nav>
 
+    <!-- mobil sabit şerit: aralık seçici + bölge çıpaları. Masaüstünde gizli
+         (aralık seçici orada başlıkta duruyor, sayfa da o kadar uzun değil).
+         Çıpalar görünümün region-label'larından TÜRETİLİYOR (buildAnchors) —
+         elle liste tutulmuyor, yeni bir bölge eklenince çıpası kendiliğinden
+         çıkıyor. -->
+    <div class="mbar" id="mbar">
+      <div class="seg"><button data-range="1">1G</button><button class="on" data-range="7">7G</button><button data-range="30">1A</button><button data-range="0">Baştan</button></div>
+      <div class="anchors" id="mAnchors" hidden></div>
+    </div>
+
     <div class="view" id="v-ozet">
     <div class="grid">
 
-      <div class="c12 region-label">Gelir</div>
+      <!-- ================= LANSMAN ÖNCESİ =================
+           Yalnız mağazada henüz bulunmayan uygulamada görünür (bkz.
+           `isPrelaunch`, docs/backlog.md B3/B9). Gerekçe: gösterim/indirme/
+           dönüşüm/gelir kartlarının hepsi bu durumda 0 ya da "–" gösterir ve
+           sıfır burada bir OLGU değil — uygulama henüz yayınlanmadı, ölçülecek
+           bir şey yok. Yerine lansman ÖNCESİ gerçekten ölçülen üç şey geçiyor:
+           mağaza kontrolü, rakip takibi, kelime hazırlığı.
+
+           DİKKAT — alt satırlar `.kpi-foot`'ta, `.kpi-name > .card-sub`'ta
+           DEĞİL: mobilde (<680px) `.rev-item .kpi-name .card-sub` GİZLENİYOR.
+           Gelir bandı buna dayanabiliyor çünkü oradaki alt satırlar yalnız
+           kaynak adı ("RevenueCat · güncel"); buradakiler ölçümün kendisi ve
+           bandın tek tarihi (ilke 2: her sayının yanında ne zaman çekildiği
+           yazar). Telefon bu panelin birincil ekranı — geri taşıma. -->
+      <div class="c12 region-label" data-prelaunch-only>Lansman öncesi</div>
+
+      <div class="card c12 rev-band" data-prelaunch-only>
+        <div class="rev-item">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#8f96a3,#5f6773)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19l3-3M9 15l-4 1 1-4 7-7a4 4 0 0 1 6 6l-7 7-3-3z"/></svg>
+            </span>
+            <span class="kpi-name">Mağaza durumu</span>
+          </div>
+          <div class="kpi-val" id="plStore" style="font-size:22px">–</div>
+          <div class="kpi-foot"><span id="plStoreSub"></span></div>
+        </div>
+        <div class="rev-item">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#7679e4,#4f53c9)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/></svg>
+            </span>
+            <span class="kpi-name">İzlenen rakip</span>
+          </div>
+          <div class="kpi-val tnum" id="plRivals">–</div>
+          <div class="kpi-foot"><span id="plRivalsSub"></span></div>
+        </div>
+        <div class="rev-item">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#22bfa3,#0c8571)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            </span>
+            <span class="kpi-name">Takip edilen kelime</span>
+          </div>
+          <div class="kpi-val tnum" id="plKw">–</div>
+          <div class="kpi-foot"><span id="plKwSub"></span></div>
+        </div>
+      </div>
+
+      <!-- Kontrol listesi: elle yazılmış bir "yapılacaklar" DEĞİL — her satır
+           panelin o an gördüğü veriden türüyor (konektör durumu, rakip sayısı,
+           kelime/talep sayısı). Yanındaki "…git →" düğmeleri B9'un istediği
+           "boş Özet yerine işe yarar ekran" ihtiyacını, sekme seçimini zorla
+           değiştirmeden karşılıyor. -->
+      <div class="card c8" data-prelaunch-only>
+        <div class="card-head">
+          <div><div class="card-title">Lansman öncesi kontrol listesi</div>
+            <div class="card-sub">panelin görebildiği hazırlık adımları</div></div>
+        </div>
+        <div id="plChecks"></div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:14px">
+          <button class="viewall" data-view="aso">Kelimelere git →</button>
+          <button class="viewall" data-view="yorum">Rakip yorumlarına git →</button>
+        </div>
+      </div>
+
+      <div class="c12 region-label" data-store-only>Gelir</div>
 
       <!-- gelir bandı: RC (stok, güncel anlık görüntü) + AdMob (akış, seçili
            aralık) — bkz. docs/backlog.md round 5/6, B1/B2. NEDEN tek bir
            "toplam" sayı YOK: iki kaynağın pencereleri farklı (biri anlık
            görüntü, biri aralık toplamı), birleştirmek yanıltıcı olurdu
            (round 5, A5). Her sayı kendi kaynağı/penceresiyle etiketli. -->
-      <div class="card c12 rev-band">
+      <div class="card c12 rev-band" data-store-only>
         <div class="rev-item">
           <div class="kpi-top">
             <span class="kpi-ic" style="background:linear-gradient(145deg,#c9a227,#8f6f0f)">
@@ -436,9 +609,9 @@
         </div>
       </div>
 
-      <div class="c12 region-label">Trafik</div>
+      <div class="c12 region-label" data-store-only>Trafik</div>
 
-      <div class="card c3">
+      <div class="card c3" data-store-only>
         <div class="kpi-top">
           <span class="kpi-ic" style="background:linear-gradient(145deg,#7679e4,#4f53c9)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -449,7 +622,7 @@
         <div class="kpi-foot"><span id="kImpD"></span></div>
       </div>
 
-      <div class="card c3">
+      <div class="card c3" data-store-only>
         <div class="kpi-top">
           <span class="kpi-ic" style="background:linear-gradient(145deg,#eeb04a,#d18e18)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18"/></svg>
@@ -460,7 +633,7 @@
         <div class="kpi-foot"><span id="kPvD"></span></div>
       </div>
 
-      <div class="card c3">
+      <div class="card c3" data-store-only>
         <div class="kpi-top">
           <span class="kpi-ic" style="background:linear-gradient(145deg,#22bfa3,#0c8571)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 21h16"/></svg>
@@ -471,7 +644,7 @@
         <div class="kpi-foot"><span id="kDlD"></span></div>
       </div>
 
-      <div class="card c3">
+      <div class="card c3" data-store-only>
         <div class="kpi-top">
           <span class="kpi-ic" style="background:linear-gradient(145deg,#e8709f,#c9407a)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20L20 4"/><circle cx="7" cy="7" r="3"/><circle cx="17" cy="17" r="3"/></svg>
@@ -483,7 +656,7 @@
       </div>
 
       <!-- büyük grafik -->
-      <div class="card c8">
+      <div class="card c8" data-store-only>
         <div class="card-head">
           <div><div class="card-title">Trafik ve indirme</div><div class="card-sub" id="chartSub">–</div></div>
           <div class="legend" id="chartLegend">
@@ -505,7 +678,7 @@
       </div>
 
       <!-- gauge -->
-      <div class="card c4">
+      <div class="card c4" data-store-only>
         <div class="card-head">
           <div><div class="card-title">Dönüşüm oranı</div><div class="card-sub">gösterimden indirmeye</div></div>
         </div>
@@ -522,7 +695,7 @@
       </div>
 
       <!-- huni -->
-      <div class="card c8">
+      <div class="card c8" data-store-only>
         <div class="card-head">
           <div><div class="card-title">Huni</div><div class="card-sub">Adım adım kayıp — mağaza ve ürün bir arada</div></div>
         </div>
@@ -532,7 +705,7 @@
       </div>
 
       <!-- kaynak segment -->
-      <div class="card c4">
+      <div class="card c4" data-store-only>
         <div class="card-head">
           <div><div class="card-title">Kaynak kırılımı</div><div class="card-sub">Gösterim ve indirme nereden</div></div>
           <select id="srcSort" style="font:inherit;font-size:12.5px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
@@ -561,7 +734,7 @@
       </div>
 
       <!-- ülkeler -->
-      <div class="card c12">
+      <div class="card c12" data-store-only>
         <div class="card-head">
           <div><div class="card-title">Ülkeler</div><div class="card-sub" id="ctryMeta"></div></div>
           <button class="viewall">Tümünü gör →</button>
@@ -573,7 +746,7 @@
           <select id="ctryMin"><option value="0">Hepsi</option><option value="1">İndirme ≥ 1</option><option value="5">İndirme ≥ 5</option><option value="-1">Sayfa var, indirme yok</option></select>
           <span class="fcount" id="ctryCount"></span>
         </div>
-        <div class="tw" style="max-height:340px"><table class="dt" id="ctryTable"></table></div>
+        <div class="tw tw-cards" style="max-height:340px"><table class="dt dt-cards" id="ctryTable"></table></div>
       </div>
 
       <div class="c12 region-label">Kelimeler</div>
@@ -595,7 +768,7 @@
           <select id="kwSort"><option value="demand">Talep ↓</option><option value="delta">Değişim ↓</option><option value="term">Terim A-Z</option><option value="country">Ülke</option></select>
           <span class="fcount" id="kwCount"></span>
         </div>
-        <div class="tw"><table class="dt" id="kwTable"></table></div>
+        <div class="tw tw-cards"><table class="dt dt-cards" id="kwTable"></table></div>
       </div>
 
       <!-- kelime donut -->
@@ -676,7 +849,7 @@
               <option value="term">Terim A-Z</option><option value="country">Ülke</option></select>
             <span class="fcount" id="aKwCount"></span>
           </div>
-          <div class="tw" style="max-height:560px"><table class="dt" id="aKwTable"></table></div>
+          <div class="tw tw-cards" style="max-height:560px"><table class="dt dt-cards" id="aKwTable"></table></div>
         </div>
 
         <div class="card c4">
@@ -906,6 +1079,49 @@ function chip(d,n){
   return d>=0 ? `<span class="chip up">▲ ${r}%</span>` : `<span class="chip down">▼ ${r}%</span>`;
 }
 
+/* === bölgesel "sessiz kriz" rozeti === (bkz. docs/backlog.md B8)
+   Toplam yatay görünürken ilk 3 ülkeden biri çöküyor olabilir — büyüyen ülkeler
+   düşeni maskeler. Rozet, düşüşün YAŞANDIĞI metriğin kartına basılıyor (indirme
+   çöktüyse İndirme kartına); genel bir uyarı bandı değil, çünkü hunide nerede
+   kanama olduğu bilginin yarısı.
+
+   NEDEN sıralama max(cur,prev): yalnız GÜNCEL hacme göre sıralamak, aradığımız
+   ülkeyi tam da aradığımız anda listeden düşürür — #1'ken çöken ülke artık
+   #8'dir ve hiç kontrol edilmez.
+   NEDEN iki dönemin ülke kümesi birleştiriliyor: `byCountryDaily` sorgusu
+   `having sum(value) > 0` süzüyor, yani sıfıra düşen ülke güncel dönemde HİÇ
+   satır bırakmaz — birleştirmeden en sert vaka görünmez olurdu.
+   NEDEN gürültü tabanı chip()'ten farklı yazılıyor: chip() bağıl SE'yi
+   `2*100/√cur` ile kuruyor — bir ülke SIFIRA düştüğünde cur=0 olur, `n>0`
+   yanlış çıkar ve süzgeç tamamen devre dışı kalır; en gürültülü vaka en yüksek
+   sesle bağırırdı (2→0 = "%-100"). Aynı 2σ Poisson fikri, oran yerine SAYI
+   farkına uygulanıyor: iki sayımın farkının varyansı cur+prev'dir, yani
+   `prev-cur > 2√(cur+prev)`. Sıfırda patlamaz, küçük örneklemi doğru susturur
+   (4→0 sessiz, 300→0 kırmızı) ve daha sert düşüşün daha az olayla kanıtlanması
+   gerektiğini kendiliğinden yansıtır.
+   NEDEN Dönüşüm kartında yok: dönüşüm bir oran; ülke bazlı oran deltası
+   "saklanmış oranların ortalaması" sınıfına girer (CLAUDE.md) — ayrı iş. */
+const REG_DROP=30;      /* % — rozet eşiği: bunun altındaki düşüş sinyal değil */
+const REG_SEVERE=50;    /* % — kırmızıya geçiş; ayrıca 3σ tabanını da aşmalı */
+const regSigma=x=>(x.p-x.c)/Math.sqrt(x.c+x.p);   /* düşüşün kaç σ olduğu */
+function regionDrops(metricKey, days, prev){
+  if(!days.length||!prev.length) return [];
+  const by={};
+  const put=(rows,key)=>rows.forEach(r=>{ (by[r.cc]=by[r.cc]||{cc:r.cc,c:0,p:0})[key]=r[metricKey]||0; });
+  put(countryRows(days),'c'); put(countryRows(prev),'p');
+  const pool=Object.values(by).filter(x=>x.c>0||x.p>0);
+  if(pool.length<3) return [];   /* "ilk 3" kurulamıyorsa rozet de yok — boş yer tutucu basmıyoruz */
+  return pool.sort((a,b)=>Math.max(b.c,b.p)-Math.max(a.c,a.p)||b.p-a.p).slice(0,3)
+    .map(x=>({...x,d:pctDelta(x.c,x.p),s:regSigma(x)}))
+    .filter(x=>x.d!=null && x.d<=-REG_DROP && x.s>2);
+}
+function regionBadges(metricKey, days, prev){
+  return regionDrops(metricKey,days,prev).map(x=>{
+    const bad = x.d<=-REG_SEVERE && x.s>3;   /* kırmızı: hem sert hem sağlam */
+    return `<span class="tag reg-${bad?'bad':'warn'}" title="ilk 3 ülkeden biri · önceki dönem ${num(x.p)} → bu dönem ${num(x.c)}${bad?'':' · gürültü tabanını yeni aştı, teyit için ikinci dönemi bekle'}">${esc(x.cc.toUpperCase())} ▼${Math.round(Math.abs(x.d))}%</span>`;
+  }).join('');
+}
+
 /* === tazelik rozeti (primitif) ===
    Manuel/gecikmeli beslenen HER karta uygulanabilir tek bileşen — Veri sağlığı
    sekmesiyle aynı eşikler: ≤7g nötr, 8-14g amber, >14g kırmızı.
@@ -996,6 +1212,116 @@ function versionChip(){
   return out.join('');
 }
 
+/* =====================================================================
+   Yayın durumu ve lansman öncesi mod  (bkz. docs/backlog.md B3 + B9)
+
+   "Bu uygulama mağazada var mı" sorusunun cevabı panelde AYRI bir bayrak
+   olarak DURMUYOR; mevcut ölçümden çıkıyor. `itunes_lookup` her gün her
+   vitrinde uygulamayı arıyor: bulamazsa `resultCount = 0` döner ve o gün
+   için puan / oy / ikili boyut / vitrin metni satırlarının HİÇBİRİ yazılmaz
+   (yalnız `store_available = 0` yazılır — o da `ratio` grain'inde olduğu
+   için veri ucunun döndürdüğü paylaşta YOK: `panel/index.ts` yalnız `flow`
+   ve `stock` çekiyor). Yani "kendine ait tek bir mağaza olgusu yok" ile
+   "mağazada yok" AYNI şey; sinyal için ne yeni kolon ne yeni sorgu gerekti.
+
+   Üç kol, çünkü tek kol yanılır:
+     · stok olguları  — puan/oy/boyut (yayında ama hiç oy almamış app'te bile
+                        boyut gelir)
+     · vitrin metni   — `docs`, YALNIZ `country` dolu olanlar: `asc_versions`
+                        ülkesiz satır yazıyor ve o satır uygulama HENÜZ
+                        yayınlanMAMIŞken de (inceleme aşamasında) oluşur —
+                        sayılsaydı mod erkenden kapanırdı
+     · mağaza trafiği — yalnız iTunes'a bakmak Play-only bir uygulamayı
+                        yanlışlıkla "yayında değil" gösterirdi
+
+   İSTİSNA (ilke 11-A, kırık boru): gözlemcinin kendisi bozuksa yokluk bir
+   OLGU değil KÖR NOKTA'dır. `itunes_lookup` kapalı/bayat/hiç ölçmemişse
+   lansman öncesi moda GEÇMİYORUZ — normal ekran ve Veri sağlığı'ndaki
+   mezar taşı duruyor, panel kendi kör noktasını "yayınlanmamış" diye
+   yorumlamıyor.
+   ===================================================================== */
+const STORE_SELF_FACTS=['store_rating_count','store_rating_avg','store_binary_size'];
+const STORE_FLOW_METRICS=['store_impression','store_page_view','store_tap','downloads_first_time'];
+const storeWatcher=()=> (D.health||[]).find(r=>r.app_slug===APP&&r.source==='itunes_lookup')||null;
+function isPrelaunch(){
+  const w=storeWatcher();
+  if(!w||!w.enabled||w.is_stale||w.never_measured) return false;
+  const listed=
+    stocksFor().some(r=>(r.subject||'self')==='self'&&STORE_SELF_FACTS.includes(r.metric)) ||
+    (D.docs||[]).some(d=>d.slug===APP&&d.subject==='self'&&d.country) ||
+    (D.series||[]).some(r=>r.slug===APP&&STORE_FLOW_METRICS.includes(r.metric)&&Number(r.v||0)>0);
+  return !listed;
+}
+/* Mağaza kontrolünün yaşı. `freshBadge` ISO METİN bekliyor, buradaki kaynak
+   ise SAYI (`hours_since_data`) — ve tarih metnini parse ettirmiyoruz
+   bilerek: sunucu zaman damgalarını boşlukla yazıyor ("… 05:05:01+00"), iOS
+   Safari onu NaN'a düşürür (aynı tuzak `versionMarks`'ta "T00:00:00Z" ekiyle
+   çözülmüş). Eşikler Veri sağlığı ile aynı: ≤7g nötr, 8-14g amber, >14g kırmızı. */
+function storeCheckBadge(hours){
+  if(hours==null) return '';
+  const h=Number(hours);
+  const cls=h<=24*7?'fresh-ok':h<=24*14?'fresh-warn':'fresh-bad';
+  return `<span class="tag ${cls}">${h<24?Math.round(h)+' saat':Math.floor(h/24)+'g'} önce bakıldı</span>`;
+}
+function drawPrelaunch(){
+  const w=storeWatcher(), gaps=gapsFor();
+  const terms=gaps.length, ccs=new Set(gaps.map(r=>r.country)).size;
+  const measured=gaps.filter(r=>r.demand!=null).length;
+  const rivals=[...new Set(stocksFor().map(r=>r.subject).filter(s=>s&&s!=='self'))];
+  /* Rakip yorum sayısı `reviewRecent`'tan (sunucuda toplanmış 30g agregası),
+     `reviews`'tan DEĞİL: o liste TÜM uygulamalar için 300 satırla sınırlı,
+     ondan sayılan her rakam kırpmaya bağlı olurdu. */
+  const rev30=(D.reviewRecent||[]).filter(r=>r.slug===APP&&r.subject!=='self')
+    .reduce((t,r)=>t+Number(r.n30||0),0);
+
+  el('plStore').textContent='Yayında değil';
+  el('plStoreSub').innerHTML=`iTunes vitrin araması ${storeCheckBadge(w&&w.hours_since_data)}`;
+  el('plRivals').textContent=num(rivals.length);
+  el('plRivalsSub').textContent=rev30?`son 30g ${num(rev30)} yorum toplandı`:'yorum akışı henüz boş';
+  el('plKw').textContent=num(terms);
+  el('plKwSub').textContent=`${ccs} ülke · ${measured}/${terms} terimde talep ölçüldü`;
+
+  const DOT={ok:'--up',warn:'--amber',off:'--ink-3'};
+  const row=(state,label,tag,note)=>`<div class="brk"><div class="brk-top">
+      <span class="dot" style="background:var(${DOT[state]})"></span>${esc(label)}
+      <span class="v">${tag}</span></div><div class="lb-sub">${note}</div></div>`;
+  const out=[];
+
+  out.push(row('off','Mağaza vitrini','<span class="tag unm">bulunamadı</span>',
+    'iTunes araması bu uygulamayı hiçbir vitrinde bulmuyor — gösterim/indirme/gelir kartları bu yüzden gizli.'));
+
+  /* Sürüm hattı: lansman öncesinde ekrandaki en aksiyona yakın satır —
+     `asc_versions` kapalıyken sahibi kendi inceleme/ret durumunu panelde
+     GÖREMİYOR. Açıksa `versionChip()` zaten "1.0 · incelemede · 3g" basıyor. */
+  const vch=versionChip();
+  const ascOff=(D.blocked||[]).find(b=>b.slug===APP&&b.source==='asc_versions');
+  if(vch) out.push(row('ok','Sürüm hattı',vch,'App Store Connect sürüm durumu okunuyor.'));
+  else if(ascOff) out.push(row('warn','Sürüm hattı','<span class="tag nod">kapalı</span>',
+    `App Store Connect sürüm konektörü kapalı${ascOff.blocked_on?' (gerekçe: '+esc(ascOff.blocked_on)+')':''}. Açılana kadar inceleme/ret durumu panelde görünmez — lansmandan önce görülmesi gereken tek şey bu.`));
+  else out.push(row('warn','Sürüm hattı','<span class="tag nod">veri yok</span>',
+    'Konektör açık ama henüz sürüm kaydı yazmadı.'));
+
+  out.push(rivals.length
+    ? row('ok','Rakip takibi',`<span class="tag cov">${rivals.length} rakip</span>`,
+        'Puan, oy ve yorum her gün toplanıyor — aşağıdaki Puan sıralaması ve Yorumlar kartları bu veriden.')
+    : row('warn','Rakip takibi','<span class="tag nod">rakip yok</span>',
+        'İzlenen rakip tanımlanmamış; lansman öncesi karşılaştırma yapılamıyor.'));
+
+  out.push(terms
+    ? row('ok','Kelime listesi',`<span class="tag cov">${terms} terim</span>`,
+        `${ccs} ülkede metadata karşılaştırması hazır.`)
+    : row('warn','Kelime listesi','<span class="tag nod">terim yok</span>',
+        'Takip edilecek terim girilmemiş.'));
+
+  out.push(measured
+    ? row('ok','Kelime talebi',`<span class="tag cov">${measured}/${terms}</span>`,
+        'Talep ölçümü var; fırsat/ölü ağırlık ayrımı yapılabiliyor.')
+    : row('warn','Kelime talebi','<span class="tag dead">ölçülmedi</span>',
+        `Talep sayısı olmadan fırsat/ölü ağırlık ayrımı yapılamaz — ASA popülerliği elle çekilmeli. ${asaFreshness()}`));
+
+  el('plChecks').innerHTML=out.join('');
+}
+
 function drawRevenue(){
   const mrr=stockValue('rc_mrr'), subs=stockValue('rc_active_subscriptions'),
         trials=stockValue('rc_active_trials'), adRev=sumMetric(rangeDays(),'rev');
@@ -1018,9 +1344,12 @@ function drawKpis(){
     const d=pctDelta(c,o);
     return chip(d,c)+(d==null?'':'<span class="dsuf">önceki döneme göre</span>');
   };
-  el('kImp').textContent=num(cur.imp); el('kImpD').innerHTML=dchip(cur.imp,old.imp);
-  el('kPv').textContent=num(cur.pv);   el('kPvD').innerHTML=dchip(cur.pv,old.pv);
-  el('kDl').textContent=num(cur.dl);   el('kDlD').innerHTML=dchip(cur.dl,old.dl);
+  /* Bölgesel düşüş rozeti — eksik önceki pencerede delta çipiyle AYNI sebeple
+     susuyor: karşılaştırılacak dönem yoksa ülke bazlı yön iddiası da yalan olur. */
+  const reg=k=>shortPrev?'':regionBadges(k,days,prev);
+  el('kImp').textContent=num(cur.imp); el('kImpD').innerHTML=dchip(cur.imp,old.imp)+reg('imp');
+  el('kPv').textContent=num(cur.pv);   el('kPvD').innerHTML=dchip(cur.pv,old.pv)+reg('pv');
+  el('kDl').textContent=num(cur.dl);   el('kDlD').innerHTML=dchip(cur.dl,old.dl)+reg('dl');
   el('kConv').textContent=(conv||0).toFixed(1)+"%";
   el('gaugeVal').textContent=(conv||0).toFixed(1)+"%";
   el('gaugeLb').textContent=`${num(cur.imp)} gösterim → ${num(cur.dl)} indirme`;
@@ -1133,11 +1462,15 @@ function drawCtry(){
     `<div class="tile"><div class="fl">${FLAG[r.cc]||"🏳️"}</div>
       <div class="vl tnum">${num(r.dl)} <small>indirme</small></div>
       <div class="nm">${r.cc.toUpperCase()} · ${num(r.imp)} gösterim</div></div>`).join("");
+  /* Dar ekranda satır liste kartına dönüşüyor (bkz. .dt-cards). Birincil ölçü
+     İNDİRME: sıralama hangisi olursa olsun kartın "değeri" bu. Kalan üç sütun
+     ikincil — hiçbiri gizlenmiyor, çünkü üçü de sıralama seçeneği; gizlenen
+     bir sütuna göre sıralanan liste sebepsiz karışmış görünür. */
   el('ctryTable').innerHTML=
     `<thead><tr><th>Ülke</th><th>Gösterim</th><th>Sayfa</th><th>İndirme</th><th>Dönüşüm %</th></tr></thead><tbody>`+
-    (rows.length?rows.map(r=>`<tr><td>${FLAG[r.cc]||"🏳️"} ${r.cc.toUpperCase()}</td><td class="num">${num(r.imp)}</td>
-      <td class="num">${num(r.pv)}</td><td class="num">${num(r.dl)}</td>
-      <td class="num ${cr(r)>=.1?'up':(cr(r)===0?'flat':'')}">${(cr(r)*100).toFixed(1)}</td></tr>`).join("")
+    (rows.length?rows.map(r=>`<tr><td>${FLAG[r.cc]||"🏳️"} ${r.cc.toUpperCase()}</td><td class="num sec" data-l="göst.">${num(r.imp)}</td>
+      <td class="num sec" data-l="sayfa">${num(r.pv)}</td><td class="num pri" data-l="indirme">${num(r.dl)}</td>
+      <td class="num sec ${cr(r)>=.1?'up':(cr(r)===0?'flat':'')}" data-l="dön.%">${(cr(r)*100).toFixed(1)}</td></tr>`).join("")
       :`<tr><td colspan="5" class="empty">Bu filtreyle eşleşen ülke yok</td></tr>`)+`</tbody>`;
   el('ctryCount').textContent=`${rows.length} / ${all.length} ülke`;
   el('ctryMeta').textContent=`${all.length} ülkede ölçüm var`;
@@ -1208,11 +1541,14 @@ function drawKw(){
       const dl=r.demand_delta==null?null:Number(r.demand_delta);
       const dcls=dl==null?"flat":dl>0?"up":dl<0?"down":"flat";
       const t=VTAG[r.verdict]||["unm",r.verdict];
-      return `<tr><td>${esc(r.term)}</td><td>${FLAG[r.country]||"🏳️"} ${String(r.country).toUpperCase()}</td>
-        <td class="num">${r.demand==null?"–":r.demand}</td>
-        <td class="num ${dcls}">${dl==null?"–":(dl>0?"+":"")+dl}</td>
-        <td class="num">${r.in_metadata?"✓":"–"}</td><td class="num">${r.measured_on||"–"}</td>
-        <td class="num"><span class="tag ${t[0]}">${t[1]}</span></td></tr>`;
+      /* Dar ekran kartı: terim + KARAR üstte (karar "ne yapmalıyım"ın cevabı),
+         ülke/talep/Δ altta. Metadata ✓ gizli — karar zaten onu içeriyor;
+         ölçüm tarihi gizli — uzun ve sıralama seçeneği değil. */
+      return `<tr><td>${esc(r.term)}</td><td class="sec" data-l="">${FLAG[r.country]||"🏳️"} ${String(r.country).toUpperCase()}</td>
+        <td class="num sec" data-l="talep">${r.demand==null?"–":r.demand}</td>
+        <td class="num sec ${dcls}" data-l="Δ">${dl==null?"–":(dl>0?"+":"")+dl}</td>
+        <td class="num hide-m">${r.in_metadata?"✓":"–"}</td><td class="num hide-m">${r.measured_on||"–"}</td>
+        <td class="num pri"><span class="tag ${t[0]}">${t[1]}</span></td></tr>`;
     }).join(""):`<tr><td colspan="7" class="empty">Bu filtreyle eşleşen terim yok</td></tr>`)+`</tbody>`;
   el('kwCount').textContent=`${rows.length} / ${all.length} terim`;
 }
@@ -1353,9 +1689,57 @@ function renderAll(){
   const a=(D.apps||[]).find(x=>x.slug===APP);
   // Sürüm durum çipi crumb'ta: telefonda kaydırmadan görünen tek satır burası,
   // ve "hangi sürüm canlı / hatta ne var" sorusu tek bir sekmeye ait değil.
-  el('crumb').innerHTML=`${esc(a?.name||APP)} · App Store · ${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}${versionChip()}`;
-  fillSelects(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
+  // Lansman öncesi modda tarih aralığı YAZILMIYOR: akış ölçümü hiç olmadığı
+  // için `days` boş kalıyor ve satır "? – ?" diye okunuyordu — yokluğu adıyla
+  // söylemek, bilinmeyen bir aralık uydurmaktan iyi. `toggle(...,pre)` iki
+  // argümanlı ŞART: tek argümanlı hâli sınıfı her çağrıda TERSLER, yani her
+  // uygulama değişiminde mod rastgele açılıp kapanırdı.
+  const pre=isPrelaunch();
+  el('v-ozet').classList.toggle('pre',pre);
+  const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
+  el('crumb').innerHTML=`${esc(a?.name||APP)} · App Store · ${span}${versionChip()}`;
+  fillSelects(); drawPrelaunch(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   if(VIEW==='aso') renderAso(); else if(VIEW==='yorum') renderYorum(); else if(VIEW==='saglik') renderSaglik();
+  // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
+  // yukarıda değişiyor ve bazı region-label'lar görünür/gizli olabiliyor —
+  // sekme değişmeden çıpa şeridi bayat kalmasın diye burada da yeniden kurulur.
+  buildAnchors();
+}
+
+/* ---------- mobil sabit şerit ---------- */
+/* bkz. docs/backlog.md round 4, B10. İki parça:
+   (a) Aralık seçici mobilde başlıktan şeride taşındı, yani sayfada İKİ `.seg`
+       kopyası var (biri masaüstünde, biri mobilde görünür). Hangisine
+       dokunulursa dokunulsun ikisi de aynı RANGE'i işaretlemeli — aksi halde
+       ekran döndürüldüğünde/pencere büyütüldüğünde diğeri yalan söyler.
+   (b) Çıpalar görünümün `region-label`'larından TÜRETİLİR; elle liste
+       tutulmaz, yeni bir bölge bandı eklendiğinde çıpası kendiliğinden çıkar.
+       Kasıtlı olarak kalıcı "aktif bölüm" işareti YOK: bu bir atlama menüsü,
+       konum göstergesi değil — ölçmediğimiz bir şeyi göstermiyoruz. */
+function syncRange(){
+  document.querySelectorAll('[data-range]').forEach(b=>b.classList.toggle('on',+b.dataset.range===RANGE));
+}
+function buildAnchors(){
+  const bar=el('mAnchors'), view=el('v-'+VIEW);
+  // WHY offsetParent: lansman-öncesi modu bazı region-label'ları
+  // `display:none` ile gizliyor (#v-ozet.pre [data-store-only] vb.) — çıpa
+  // görünmeyen bir bölgeye atlarsa kullanıcı "hiçbir şey olmadı" sanır.
+  const labels=view?[...view.querySelectorAll('.region-label')].filter(n=>n.offsetParent!==null):[];
+  labels.forEach((n,i)=>{ if(!n.id) n.id='rg-'+VIEW+'-'+i; });
+  bar.innerHTML=labels.map(n=>`<button class="anc" data-to="${n.id}">${esc(n.textContent.trim())}</button>`).join('');
+  bar.hidden=labels.length<2;   /* tek bölge çıpa değildir; diğer sekmelerde hiç yok */
+}
+function bindAnchors(){
+  el('mAnchors').addEventListener('click',e=>{
+    const b=e.target.closest('.anc'); if(!b) return;
+    const n=el(b.dataset.to); if(!n) return;
+    /* Şerit hedefin üstünü kapatmasın: yapışık yüksekliği + bir nefes payı
+       kadar yukarı hizala. scrollIntoView bu ofseti kabul etmiyor. */
+    const off=el('mbar').getBoundingClientRect().height+12;
+    const soft=!matchMedia('(prefers-reduced-motion:reduce)').matches;   /* OS ayarına uyulur */
+    window.scrollTo({top:Math.max(0,n.getBoundingClientRect().top+window.scrollY-off),
+      behavior:soft?'smooth':'auto'});
+  });
 }
 
 /* ---------- olaylar ---------- */
@@ -1380,9 +1764,9 @@ function bind(){
   document.querySelectorAll('.seg').forEach(g=>g.querySelectorAll('button').forEach(b=>
     b.addEventListener('click',()=>{
       g.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
-      if(b.dataset.range!=null){ RANGE=+b.dataset.range; renderAll(); }
+      if(b.dataset.range!=null){ RANGE=+b.dataset.range; syncRange(); renderAll(); }
     })));
-  bindViews();
+  bindViews(); bindAnchors(); buildAnchors();
   el('themeBtn').addEventListener('click',()=>{
     const r=document.documentElement;
     r.setAttribute('data-theme', r.getAttribute('data-theme')==='dark'?'light':'dark');
@@ -1402,6 +1786,7 @@ function showView(v){
   const titles={ozet:"Özet",aso:"ASO & kelimeler",yorum:"Yorumlar",saglik:"Veri sağlığı"};
   el('pageTitle').textContent = titles[v]||v;
   document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on', b.dataset.view===v));
+  buildAnchors();   /* çıpalar görünüme ait — sekme değişince yeniden türetilir */
   if(v==="aso") renderAso(); else if(v==="yorum") renderYorum(); else if(v==="saglik") renderSaglik();
 }
 
@@ -1472,12 +1857,13 @@ function drawAKw(){
     (rows.length?rows.map(r=>{
       const dl=r.demand_delta==null?null:Number(r.demand_delta);
       const t=VTAG[r.verdict]||["unm",r.verdict];
-      return `<tr><td>${esc(r.term)}</td><td>${FLAG[r.country]||"🏳️"} ${String(r.country).toUpperCase()}</td>
-        <td class="num">${r.demand==null?"–":r.demand}</td>
-        <td class="num ${dl==null?'flat':dl>0?'up':'down'}">${dl==null?"–":(dl>0?"+":"")+dl}</td>
-        <td class="num">${r.in_metadata?"✓":"–"}</td><td class="num">${esc(r.origin||"–")}</td>
-        <td class="num">${r.measured_on||"–"}</td>
-        <td class="num"><span class="tag ${t[0]}">${t[1]}</span></td></tr>`;
+      /* Özet'teki kelime tablosuyla aynı kart grameri (bkz. drawKw). */
+      return `<tr><td>${esc(r.term)}</td><td class="sec" data-l="">${FLAG[r.country]||"🏳️"} ${String(r.country).toUpperCase()}</td>
+        <td class="num sec" data-l="talep">${r.demand==null?"–":r.demand}</td>
+        <td class="num sec ${dl==null?'flat':dl>0?'up':'down'}" data-l="Δ">${dl==null?"–":(dl>0?"+":"")+dl}</td>
+        <td class="num hide-m">${r.in_metadata?"✓":"–"}</td><td class="num hide-m">${esc(r.origin||"–")}</td>
+        <td class="num hide-m">${r.measured_on||"–"}</td>
+        <td class="num pri"><span class="tag ${t[0]}">${t[1]}</span></td></tr>`;
     }).join(""):`<tr><td colspan="8" class="empty">Bu filtreyle eşleşen terim yok</td></tr>`)+`</tbody>`;
   el('aKwCount').textContent=`${rows.length} / ${all.length} terim`;
 }
