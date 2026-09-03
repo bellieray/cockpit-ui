@@ -1102,7 +1102,7 @@
               <option value="sig">Sinyal</option>
             </select>
           </div>
-          <div class="tw"><table class="dt" id="pfTable"></table></div>
+          <div class="tw tw-cards"><table class="dt dt-cards" id="pfTable"></table></div>
           <div class="funnel-note" id="pfNote"></div>
         </div>
 
@@ -1185,7 +1185,7 @@
             <div><div class="card-title">Format kırılımı</div>
                  <div class="card-sub" id="paFmtSub">istek → eşleşme → gösterim, format başına</div></div>
           </div>
-          <div class="tw"><table class="dt" id="paFmtTable"></table></div>
+          <div class="tw tw-cards"><table class="dt dt-cards" id="paFmtTable"></table></div>
           <div class="funnel-note" id="paFmtNote"></div>
         </div>
 
@@ -1195,7 +1195,7 @@
             <div><div class="card-title">Ülke başına para</div>
                  <div class="card-sub">son 30 gün · para ve trafik yan yana</div></div>
           </div>
-          <div class="tw" style="max-height:420px"><table class="dt" id="paCtryTable"></table></div>
+          <div class="tw tw-cards" style="max-height:420px"><table class="dt dt-cards" id="paCtryTable"></table></div>
           <div class="funnel-note">Her iki taraf da AYNI 30 günlük pencereden. Son iki sütun aynı toplamın payları: gelir payı indirme payından belirgin düşükse (kırmızı) o ülke kullanıcı getiriyor ama para getirmiyor; yüksekse (yeşil) az kullanıcıdan çok para geliyor. <b>Bilerek yok:</b> "indirme başına gelir" — o ülkedeki gelir aylar önce indirenler dahil TÜM kullanıcılardan gelirken payda yalnız son 30 günün indirmeleri olurdu; iki farklı kohortu bölmek birim ekonomi gibi görünen ama hiçbir şeyin oranı olmayan bir sayı üretir. Reklam ülkesi cihazın bulunduğu yer, mağaza ülkesi ise hesabın vitrini — çoğunlukla aynı, her zaman değil.</div>
         </div>
 
@@ -1209,7 +1209,7 @@
           <!-- Ödemeye dönüşüm: kaç yeni müşteriden kaçı bir şey satın aldı
                (deneme başlatmak dahil). `revenuecat_charts` konektöründen,
                grain='ratio' — pay/payda ayrı taşınıyor. -->
-          <div class="tw" style="margin-top:14px"><table class="dt" id="paConvTable"></table></div>
+          <div class="tw tw-cards" style="margin-top:14px"><table class="dt dt-cards" id="paConvTable"></table></div>
         </div>
       </div>
     </div>
@@ -2527,13 +2527,13 @@ function renderPortfoy(){
       <th class="num">Puan</th><th class="num">Sinyal</th></tr></thead><tbody>`
     + rows.map(r=>`<tr${r.slug===APP?' style="background:var(--canvas)"':''}>
         <td><b>${esc(r.name)}</b>${r.pre?' <span class="chip flat">lansman öncesi</span>':''}</td>
-        <td class="num">${r.rev?money2(r.rev):'–'}</td>
-        <td class="num"${r.lost?' style="color:var(--down);font-weight:600"':''}>${r.lost?'~'+money2(r.lost):'–'}</td>
-        <td class="num">${r.dl?num(r.dl):'–'}</td>
-        <td class="num">${r.dau!=null?num(r.dau):'–'}</td>
-        <td class="num">${r.users!=null?num(r.users):'–'}</td>
-        <td class="num">${r.rating!=null?r.rating.toFixed(2):'–'}</td>
-        <td class="num">${r.sig.length?`${r.sig.length}${r.sigMoney?` <span style="color:var(--down)">(${r.sigMoney} para)</span>`:''}`:'–'}</td>
+        <td class="num sec" data-l="gelir">${r.rev?money2(r.rev):'–'}</td>
+        <td class="num pri ${r.lost?'down':''}" data-l="masadaki">${r.lost?'~'+money2(r.lost):'–'}</td>
+        <td class="num sec" data-l="indirme">${r.dl?num(r.dl):'–'}</td>
+        <td class="num sec" data-l="günlük aktif">${r.dau!=null?num(r.dau):'–'}</td>
+        <td class="num sec" data-l="kullanıcı">${r.users!=null?num(r.users):'–'}</td>
+        <td class="num sec" data-l="puan">${r.rating!=null?r.rating.toFixed(2):'–'}</td>
+        <td class="num sec ${r.sigMoney?'down':''}" data-l="sinyal">${r.sig.length?`${r.sig.length}${r.sigMoney?` (${r.sigMoney} para)`:''}`:'–'}</td>
       </tr>`).join('')
     + `</tbody>`;
 
@@ -2664,12 +2664,14 @@ function renderPara(){
       <th class="num">Eşleşme %</th><th class="num">Gösterim</th><th class="num">Show %</th>
       <th class="num">eCPM</th><th class="num">Kazanç</th><th class="num">Kaçan</th></tr></thead><tbody>`
     + rows.map(({f,a})=>`<tr${warn(a)?' style="background:rgba(232,112,95,.09)"':''}>
-        <td>${esc(f)}</td><td class="num">${num(a.req)}</td><td class="num">${num(a.matched)}</td>
-        <td class="num">${pct1(a.matchRate)}</td><td class="num">${num(a.imp)}</td>
-        <td class="num"><b>${pct1(a.showRate)}</b></td>
-        <td class="num">${a.rpm==null?'–':money2(a.rpm)}</td>
-        <td class="num">${money2(a.earn)}</td>
-        <td class="num">${num(a.missed)}${missedValue(a)==null?'':` <span style="color:var(--ink-3)">(~${money2(missedValue(a))})</span>`}</td>
+        <td>${esc(f)}</td><td class="num sec" data-l="istek">${num(a.req)}</td>
+        <td class="num sec" data-l="eşleşme">${num(a.matched)}</td>
+        <td class="num sec" data-l="eşleşme">${pct1(a.matchRate)}</td>
+        <td class="num sec" data-l="gösterim">${num(a.imp)}</td>
+        <td class="num pri" data-l="show"><b>${pct1(a.showRate)}</b></td>
+        <td class="num sec" data-l="eCPM">${a.rpm==null?'–':money2(a.rpm)}</td>
+        <td class="num sec" data-l="kazanç">${money2(a.earn)}</td>
+        <td class="num sec ${a.missed?'down':''}" data-l="kaçan">${num(a.missed)}${missedValue(a)==null?'':` (~${money2(missedValue(a))})`}</td>
       </tr>`).join('')
     + `<tr style="font-weight:600"><td>Toplam</td><td class="num">${num(tot.req)}</td>
         <td class="num">${num(tot.matched)}</td><td class="num">${pct1(tot.matchRate)}</td>
@@ -2729,12 +2731,18 @@ function renderPara(){
         const gap=(rShare!=null&&dShare!=null&&(s.dl>=3||a.earn>0))?rShare-dShare:null;
         const mark=gap==null?'':(gap<=-10?' style="color:var(--down);font-weight:600"'
                               : gap>=10?' style="color:var(--up);font-weight:600"':'');
+        // Mobilde pay sütunları .sec olarak alt satıra iniyor ama etiketleri
+        // yanlarında gidiyor — tablonun var oluş sebebi o iki sayının FARKI,
+        // etiketsiz kalsalar okunmaz.
+        const gapCls=gap==null?'':(gap<=-10?'down':gap>=10?'up':'');
         return `<tr><td>${FLAG[c]||"🏳️"} ${esc(String(c).toUpperCase())}</td>
-        <td class="num">${money2(a.earn)}</td><td class="num">${a.rpm==null?'–':money2(a.rpm)}</td>
-        <td class="num">${num(a.imp)}</td><td class="num">${s.imp?num(s.imp):'–'}</td>
-        <td class="num">${s.dl?num(s.dl):'–'}</td>
-        <td class="num"${mark}>${rShare==null?'–':rShare.toFixed(1)+'%'}</td>
-        <td class="num"${mark}>${dShare==null?'–':dShare.toFixed(1)+'%'}</td></tr>`;
+        <td class="num pri" data-l="kazanç">${money2(a.earn)}</td>
+        <td class="num sec" data-l="eCPM">${a.rpm==null?'–':money2(a.rpm)}</td>
+        <td class="num sec" data-l="reklam göst.">${num(a.imp)}</td>
+        <td class="num sec" data-l="mağaza göst.">${s.imp?num(s.imp):'–'}</td>
+        <td class="num sec" data-l="indirme">${s.dl?num(s.dl):'–'}</td>
+        <td class="num sec ${gapCls}" data-l="gelir payı"${mark}>${rShare==null?'–':rShare.toFixed(1)+'%'}</td>
+        <td class="num sec ${gapCls}" data-l="indirme payı"${mark}>${dShare==null?'–':dShare.toFixed(1)+'%'}</td></tr>`;
       }).join('')
     + `</tbody>`;
 
@@ -2761,8 +2769,10 @@ function renderPara(){
   const cTotN=conv.reduce((s,r)=>s+r.n,0), cTotD=conv.reduce((s,r)=>s+r.d,0);
   el('paConvTable').innerHTML=conv.length
     ? `<thead><tr><th>Dönem</th><th class="num">Yeni müşteri</th><th class="num">Ödeyen</th><th class="num">Oran</th></tr></thead><tbody>`
-      + conv.map(r=>`<tr><td>${esc(r.day)}</td><td class="num">${num(r.d)}</td>
-          <td class="num">${num(r.n)}</td><td class="num">${r.d?pct1(r.n/r.d):'–'}</td></tr>`).join('')
+      + conv.map(r=>`<tr><td>${esc(r.day)}</td>
+          <td class="num sec" data-l="yeni">${num(r.d)}</td>
+          <td class="num sec" data-l="ödeyen">${num(r.n)}</td>
+          <td class="num pri" data-l="oran">${r.d?pct1(r.n/r.d):'–'}</td></tr>`).join('')
       + `<tr style="font-weight:600"><td>Toplam</td><td class="num">${num(cTotD)}</td>
           <td class="num">${num(cTotN)}</td><td class="num">${cTotD?pct1(cTotN/cTotD):'–'}</td></tr></tbody>`
     : `<tbody><tr><td style="color:var(--ink-3)">Ödemeye dönüşüm — revenuecat_charts konektörü henüz koşmadı.</td></tr></tbody>`;
