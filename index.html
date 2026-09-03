@@ -2312,10 +2312,19 @@ function renderPara(){
   el('paImp').textContent=num(tot.imp);
   el('paRpm').textContent=tot.rpm==null?'–':money2(tot.rpm);
   el('paMiss').textContent=num(tot.missed);
-  const mv=missedValue(tot);
-  el('paMissSub').textContent=mv==null
-    ? 'dolu geldi, basılmadı'
-    : `dolu geldi, basılmadı · ~${money2(mv)} tahmini`;
+  // WHY toplamın KENDİ eCPM'i DEĞİL, format başına toplam: kaçan gösterimler
+  // yüksek eCPM'li formatlarda yoğunlaşıyor (rewarded $31, interstitial $24 —
+  // banner $0.58). Harmanlanmış eCPM ile çarpmak kaybı KAT KAT eksik gösterir
+  // ve üstelik alttaki tablonun kendi satırlarının toplamıyla çelişirdi.
+  // eCPM'i ölçülmemiş format (hiç gösterim almamış) toplama HİÇ katılmıyor;
+  // kaybı sıfır değil, BİLİNMİYOR — bu yüzden not "en az" diyor.
+  const perFmt=[...new Set(fmtRows.map(r=>r.format))]
+    .map(f=>({f, a:adAgg(fmtRows.filter(r=>r.format===f))}));
+  const missSum=perFmt.reduce((s,x)=>s+(missedValue(x.a)||0),0);
+  const unpriced=perFmt.filter(x=>x.a.missed>0 && x.a.rpm==null);
+  el('paMissSub').textContent=missSum
+    ? `dolu geldi, basılmadı · en az ~${money2(missSum)}`
+    : 'dolu geldi, basılmadı';
 
   drawRevenueTimeline(fmtRows);
 
@@ -2343,9 +2352,12 @@ function renderPara(){
         <td class="num">${num(tot.missed)}</td></tr></tbody>`;
 
   const bad=rows.filter(r=>warn(r.a));
-  el('paFmtNote').textContent = bad.length
-    ? `Eşleşme %, AdMob'un dolu reklam döndürme oranı — bizim elimizde değil. Show %, dolu gelen reklamın ekrana basılma oranı — TAMAMEN bizim kodumuzda. Kırmızı satırlarda (${bad.map(r=>r.f).join(', ')}) envanter geliyor ama basılmıyor. eCPM tahmini kaçan gösterime o formatın kendi ölçülmüş eCPM'i uygulanarak çıkarıldı; hiç gösterim almamış formatın eCPM'i bilinmediği için orada tahmin YOK.`
-    : `Show % dolu gelen reklamın ekrana basılma oranı; bu oran bizim kodumuzda. Şu an %50'nin altında kalan format yok.`;
+  const unpricedTxt=unpriced.length
+    ? ` ${unpriced.map(x=>x.f).join(', ')} hiç gösterim almadığı için eCPM'i BİLİNMİYOR — kaybı sıfır değil, ölçülemiyor ve toplama katılmıyor; gerçek kayıp yazandan yüksek.`
+    : '';
+  el('paFmtNote').textContent = (bad.length
+    ? `Eşleşme %, AdMob'un dolu reklam döndürme oranı — bizim elimizde değil. Show %, dolu gelen reklamın ekrana basılma oranı — TAMAMEN bizim kodumuzda. Kırmızı satırlarda (${bad.map(r=>r.f).join(', ')}) envanter geliyor ama basılmıyor. Para tahmini, kaçan gösterime o formatın KENDİ ölçülmüş eCPM'i uygulanarak çıkarıldı.`
+    : `Show % dolu gelen reklamın ekrana basılma oranı; bu oran bizim kodumuzda. Şu an %50'nin altında kalan format yok.`) + unpricedTxt;
 
   // Ülke — backend sabit 30 günlük pencere veriyor (aralık seçicisine bağlı
   // DEĞİL). Başlıkta böyle yazıyor; kartın kendi penceresini gizlemek panelin
