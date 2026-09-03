@@ -168,6 +168,25 @@
   .chart svg{display:block;width:100%;height:230px;overflow:visible}
   .xaxis{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-3);margin-top:10px}
 
+  /* === sürüm işaret bandı === İşaretler çizim alanının İÇİNE değil, eksenin
+     hemen ALTINDAKİ ayrı bir şeride basılıyor (bkz. docs/backlog.md round 5,
+     B2 / round 4, B10): grafiğin üstünden geçen dikey çizgi telefonda seriyi
+     okunmaz yapıyor. Konumlar SVG'nin x(i) geometrisiyle aynı yüzdeyi
+     kullanıyor — .xaxis'in space-between'i ile DEĞİL (o etiketleri veri
+     noktasına ortalamaz). */
+  .mband{position:relative;height:22px;margin-top:4px}
+  .mk{position:absolute;top:0;transform:translateX(-50%);display:flex;flex-direction:column;
+      align-items:center;gap:2px;white-space:nowrap;cursor:pointer;border:0;background:0;padding:0}
+  .mk i{width:1px;height:5px;background:var(--ink-3);display:block}
+  .mk b{font:700 10px/1 Sora,sans-serif;color:var(--ink-2);background:var(--canvas);
+        border-radius:var(--r-pill);padding:3px 8px}
+  .mk:hover b,.mk.on b{background:var(--violet-soft);color:var(--violet)}
+  /* kenar kırpılmasını önle: ilk/son güne düşen işaret ortalanırsa kartın
+     dışına taşar (ilk gün = %0). */
+  .mk.edge-l{transform:none;align-items:flex-start}
+  .mk.edge-r{transform:none;align-items:flex-end;left:auto!important;right:0}
+  .mnote{font-size:11.5px;color:var(--ink-3);margin-top:8px;min-height:18px}
+
   /* === filtreler === */
   .filters{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:14px}
   .filters select,.filters input{font:inherit;font-size:12.5px;color:var(--ink);background:var(--canvas);
@@ -203,6 +222,13 @@
   .tag.fresh-ok{background:var(--canvas);color:var(--ink-3)}
   .tag.fresh-warn{background:var(--amber-soft);color:var(--amber)}
   .tag.fresh-bad{background:var(--down-soft);color:var(--down)}
+  /* === sürüm hattı durum çipi === Tazelik rozetiyle aynı renk üçlüsü ama ayrı
+     sınıf: anlamı "veri eskimiş mi" değil, "sürüm hangi aşamada". Canlı = marka
+     rengi (iyi durum), hatta bekleyen = amber, ret = kırmızı. */
+  .tag.st-ok{background:var(--brand-soft);color:var(--brand)}
+  .tag.st-warn{background:var(--amber-soft);color:var(--amber)}
+  .tag.st-bad{background:var(--down-soft);color:var(--down)}
+  .crumb .tag{margin-left:6px;vertical-align:1px}
   .up{color:var(--up)}.down{color:var(--down)}.flat{color:var(--ink-3)}
 
   /* === bayrak kutucukları === */
@@ -447,7 +473,7 @@
       <!-- büyük grafik -->
       <div class="card c8">
         <div class="card-head">
-          <div><div class="card-title">Trafik ve indirme</div><div class="card-sub">Günlük ölçüm · 27 Ağu – 1 Eyl</div></div>
+          <div><div class="card-title">Trafik ve indirme</div><div class="card-sub" id="chartSub">–</div></div>
           <div class="legend" id="chartLegend">
             <span class="li" data-s="imp"><span class="dot" style="background:var(--violet)"></span>Gösterim</span>
             <span class="li" data-s="pv"><span class="dot" style="background:var(--amber)"></span>Sayfa</span>
@@ -460,7 +486,10 @@
           <select id="chartCountry"></select>
           <span class="fcount" id="chartCount"></span>
         </div>
-        <div class="chart"><svg id="chartSvg" viewBox="0 0 600 230"></svg><div class="xaxis" id="chartX"></div></div>
+        <div class="chart"><svg id="chartSvg" viewBox="0 0 600 230"></svg>
+          <div class="mband" id="chartMarks"></div>
+          <div class="xaxis" id="chartX"></div></div>
+        <div class="mnote" id="chartMarkNote"></div>
       </div>
 
       <!-- gauge -->
@@ -778,6 +807,8 @@ const SRCCOL=["var(--violet)","var(--brand)","var(--amber)","var(--ink-3)","var(
 const esc=s=>String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 const num=v=>v==null?"–":Number(v).toLocaleString("tr");
 const money=v=>v==null?"–":"$"+Number(v).toLocaleString("en-US",{maximumFractionDigits:0});
+const MON=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
+const dShort=iso=>iso?`${+String(iso).slice(8,10)} ${MON[+String(iso).slice(5,7)-1]||"?"}`:"?";
 const el=id=>document.getElementById(id);
 const METRIC={imp:"store_impression",pv:"store_page_view",dl:"downloads_first_time",tap:"store_tap",rev:"ad_estimated_earnings"};
 // self (rakip değil) tekil "stock" ölçümü — RC'nin Overview API'sinden gelen
@@ -876,6 +907,82 @@ function freshBadge(iso,label){
   const pre=label?esc(label)+' · ':'';
   return `<span class="tag ${cls}" title="son güncelleme: ${esc(iso)}">${pre}${txt}</span>`;
 }
+/* === sürüm işaretleri (ortak primitif) ===
+   `versionMarks()` veriden işaretleri çıkarır, `drawMarkers()` onları verilen
+   banda basar. İkisi ayrı: gelir sparkline'ı ya da arama görünürlüğü serisi
+   eklendiğinde aynı işaret listesi başka bir banda da basılabilsin diye.
+
+   NEDEN yalnız `released_at` (itunes_lookup'ın `currentVersionReleaseDate`'i)
+   ve `asc_versions`'ın `createdDate`'i DEĞİL: createdDate, sürümün App Store
+   Connect'te AÇILDIĞI an — yayına çıktığı an değil (1.0.2'de iki gün fark
+   var). Grafiğe yaklaşık tarih basmaktansa işareti hiç basmıyoruz; her sürüm
+   bir kez "güncel" olduğunda kesin tarihiyle yakalanıyor, geçmiş kendiliğinden
+   dolacak. */
+function versionMarks(){
+  const by={};
+  (D.docs||[]).filter(d=>d.slug===APP&&d.subject==='self'&&d.version&&d.released_at)
+    .forEach(d=>{ by[d.version]=String(d.released_at).slice(0,10); }); /* ülke kopyaları aynı tarihi taşır */
+  return Object.keys(by).map(v=>({day:by[v],label:'v'+v,version:v}))
+    .sort((a,b)=>a.day<b.day?-1:a.day>b.day?1:0);
+}
+function drawMarkers(bandId, noteId, days, marks){
+  const band=el(bandId), note=noteId?el(noteId):null;
+  if(note) note.textContent='';
+  if(!band) return;
+  if(days.length<2||!marks.length){ band.innerHTML=''; return; }
+  const first=days[0], last=days[days.length-1];
+  band.innerHTML=marks.map((m,i)=>{
+    if(m.day<first||m.day>last) return '';
+    let idx=days.indexOf(m.day);
+    if(idx<0) idx=days.findIndex(d=>d>=m.day);   /* o gün ölçüm yoksa sonraki ölçülen güne düş */
+    if(idx<0) return '';
+    const pct=idx/(days.length-1)*100;
+    const edge=pct<=6?' edge-l':pct>=94?' edge-r':'';
+    return `<button class="mk${edge}" style="left:${pct.toFixed(1)}%" data-i="${i}"
+      title="${esc(m.label)} · ${esc(m.day)} tarihinde App Store'da yayınlandı"><i></i><b>${esc(m.label)}</b></button>`;
+  }).join('');
+  band.onclick=e=>{
+    const b=e.target.closest('.mk'); if(!b) return;
+    band.querySelectorAll('.mk').forEach(x=>x.classList.toggle('on',x===b));
+    const m=marks[+b.dataset.i];
+    if(note) note.textContent=`${m.label} — ${m.day} tarihinde App Store'da yayınlandı. Yayın tarihi iTunes'un currentVersionReleaseDate alanından; ölçüm günleriyle aynı takvimde.`;
+  };
+}
+
+/* === sürüm hattı durum çipi === (bkz. docs/backlog.md round 6, A7)
+   `asc_versions` her sürümün `appStoreState`'ini doc_snapshot.subtitle'a
+   yazıyor. Panel telefondan yönetildiği için çip, kaydırmadan görünen tek
+   yere — başlığın altındaki crumb satırına — konuyor. */
+const VSTATE={
+  READY_FOR_SALE:["canlı","ok"], REPLACED_WITH_NEW_VERSION:["değiştirildi","ok"],
+  PREPARE_FOR_SUBMISSION:["hazırlanıyor","warn"], WAITING_FOR_REVIEW:["inceleme sırasında","warn"],
+  IN_REVIEW:["incelemede","warn"], PENDING_DEVELOPER_RELEASE:["yayına hazır","warn"],
+  PENDING_APPLE_RELEASE:["Apple yayınını bekliyor","warn"], PROCESSING_FOR_APP_STORE:["işleniyor","warn"],
+  REJECTED:["reddedildi","bad"], METADATA_REJECTED:["metadata reddi","bad"],
+  DEVELOPER_REJECTED:["geri çekildi","bad"], INVALID_BINARY:["geçersiz binary","bad"],
+  REMOVED_FROM_SALE:["satıştan kaldırıldı","bad"], DEVELOPER_REMOVED_FROM_SALE:["satıştan kaldırıldı","bad"],
+};
+const ageTxt=iso=>{ if(!iso) return ''; const n=Math.floor((Date.now()-new Date(iso).getTime())/86400000);
+  return n<=0?'bugün':n===1?'1g':n+'g'; };
+function versionChip(){
+  const rows=(D.docs||[]).filter(d=>d.slug===APP&&d.subject==='self'&&!d.country&&d.subtitle&&d.version);
+  if(!rows.length) return '';
+  const byVer=(a,b)=>String(a.version).localeCompare(String(b.version),undefined,{numeric:true});
+  const live=rows.filter(r=>r.subtitle==='READY_FOR_SALE').sort(byVer).pop();
+  const flight=rows.filter(r=>!['READY_FOR_SALE','REPLACED_WITH_NEW_VERSION'].includes(r.subtitle)).sort(byVer).pop();
+  const marks=versionMarks(), out=[];
+  if(live){
+    const rel=(marks.find(m=>m.version===live.version)||{}).day;
+    out.push(`<span class="tag st-ok" title="${rel?"yayın tarihi: "+esc(rel):"App Store Connect durumu: READY_FOR_SALE"}">${esc(live.version)} · canlı${rel?' · '+ageTxt(rel):''}</span>`);
+  }
+  if(flight){
+    const s=VSTATE[flight.subtitle]||[String(flight.subtitle).toLowerCase(),'warn'];
+    const a=ageTxt(flight.created_at);
+    out.push(`<span class="tag st-${s[1]}" title="App Store Connect: ${esc(flight.subtitle)}${flight.created_at?" · sürüm kaydı "+esc(String(flight.created_at).slice(0,10))+" tarihinde açıldı":""}">${esc(flight.version)} · ${esc(s[0])}${a?' · '+a:''}</span>`);
+  }
+  return out.join('');
+}
+
 function drawRevenue(){
   const mrr=stockValue('rc_mrr'), subs=stockValue('rc_active_subscriptions'),
         trials=stockValue('rc_active_trials'), adRev=sumMetric(rangeDays(),'rev');
@@ -888,9 +995,17 @@ function drawKpis(){
   const cur={imp:sumMetric(days,'imp'),pv:sumMetric(days,'pv'),dl:sumMetric(days,'dl')};
   const old={imp:sumMetric(prev,'imp'),pv:sumMetric(prev,'pv'),dl:sumMetric(prev,'dl')};
   const conv = cur.imp ? cur.dl/cur.imp*100 : 0;
-  el('kImp').textContent=num(cur.imp); el('kImpD').innerHTML=chip(pctDelta(cur.imp,old.imp),cur.imp);
-  el('kPv').textContent=num(cur.pv);   el('kPvD').innerHTML=chip(pctDelta(cur.pv,old.pv),cur.pv);
-  el('kDl').textContent=num(cur.dl);   el('kDlD').innerHTML=chip(pctDelta(cur.dl,old.dl),cur.dl);
+  // WHY: önceki pencere seçili pencereden KISAysa (ölçüm daha yeni başladıysa)
+  // oran karşılaştırması yalan söyler — 7 günlük toplamı 1 güne bölmek
+  // "▲%1468" üretiyordu. Eksik pencerede yön iddia etmiyoruz; kaç gün
+  // olduğunu söylüyoruz.
+  const shortPrev = prev.length>0 && prev.length<days.length;
+  const dchip=(c,o)=> shortPrev
+    ? `<span class="chip flat" title="önceki dönemde yalnız ${prev.length} gün ölçüm var; ${days.length} günle karşılaştırmak yanıltıcı olurdu">önceki dönem eksik</span>`
+    : chip(pctDelta(c,o),c);
+  el('kImp').textContent=num(cur.imp); el('kImpD').innerHTML=dchip(cur.imp,old.imp);
+  el('kPv').textContent=num(cur.pv);   el('kPvD').innerHTML=dchip(cur.pv,old.pv);
+  el('kDl').textContent=num(cur.dl);   el('kDlD').innerHTML=dchip(cur.dl,old.dl);
   el('kConv').textContent=(conv||0).toFixed(1)+"%";
   el('gaugeVal').textContent=(conv||0).toFixed(1)+"%";
   el('gaugeLb').textContent=`${num(cur.imp)} gösterim → ${num(cur.dl)} indirme`;
@@ -966,6 +1081,8 @@ function drawChart(){
   el('chartSvg').innerHTML=svg;
   el('chartX').innerHTML=days.map(d=>`<span>${d.slice(5).replace('-','.')}</span>`).join("");
   el('chartCount').textContent=`${on.length} seri · ${days.length} gün · tepe ${num(max)}`;
+  el('chartSub').textContent=`Günlük ölçüm · ${dShort(days[0])} – ${dShort(days[days.length-1])}`;
+  drawMarkers('chartMarks','chartMarkNote',days,versionMarks());
 }
 
 /* ---------- kaynak ---------- */
@@ -1046,12 +1163,19 @@ let kwVerdict="ALL";
 // kalıcı DISABLED, cookie-session API otomatikleştirilemiyor). Panel bunun
 // yaşını `panel.connector.config->>'last_manual_run'`'dan okuyor — tek
 // tazelik primitifi (freshBadge), Veri sağlığı ile aynı sözlük.
+// Üç ayrı durum, üç ayrı cevap (boş-durum sözleşmesi, bkz. round 6 B3):
+// kaynak bu uygulamada YOK → hiçbir şey yazma; var ama hiç çekilmemiş → kırmızı
+// rozet; çekilmiş → yaşına göre rozet. "tarih yok" diye gri bir kuyruk bırakmak
+// AstroScope'ta anlamsız gürültüydü.
 function asaFreshness(){
   const b=(D.blocked||[]).find(x=>x.slug===APP && x.source==='asa_popularity');
-  return b?freshBadge(b.last_manual_run,'ASA talep'):'';
+  if(!b) return '';
+  return b.last_manual_run ? freshBadge(b.last_manual_run,'ASA talep')
+    : '<span class="tag fresh-bad" title="konektör kapalı ve elle de hiç çekilmemiş">ASA talep · hiç çekilmedi</span>';
 }
 function drawKw(){
-  el('kwFresh').innerHTML='· '+(asaFreshness()||'tarih yok');
+  const asa=asaFreshness();
+  el('kwFresh').innerHTML=asa?'· '+asa:'';
   const all=gapsFor();
   const c=el('kwCountry').value, q=el('kwSearch').value.trim().toLowerCase(), s=el('kwSort').value;
   let rows=all.filter(r=>(!c||r.country===c)&&(kwVerdict==='ALL'||r.verdict===kwVerdict)&&(!q||r.term.toLowerCase().includes(q)));
@@ -1174,7 +1298,9 @@ function fillSelects(){
 function renderAll(){
   const days=rangeDays();
   const a=(D.apps||[]).find(x=>x.slug===APP);
-  el('crumb').textContent=`${a?.name||APP} · App Store · ${days[0]||"?"} – ${days[days.length-1]||"?"}`;
+  // Sürüm durum çipi crumb'ta: telefonda kaydırmadan görünen tek satır burası,
+  // ve "hangi sürüm canlı / hatta ne var" sorusu tek bir sekmeye ait değil.
+  el('crumb').innerHTML=`${esc(a?.name||APP)} · App Store · ${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}${versionChip()}`;
   fillSelects(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   if(VIEW==='aso') renderAso(); else if(VIEW==='yorum') renderYorum(); else if(VIEW==='saglik') renderSaglik();
 }
