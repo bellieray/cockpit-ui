@@ -702,7 +702,7 @@
       <div class="grid">
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#22bfa3,#0c8571)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.6 5.6 6.4.8-4.7 4.3 1.2 6.3L12 17l-5.5 3 1.2-6.3L3 9.4l6.4-.8z"/></svg></span>
-          <span class="kpi-name">Bizim puanımız<br><span class="card-sub">ömür boyu · tüm oylar</span></span></div>
+          <span class="kpi-name">Bizim puanımız<br><span class="card-sub">ömür boyu · yıldız oyları</span></span></div>
           <div class="kpi-val tnum" id="yRating">–</div><div class="kpi-foot" id="yVotes"></div>
           <div class="kpi-foot" id="yRating30"></div></div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#7679e4,#4f53c9)">
@@ -1242,6 +1242,9 @@ function drawRing(){
 // "yer açma protokolü" bütçesini hiç harcamıyor. Özne başına EN YENİ sürüm
 // (ülke kopyaları aynı tarihi taşır).
 function latestReleases(){
+  // NOT: `versionMarks()` yalnız subject='self' alıyor, bu fonksiyon TÜM özneleri
+  // (biz + rakipler) döndürüyor — kasıtlı: biri grafiğe kendi sürümümüzü basıyor,
+  // diğeri listede herkesin son sürümünü gösteriyor.
   const by={};
   (D.docs||[]).filter(d=>d.slug===APP&&d.version&&d.released_at).forEach(d=>{
     const day=String(d.released_at).slice(0,10);
@@ -1487,7 +1490,18 @@ function renderYorum(){
   const rat=st.filter(r=>r.metric==='store_rating_avg').map(r=>Number(r.value));
   const vot=st.filter(r=>r.metric==='store_rating_count').map(r=>Number(r.value));
   el('yRating').textContent=rat.length?Math.max(...rat).toFixed(2):"–";
-  el('yVotes').textContent=vot.length?`${num(Math.max(...vot))} oy · tüm oylar`:"henüz oy yok";
+  // WHY bu satır mağazayı da söylüyor: `store_rating_count` MAĞAZA BAŞINA geliyor
+  // (iTunes lookup, storefront başına ayrı sorgu) ve burada en yükseği gösteriliyor;
+  // hemen altındaki "N yazılı yorum" ise TÜM mağazalardan toplanan yorum sayısı.
+  // İkisi farklı uçlardan, farklı kapsamda — etiketsiz yan yana durunca "3 oyun
+  // içinde 5 yorum" gibi bozuk aritmetik okunuyordu. Sayılar doğru, eksik olan
+  // kapsam etiketiydi.
+  const vRows=st.filter(r=>r.metric==='store_rating_count'&&Number(r.value)>0);
+  const vMax=vot.length?Math.max(...vot):0;
+  const vCc=vRows.filter(r=>Number(r.value)===vMax).map(r=>String(r.country||'').toUpperCase()).filter(Boolean);
+  el('yVotes').textContent=vMax
+    ? `${num(vMax)} yıldız oyu${vCc.length===1?' · '+vCc[0]+' mağazası':''}`
+    : "henüz yıldız oyu yok";
   // A3 — son 30 gün puanı, ömür boyunun YANINDA (bkz. docs/backlog.md round 5).
   // WHY ok (▲/▼) YOK: iki sayı aynı kitleden değil. Ömür boyu puan yıldız-only
   // oyları da içeriyor (iTunes), son 30 gün yalnız YAZILI yorumlardan geliyor —
