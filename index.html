@@ -304,7 +304,8 @@
   .lb.self .lb-name,.lb.self .lb-star{color:var(--brand)}
   /* son 14 günde sürüm çıkaran özne — "rakip hareketi" sinyali ayrı bir
      karta değil, zaten baktığın satıra gömülü (bkz. round 6, A2). */
-  .lb-new{color:var(--amber);font-weight:700}
+  .lb-rel{display:block;font-size:11.5px;color:var(--ink-3);margin-top:1px}
+  .lb-rel.new{color:var(--amber);font-weight:700}
 
   /* === yorumlar === */
   .revlist{max-height:460px;overflow:auto;margin:0 -4px;padding:0 4px}
@@ -955,7 +956,7 @@ function drawMarkers(bandId, noteId, days, marks){
     const b=e.target.closest('.mk'); if(!b) return;
     band.querySelectorAll('.mk').forEach(x=>x.classList.toggle('on',x===b));
     const m=marks[+b.dataset.i];
-    if(note) note.textContent=`${m.label} — ${m.day} tarihinde App Store'da yayınlandı. Yayın tarihi iTunes'un currentVersionReleaseDate alanından; ölçüm günleriyle aynı takvimde.`;
+    if(note) note.textContent=`${m.label} · ${dShort(m.day)} tarihinde App Store'da yayınlandı (kaynak: iTunes yayın tarihi).`;
   };
 }
 
@@ -1277,16 +1278,19 @@ function drawLb(){
     const bits=[`${num(r.votes)} oy`];
     if(r.size) bits.push(`${r.size} MB`);
     if(r.r30) bits.push(`son 30g ★ ${Number(r.r30.avg30).toFixed(2)} (${r.r30.n30})`);
+    // Sürüm hareketi KENDİ satırında: ayrı bir olgu, ölçüm listesinin kuyruğu
+    // değil — mobilde araya sarktığında satır sonunda sahipsiz bir "·" kalıyordu.
+    let relLine='';
     if(r.rel){
       const fresh=r.relAge!=null&&r.relAge<=RECENT_RELEASE_DAYS;
-      const age=r.relAge===0?'bugün':r.relAge===1?'dün':`${r.relAge}g önce`;
-      bits.push(`<span class="${fresh?'lb-new':''}" title="${esc(r.rel.day)} tarihinde yayınlandı">v${esc(r.rel.version)}, ${age}</span>`);
+      const age=r.relAge===0?'bugün':r.relAge===1?'dün':`${r.relAge} gün önce`;
+      relLine=`<span class="lb-rel${fresh?' new':''}" title="${esc(r.rel.day)} tarihinde yayınlandı">v${esc(r.rel.version)} · ${age}</span>`;
     }
     return `
     <div class="lb${r.self?' self':''}">
       <div class="lb-top"><span class="lb-av">${esc((r.name||"?")[0])}</span>
         <span style="flex:1;min-width:0"><span class="lb-name">${esc(r.name)}</span><br>
-          <span class="lb-sub">${bits.join(" · ")}</span></span>
+          <span class="lb-sub">${bits.join(" · ")}</span>${relLine}</span>
         <span class="lb-star">${r.rating!=null?"★ "+Number(r.rating).toFixed(2):"–"}</span></div>
       <div class="lb-track"><div class="lb-fill" style="width:${barW(r).toFixed(1)}%"></div></div>
     </div>`}).join("") : `<div class="empty">Bu uygulama için puan ölçümü yok</div>`;
