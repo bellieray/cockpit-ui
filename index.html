@@ -1189,8 +1189,15 @@ function renderDelta(markerDay,label){
   const host=el('chartMarkDelta'); if(!host) return;
   const d=experimentDelta(markerDay);
   if(!d){ host.innerHTML=''; return; }
+  // WHY: aynı "önceki dönem eksik" kuralı (bkz. ea2612b) — önce/sonra
+  // pencereleri farklı uzunluktaysa (ör. sürüm 1 gün önce çıktı, sonrası
+  // 7 gün) ham toplamları kıyaslamak %1468 gibi sahte bir sıçrama üretir;
+  // pencere kısaysa yön iddia ETMEDEN "eksik" göster.
+  const shortBefore=d.beforeDays.length<d.afterDays.length;
   const rowHtml=r=>`<tr><td>${esc(r.label)}</td><td class="num">${num(r.before)}</td>
-    <td class="num">${num(r.after)}</td><td class="num">${chip(r.delta,r.after)}</td></tr>`;
+    <td class="num">${num(r.after)}</td><td class="num">${shortBefore
+      ?`<span class="chip flat" title="önce penceresi yalnız ${d.beforeDays.length} gün — ${d.afterDays.length} günle kıyaslamak yanıltıcı olurdu">önceki dönem eksik</span>`
+      :chip(r.delta,r.after)}</td></tr>`;
   const convTxt=v=>v==null?'–':v.toFixed(1)+'%';
   host.innerHTML=`<div class="mdelta-title">${esc(label)} — ${d.beforeDays.length}g önce · ${d.afterDays.length}g sonra</div>
     <table><thead><tr><th></th><th>önce</th><th>sonra</th><th>Δ</th></tr></thead><tbody>
