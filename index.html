@@ -941,6 +941,52 @@
           <div id="upTxSpark"></div>
         </div>
 
+        <!-- Aktiflik: kaç kişi uygulamayı GERÇEKTEN açıyor. `app_export`'un
+             "kayıtlı kullanıcı / aktif hane" sayılarından farklı — orası bizim
+             veritabanımızdaki kayıt, burası RevenueCat SDK'sının her açılışta
+             gördüğü kişi. 28 günlük değerler `revenuecat` (overview) ile
+             HAZIR geliyor; günlük/haftalık seri `revenuecat_charts`
+             konektörüyle geliyor. -->
+        <div class="c12 region-label">Aktiflik</div>
+        <div class="card c3">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            </span>
+            <span class="kpi-name">Günlük aktif<br><span class="card-sub">uygulamayı açan kişi</span></span>
+          </div>
+          <div class="kpi-val tnum" id="upDau">–</div>
+          <div id="upDauSpark"></div>
+        </div>
+        <div class="card c3">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            </span>
+            <span class="kpi-name">Haftalık aktif<br><span class="card-sub">tekilleştirilmiş</span></span>
+          </div>
+          <div class="kpi-val tnum" id="upWau">–</div>
+          <div id="upWauSpark"></div>
+        </div>
+        <div class="card c3">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </span>
+            <span class="kpi-name">28 günlük aktif<br><span class="card-sub" id="upMauSub">RevenueCat · güncel</span></span>
+          </div>
+          <div class="kpi-val tnum" id="upMau">–</div>
+        </div>
+        <div class="card c3">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
+            </span>
+            <span class="kpi-name">28 günlük yeni müşteri<br><span class="card-sub">RC ilk kez gördü</span></span>
+          </div>
+          <div class="kpi-val tnum" id="upNewCust">–</div>
+        </div>
+
         <div class="c12 region-label">Ürün sağlığı</div>
         <div class="card c3">
           <div class="kpi-top">
@@ -1072,6 +1118,10 @@
           </div>
           <div class="srcgrid" id="paSubGrid"></div>
           <div class="funnel-note" id="paSubNote"></div>
+          <!-- Ödemeye dönüşüm: kaç yeni müşteriden kaçı bir şey satın aldı
+               (deneme başlatmak dahil). `revenuecat_charts` konektöründen,
+               grain='ratio' — pay/payda ayrı taşınıyor. -->
+          <div class="tw" style="margin-top:14px"><table class="dt" id="paConvTable"></table></div>
         </div>
       </div>
     </div>
@@ -2125,8 +2175,13 @@ function stockSeriesFor(metric){
 // app_export bugün kuruldu — 1-2 günlük geçmişle bir çizgi çizmek sahte bir
 // trend izlenimi verir (bkz. round 5/6 gürültü/dürüstlük ilkesi). En az 3
 // gün birikene kadar dürüst bir bekleme notu basılır.
-function sparkline(metric){
+/* `empty`: hiç satır yokken ne yazılacağı. Varsayılan "geçmiş birikiyor"
+   metni, konektörün ÇALIŞTIĞI ama henüz az gün biriktirdiği durumu anlatıyor.
+   Konektör hiç koşmamışsa bu yanıltıcı olur — "birikiyor" der, oysa hiçbir şey
+   birikmiyor. Bu yüzden çağıran taraf kendi metnini verebiliyor. */
+function sparkline(metric, empty){
   const pts=stockSeriesFor(metric);
+  if(!pts.length && empty) return `<div class="spark-note">${esc(empty)}</div>`;
   if(pts.length<3) return `<div class="spark-note">geçmiş birikiyor · ${pts.length} gün ölçüldü</div>`;
   const vals=pts.map(p=>p.v), min=Math.min(...vals), max=Math.max(...vals), w=100, h=26;
   const path=pts.map((p,i)=>{
@@ -2253,6 +2308,21 @@ function renderPara(){
   el('paSubNote').textContent=(users&&!subs)
     ? `Kayıtlı ${num(users)} kullanıcıdan hiçbiri abone değil. Reklam tek gelir kaynağı.`
     : '';
+
+  // Ödemeye dönüşüm — kohort dönemi başına. Oran pay/paydadan hesaplanıyor;
+  // RC'nin kendi hazır oranı KULLANILMIYOR çünkü dönemleri toplarken ham
+  // oranların ortalaması küçük dönemi büyük dönem kadar ağırlıklandırır.
+  const conv=(D.stockSeries||[]).filter(r=>r.slug===APP && r.metric==='rc_initial_conversion')
+    .map(r=>({day:r.day, n:Number(r.num||0), d:Number(r.den||0)}))
+    .sort((a,b)=>a.day<b.day?1:-1);
+  const cTotN=conv.reduce((s,r)=>s+r.n,0), cTotD=conv.reduce((s,r)=>s+r.d,0);
+  el('paConvTable').innerHTML=conv.length
+    ? `<thead><tr><th>Dönem</th><th class="num">Yeni müşteri</th><th class="num">Ödeyen</th><th class="num">Oran</th></tr></thead><tbody>`
+      + conv.map(r=>`<tr><td>${esc(r.day)}</td><td class="num">${num(r.d)}</td>
+          <td class="num">${num(r.n)}</td><td class="num">${r.d?pct1(r.n/r.d):'–'}</td></tr>`).join('')
+      + `<tr style="font-weight:600"><td>Toplam</td><td class="num">${num(cTotD)}</td>
+          <td class="num">${num(cTotN)}</td><td class="num">${cTotD?pct1(cTotN/cTotD):'–'}</td></tr></tbody>`
+    : `<tbody><tr><td style="color:var(--ink-3)">Ödemeye dönüşüm — revenuecat_charts konektörü henüz koşmadı.</td></tr></tbody>`;
 }
 
 function renderUrun(){
@@ -2270,6 +2340,29 @@ function renderUrun(){
   el('upNewSub').textContent=`son 7g: ${num(nu7)} · son 30g: ${num(nu30)}`;
   el('upTx').textContent=num(tx);
   el('upTxSpark').innerHTML=sparkline('app_export_total_transactions');
+
+  // Aktiflik. `stockSeriesFor` son günün değerini verir; 28 günlükler
+  // `stockValue` ile (overview konektöründen, tek anlık görüntü).
+  //
+  // WHY ayrı boş-durum metni: günlük/haftalık seriyi `revenuecat_charts`
+  // konektörü yazıyor. O konektör henüz dağıtılmadıysa satır HİÇ yoktur ve
+  // "geçmiş birikiyor" demek yalan olurdu — hiçbir şey birikmiyor.
+  const dauPts=stockSeriesFor('rc_active_customers_1d');
+  const wauPts=stockSeriesFor('rc_active_customers_7d');
+  const pending='revenuecat_charts konektörü henüz koşmadı';
+  el('upDau').textContent=dauPts.length?num(dauPts[dauPts.length-1].v):'–';
+  el('upDauSpark').innerHTML=sparkline('rc_active_customers_1d',pending);
+  el('upWau').textContent=wauPts.length?num(wauPts[wauPts.length-1].v):'–';
+  el('upWauSpark').innerHTML=sparkline('rc_active_customers_7d',pending);
+
+  const mau=stockValue('rc_active_users_28d'), newCust=stockValue('rc_new_customers_28d');
+  el('upMau').textContent=num(mau);
+  el('upNewCust').textContent=num(newCust);
+  // Kayıtlı kullanıcıyla kıyas: "86 aktif" tek başına iyi mi kötü mü belli
+  // değil; kayıtlının kaçta kaçı olduğu belli.
+  el('upMauSub').textContent=(users&&mau!=null)
+    ? `kayıtlı ${num(users)} kişinin %${Math.round(mau/users*100)}'i`
+    : 'RevenueCat · güncel';
 
   const c1=stockValue('app_export_crashes_1d'), c7=stockValue('app_export_crashes_7d'),
         c30=stockValue('app_export_crashes_30d');
