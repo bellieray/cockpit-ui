@@ -999,15 +999,11 @@
             <span class="kpi-name">28 günlük aktif<br><span class="card-sub" id="upMauSub">RevenueCat · güncel</span></span>
           </div>
           <div class="kpi-val tnum" id="upMau">–</div>
-        </div>
-        <div class="card c3">
-          <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
-            </span>
-            <span class="kpi-name">28 günlük yeni müşteri<br><span class="card-sub">RC ilk kez gördü</span></span>
-          </div>
-          <div class="kpi-val tnum" id="upNewCust">–</div>
+          <!-- Yeni müşteri kendi kartı DEĞİL, buranın altsatırı: aynı 28 günlük
+               pencereden ve aynı RC "müşteri" tanımından geliyor, yanına
+               koymak ikisini birlikte okutuyor. Ayrıca bant 4 karta iniyor —
+               beşinci kart 4'lük ızgarada tek başına satır bırakıyordu. -->
+          <div class="kpi-foot" id="upNewCust"></div>
         </div>
         <!-- Yapışkanlık = ortalama DAU / MAU. İKİ SAYI DA RevenueCat'in AYNI
              "müşteri" tanımından geliyor (uygulamayı açan kişi), yalnız
@@ -2769,7 +2765,7 @@ function renderUrun(){
 
   const mau=stockValue('rc_active_users_28d'), newCust=stockValue('rc_new_customers_28d');
   el('upMau').textContent=num(mau);
-  el('upNewCust').textContent=num(newCust);
+  el('upNewCust').textContent = newCust==null?'' : `bunların ${num(newCust)}'i ilk kez göründü`;
   // WHY oran YOK: bu sayı `app_export_total_users`'a BÖLÜNEMEZ. RevenueCat'in
   // "müşteri"si uygulamayı açan HERKES (hesap açmamış anonim kimlikler dahil),
   // bizim "kayıtlı kullanıcı"mız ise hesabı olan. Farklı kitleler — biri
