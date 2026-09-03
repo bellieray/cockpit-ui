@@ -1214,6 +1214,21 @@
           <div class="funnel-note">Her iki taraf da AYNI 30 günlük pencereden. Son iki sütun aynı toplamın payları: gelir payı indirme payından belirgin düşükse (kırmızı) o ülke kullanıcı getiriyor ama para getirmiyor; yüksekse (yeşil) az kullanıcıdan çok para geliyor. <b>Bilerek yok:</b> "indirme başına gelir" — o ülkedeki gelir aylar önce indirenler dahil TÜM kullanıcılardan gelirken payda yalnız son 30 günün indirmeleri olurdu; iki farklı kohortu bölmek birim ekonomi gibi görünen ama hiçbir şeyin oranı olmayan bir sayı üretir. Reklam ülkesi cihazın bulunduğu yer, mağaza ülkesi ise hesabın vitrini — çoğunlukla aynı, her zaman değil.</div>
         </div>
 
+        <div class="c12 region-label">Kohort</div>
+        <!-- Haftalık kohort: kaç yeni müşteri geldi ve o kohort bugüne dek
+             kişi başı ne kazandırdı (realized LTV). Sahibin açık kararıyla
+             0 abone varken de gösteriliyor — boru hattı ilk abone geldiğinde
+             kendiliğinden dolsun. Kohort BÜYÜKLÜĞÜ zaten sıfır değil ve tek
+             başına kullanışlı: hangi hafta kaç kişi geldi. -->
+        <div class="card c12">
+          <div class="card-head">
+            <div><div class="card-title">Haftalık kohort</div>
+                 <div class="card-sub">RevenueCat · ilk görüldüğü haftaya göre gruplanmış</div></div>
+          </div>
+          <div class="tw tw-cards" style="max-height:340px"><table class="dt dt-cards" id="paCohortTable"></table></div>
+          <div class="funnel-note" id="paCohortNote"></div>
+        </div>
+
         <div class="c12 region-label">Abonelik</div>
         <div class="card c12">
           <div class="card-head">
@@ -2679,6 +2694,52 @@ function drawRevenueTimeline(fmtRows){
     : '';
 }
 
+/* Haftalık kohort tablosu: büyüklük + kişi başı gerçekleşmiş LTV.
+
+   `rc_cohort_size` (period 0) kohortun büyüklüğü, `rc_cohort_ltv`
+   (period 1..N) o kohortun N. haftadaki kişi başı geliri. period bir
+   TARİH değil, RC'nin `periods[]` dizisine indeks — bu yüzden etiket
+   ("Week 3") ölçümün kendi `dims.label`'ından geliyor, hesaplanmıyor.
+
+   Abonelik yokken LTV sütunları sıfır: bu "herkes kaybedildi" değil,
+   "henüz kimse ödemedi" demek. Not satırı bunu açıkça söylüyor — sıfırı
+   yorumsuz bırakmak, tablonun en kolay yanlış okunma biçimi. */
+function renderCohort(){
+  const host=el('paCohortTable'); if(!host) return;
+  const rows=(D.stockSeries||[]).filter(r=>r.slug===APP
+    && (r.metric==='rc_cohort_size'||r.metric==='rc_cohort_ltv'));
+  if(!rows.length){
+    host.innerHTML=`<tbody><tr><td style="color:var(--ink-3)">Kohort verisi yok — revenuecat_charts konektörü henüz koşmadı.</td></tr></tbody>`;
+    el('paCohortNote').textContent=''; return;
+  }
+  const byDay=new Map();
+  rows.forEach(r=>{
+    const o=byDay.get(r.day)||byDay.set(r.day,{size:null,ltv:new Map()}).get(r.day);
+    if(r.metric==='rc_cohort_size') o.size=Number(r.value);
+    else o.ltv.set(Number(r.period??0), Number(r.value));
+  });
+  const days=[...byDay.keys()].sort().reverse();
+  // Kaç hafta sütunu gösterilecek: en uzun kohort kadar, en çok 8.
+  const maxP=Math.min(8, Math.max(0, ...days.map(d=>Math.max(0,...byDay.get(d).ltv.keys()))));
+  const heads=Array.from({length:maxP},(_,i)=>`<th class="num">H${i}</th>`).join('');
+  host.innerHTML=`<thead><tr><th>Kohort</th><th class="num">Yeni müşteri</th>${heads}</tr></thead><tbody>`
+    + days.map(d=>{
+        const o=byDay.get(d);
+        const cells=Array.from({length:maxP},(_,i)=>{
+          const v=o.ltv.get(i+1);
+          return `<td class="num sec" data-l="H${i}">${v==null?'–':money2(v)}</td>`;
+        }).join('');
+        return `<tr><td>${esc(d)}</td>
+          <td class="num pri" data-l="yeni müşteri">${o.size==null?'–':num(o.size)}</td>${cells}</tr>`;
+      }).join('')
+    + `</tbody>`;
+  const totalSize=days.reduce((s,d)=>s+(byDay.get(d).size||0),0);
+  const anyLtv=days.some(d=>[...byDay.get(d).ltv.values()].some(v=>v>0));
+  el('paCohortNote').textContent = anyLtv
+    ? `H0…H${maxP-1}: kohortun o haftadaki KİŞİ BAŞI gerçekleşmiş geliri (kümülatif). Toplam ${num(totalSize)} yeni müşteri.`
+    : `Toplam ${num(totalSize)} yeni müşteri. Tüm LTV sütunları $0.00 — bu "kohortlar kaybedildi" DEĞİL, "henüz hiç kimse ödeme yapmadı" demek. İlk satın alma olduğunda bu tablo kendiliğinden dolar.`;
+}
+
 function renderPara(){
   const days=new Set(rangeDays());
   const fmtRows=(D.adByFormat||[]).filter(r=>r.slug===APP && days.has(r.day));
@@ -2811,6 +2872,8 @@ function renderPara(){
   el('paSubNote').textContent=(users&&!subs)
     ? `Kayıtlı ${num(users)} kullanıcıdan hiçbiri abone değil. Reklam tek gelir kaynağı.`
     : '';
+
+  renderCohort();
 
   // Ödemeye dönüşüm — kohort dönemi başına. Oran pay/paydadan hesaplanıyor;
   // RC'nin kendi hazır oranı KULLANILMIYOR çünkü dönemleri toplarken ham
