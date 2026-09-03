@@ -2780,13 +2780,20 @@ function renderUrun(){
   // Yapışkanlık: ortalama DAU / MAU. Pay ve payda AYNI kitleden (RC "müşteri")
   // geliyor, yalnız pencere farklı — oran geçerli. Ortalama son 28 ölçülen
   // günden; tek gün hafta sonu ritmiyle oynar.
-  const last28=dauPts.slice(-28);
-  const avgDau=last28.length? last28.reduce((s,p)=>s+p.v,0)/last28.length : null;
+  const mean=a=>a.length? a.reduce((s,p)=>s+p.v,0)/a.length : null;
+  const last28=dauPts.slice(-28), last7=dauPts.slice(-7);
+  const avgDau=mean(last28), avg7=mean(last7);
   const stick=(avgDau!=null && mau)? avgDau/mau : null;
   el('upStick').textContent=stick==null?'–':'%'+(stick*100).toFixed(0);
+  // WHY son 7 gün de yazılıyor: standart tanım ortalama DAU'yu MAU ile AYNI
+  // 28 günlük pencereden alır. Hızlı büyüyen bir üründe bu, oranı geçmişe
+  // demirler — MAU son 28 günün tüm tekil kişilerini sayarken DAU ortalaması
+  // düşük geçen ilk günlerle aşağı çekilir. Sayı yanlış değil, ama tek başına
+  // "yapışkanlık kötü" diye okunur. Son 7 günün ortalamasını yan yana koymak
+  // yönü gösteriyor; yorumu okuyan yapıyor, panel uydurmuyor.
   el('upStickSub').textContent=stick==null
     ? 'ortalama günlük / 28 günlük'
-    : `ort. ${avgDau.toFixed(1)} günlük / ${num(mau)} · ${last28.length} gün`;
+    : `28g ort. ${avgDau.toFixed(1)} / ${num(mau)}${avg7!=null?` · son 7g ort. ${avg7.toFixed(1)}`:''}`;
 
   const c1=stockValue('app_export_crashes_1d'), c7=stockValue('app_export_crashes_7d'),
         c30=stockValue('app_export_crashes_30d');
