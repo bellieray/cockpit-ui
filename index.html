@@ -229,6 +229,14 @@
   .fpct{font-family:Sora,sans-serif;font-weight:700;font-size:15px;margin-bottom:6px}
   .fname{font-size:11.5px;color:var(--ink-3);margin-top:9px}
   .fval{font-size:13px;font-weight:600}
+  /* === mağaza/ürün ayracı === huniye eklenen 4-5. adımlar (App Export'tan,
+     ülkesiz/farklı pencere) mağaza adımlarından (ASC, ülke bazlı) ayrı bir
+     kaynak — bkz. docs/backlog.md round 5/6, B2 "dikiş" notu. */
+  .fdiv{flex:none;width:1px;align-self:stretch;background:var(--line);position:relative;margin:0 2px}
+  .fdiv span{position:absolute;top:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;
+    font-size:9px;font-weight:600;letter-spacing:.04em;color:var(--ink-3);text-transform:uppercase}
+  .fbars.product i.on{background:var(--amber)}
+  .funnel-note{font-size:11px;color:var(--ink-3);margin-top:10px}
 
   /* === segmentli çubuk === */
   .segbar{display:flex;height:10px;border-radius:var(--r-pill);overflow:hidden;gap:2px;margin:6px 0 14px}
@@ -473,12 +481,13 @@
       </div>
 
       <!-- huni -->
-      <div class="card c4">
+      <div class="card c8">
         <div class="card-head">
-          <div><div class="card-title">Huni</div><div class="card-sub">Adım adım kayıp</div></div>
+          <div><div class="card-title">Huni</div><div class="card-sub">Adım adım kayıp — mağaza ve ürün bir arada</div></div>
         </div>
         <div class="funnel" id="funnel"></div>
-        <div class="gauge-foot"><span>En büyük kayıp: <b>gösterim → sayfa</b></span></div>
+        <div class="gauge-foot"><span>En büyük kayıp: <b id="funnelWorst">gösterim → sayfa</b></span></div>
+        <div class="funnel-note">Son iki adım (Yeni kullanıcı, Aktif hane) farklı kaynaktan (kendi backend'imiz, ülkesiz) — mağaza adımlarıyla birebir kohort eşleşmesi değildir.</div>
       </div>
 
       <!-- kaynak segment -->
@@ -889,15 +898,36 @@ function drawKpis(){
   el('gaugeArc').setAttribute('stroke-dashoffset', String(Math.round(arc-arc*filled)));
   el('gaugeF1').textContent=cur.imp?Math.round(cur.pv/cur.imp*100)+"%":"–";
   el('gaugeF2').textContent=cur.pv?Math.round(cur.dl/cur.pv*100)+"%":"–";
-  /* huni */
-  const steps=[["Gösterim",cur.imp,100],["Ürün sayfası",cur.pv,cur.imp?cur.pv/cur.imp*100:0],
+  /* huni — mağaza (ASC, ülke bazlı) + ürün (App Export, ülkesiz) bir arada.
+     Ürün yarısı ayrı bir pencereye sahip (app_export yalnız 1g/7g/30g anlık
+     görüntü tutuyor, arayüzün RANGE'ine birebir uymayabilir) — etiket her
+     zaman GERÇEK pencereyi söylüyor, sessizce yanlış eşleştirilmiyor. */
+  const nuWin = RANGE===1 ? '1d' : RANGE===30 ? '30d' : '7d';
+  const nuLabel = RANGE===1 ? 'son 1g' : RANGE===30 ? 'son 30g' : 'son 7g';
+  const newUsers = stockValue('app_export_new_users_'+nuWin);
+  const activeHh = stockValue('app_export_active_households');
+  const storeSteps=[["Gösterim",cur.imp,100],["Ürün sayfası",cur.pv,cur.imp?cur.pv/cur.imp*100:0],
                ["İndirme",cur.dl,cur.imp?cur.dl/cur.imp*100:0]];
-  el('funnel').innerHTML=steps.map(([nm,v,p])=>{
-    const on=Math.max(1,Math.round(p/100*12));
+  const productSteps=[["Yeni kullanıcı",newUsers,cur.imp&&newUsers!=null?newUsers/cur.imp*100:0,nuLabel],
+               ["Aktif hane",activeHh,cur.imp&&activeHh!=null?activeHh/cur.imp*100:0,'güncel toplam']];
+  const stageHtml=(nm,v,p,sub,cls)=>{
+    const on=Math.max(1,Math.round((p||0)/100*12));
     const bars=Array.from({length:12},(_,i)=>`<i class="${i<on?'on':''}" style="height:${20+i*6}%"></i>`).join("");
-    return `<div class="fstage"><div class="fpct">${p.toFixed(p<10?1:0)}%</div><div class="fbars">${bars}</div>
-      <div class="fname">${nm}</div><div class="fval tnum">${num(v)}</div></div>`;
-  }).join("");
+    return `<div class="fstage"><div class="fpct">${v==null?'–':(p||0).toFixed((p||0)<10?1:0)+'%'}</div><div class="fbars ${cls||''}">${bars}</div>
+      <div class="fname">${nm}${sub?` <span style="opacity:.6">· ${sub}</span>`:''}</div><div class="fval tnum">${num(v)}</div></div>`;
+  };
+  el('funnel').innerHTML =
+    storeSteps.map(([nm,v,p])=>stageHtml(nm,v,p)).join("") +
+    `<div class="fdiv"><span>mağaza · ürün</span></div>` +
+    productSteps.map(([nm,v,p,sub])=>stageHtml(nm,v,p,sub,'product')).join("");
+  // en büyük kayıp — ardışık adımlar arası en büyük yüzde-puan düşüşü
+  const all=[...storeSteps,...productSteps].map(s=>[s[0],s[2]]).filter(([,p])=>p!=null);
+  let worst=null,worstDrop=-1;
+  for(let i=0;i<all.length-1;i++){
+    const drop=all[i][1]-all[i+1][1];
+    if(drop>worstDrop){worstDrop=drop;worst=[all[i][0],all[i+1][0]];}
+  }
+  if(worst) el('funnelWorst').textContent=`${worst[0].toLowerCase()} → ${worst[1].toLowerCase()}`;
 }
 
 /* ---------- grafik ---------- */
