@@ -4,14 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#e8eaed">
+<meta name="theme-color" content="#e8eaed" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101416" media="(prefers-color-scheme: dark)">
 <title>App Cockpit</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
   :root{
     --page:#e8eaed; --app:#ffffff; --canvas:#f6f7f9; --card:#ffffff;
-    --ink:#101418; --ink-2:#5b636b; --ink-3:#98a1a9; --line:#eceef1;
+    /* --ink-3 #98a1a9 idi: beyaz kart üstünde 2.62:1 — WCAG AA küçük metin
+       için 4.5 istiyor ve bu renk TÜM 11-12px card-sub metinlerinde, yani
+       panelin bağlam taşıyan yazılarının tamamında. #6f787f tam 4.50:1
+       veriyor ve görsel dili (soğuk gri) bozmuyor. Koyu temada da aynı
+       düzeltme: #6d767c koyu kart üstünde 3.7:1 idi. */
+    --ink:#101418; --ink-2:#5b636b; --ink-3:#6f787f; --line:#eceef1;
     --brand:#0f9e86; --brand-soft:#e2f4f0;
     --violet:#6165d7; --violet-soft:#ecedfb;
     --amber:#e0a02a; --amber-soft:#fdf1dc;
@@ -23,7 +29,7 @@
   }
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
     --page:#0a0c0d; --app:#14181a; --canvas:#101416; --card:#181d1f;
-    --ink:#eef1f2; --ink-2:#a3acb1; --ink-3:#6d767c; --line:#232a2d;
+    --ink:#eef1f2; --ink-2:#a3acb1; --ink-3:#8b949a; --line:#232a2d;
     --brand:#38cdb0; --brand-soft:#12332d; --violet:#8c8ff0; --violet-soft:#1e2040;
     --amber:#e6b455; --amber-soft:#332714; --pink:#ef7ba9; --pink-soft:#361a25;
     --up:#3fc47f; --up-soft:#12321f; --down:#ff7a68; --down-soft:#361a17;
@@ -31,7 +37,7 @@
   }}
   :root[data-theme="dark"]{
     --page:#0a0c0d; --app:#14181a; --canvas:#101416; --card:#181d1f;
-    --ink:#eef1f2; --ink-2:#a3acb1; --ink-3:#6d767c; --line:#232a2d;
+    --ink:#eef1f2; --ink-2:#a3acb1; --ink-3:#8b949a; --line:#232a2d;
     --brand:#38cdb0; --brand-soft:#12332d; --violet:#8c8ff0; --violet-soft:#1e2040;
     --amber:#e6b455; --amber-soft:#332714; --pink:#ef7ba9; --pink-soft:#361a25;
     --up:#3fc47f; --up-soft:#12321f; --down:#ff7a68; --down-soft:#361a17;
@@ -482,10 +488,6 @@
       <span><span class="brand-name">Cockpit</span><span class="brand-sub" id="brandSub">…</span></span>
     </div>
 
-    <div class="search">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-      Ara…
-    </div>
 
     <div>
       <div class="nav-label">MENÜ</div>
@@ -706,7 +708,6 @@
           <span class="kpi-name">Dönüşüm<br><span class="card-sub">gösterim → indirme</span></span>
         </div>
         <div class="kpi-val tnum" id="kConv">–</div>
-        <div class="kpi-foot"><span class="chip flat">sektör ort. %3–5</span></div>
       </div>
 
       <!-- büyük grafik -->
@@ -792,7 +793,6 @@
       <div class="card c12" data-store-only>
         <div class="card-head">
           <div><div class="card-title">Ülkeler</div><div class="card-sub" id="ctryMeta"></div></div>
-          <button class="viewall">Tümünü gör →</button>
         </div>
         <div class="tiles" id="ctryTiles"></div>
         <div class="filters">
@@ -1334,7 +1334,6 @@
 
   </main>
 </div>
-</div>
 <script>
 /* =====================================================================
    App Cockpit — canlı panel.
@@ -1354,6 +1353,13 @@ const KEY_STORE = "cockpit_key";
   }
 })();
 const getKey = () => { try { return localStorage.getItem(KEY_STORE) || ""; } catch { return ""; } };
+/* Görünüm tercihleri (tema, seçili uygulama). Sır DEĞİL, yalnız kolaylık —
+   ayrı anahtarlar, ayrı okuyucular. try/catch şart: gizli sekmede ve site
+   verisi kapalıyken localStorage erişimi ATAR, panel yine açılmalı. */
+const PREF={
+  get(k){ try{ return localStorage.getItem('cockpit_'+k)||''; }catch{ return ''; } },
+  set(k,v){ try{ localStorage.setItem('cockpit_'+k,v); }catch{} },
+};
 
 let D = null;                 /* sunucudan gelen ham payload */
 let APP = null;               /* seçili uygulama slug'ı */
@@ -1362,7 +1368,14 @@ let RANGE = 7;                /* 1 | 7 | 30 | 0 (=baştan) */
 const FLAG={tr:"🇹🇷",us:"🇺🇸",es:"🇪🇸",de:"🇩🇪",gb:"🇬🇧",fr:"🇫🇷",it:"🇮🇹",nl:"🇳🇱",jp:"🇯🇵",kr:"🇰🇷",br:"🇧🇷",mx:"🇲🇽",ca:"🇨🇦",au:"🇦🇺",ar:"🇦🇷",in:"🇮🇳",ru:"🇷🇺",do:"🇩🇴",pa:"🇵🇦",pe:"🇵🇪",kz:"🇰🇿",se:"🇸🇪",ch:"🇨🇭",at:"🇦🇹",be:"🇧🇪",pl:"🇵🇱",pt:"🇵🇹",ie:"🇮🇪",dk:"🇩🇰",no:"🇳🇴",fi:"🇫🇮",cz:"🇨🇿",gr:"🇬🇷",hu:"🇭🇺",ro:"🇷🇴",ua:"🇺🇦",il:"🇮🇱",ae:"🇦🇪",sa:"🇸🇦",eg:"🇪🇬",za:"🇿🇦",ng:"🇳🇬",id:"🇮🇩",th:"🇹🇭",vn:"🇻🇳",ph:"🇵🇭",my:"🇲🇾",sg:"🇸🇬",hk:"🇭🇰",tw:"🇹🇼",cn:"🇨🇳",cl:"🇨🇱",co:"🇨🇴",py:"🇵🇾",uy:"🇺🇾",ec:"🇪🇨",bo:"🇧🇴",cr:"🇨🇷",gt:"🇬🇹",nz:"🇳🇿"};
 const VTAG={GAP:["gap","Fırsat"],COVERED:["cov","Kapsanan"],DEAD_WEIGHT:["dead","Ölü ağırlık"],NO_DEMAND:["nod","Talep yok"],UNMEASURED:["unm","Ölçülmemiş"]};
 const SRCCOL=["var(--violet)","var(--brand)","var(--amber)","var(--ink-3)","var(--pink)","var(--up)"];
-const esc=s=>String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+/* Tırnaklar da kaçırılıyor: bu değerlerin bir kısmı ÖZNİTELİK içine giriyor
+   (`title=`, `data-app=`, `<option value=>`) ve içerik dışarıdan geliyor —
+   rakip uygulama adları App Store'dan. Adında tırnak olan tek bir rakip,
+   öznitelikten çıkıp script çalıştırabilirdi. Aynı origin'de okuma anahtarı
+   localStorage'da duruyor, üstelik github.io tüm Pages projeleriyle ortak
+   origin — bedeli yüksek, düzeltmesi bir satır. */
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>(
+  {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const num=v=>v==null?"–":Number(v).toLocaleString("tr");
 const money=v=>v==null?"–":"$"+Number(v).toLocaleString("en-US",{maximumFractionDigits:0});
 const MON=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"];
@@ -1402,9 +1415,20 @@ function sumMetric(days, metricKey){
   return (D.series||[]).filter(r=>r.slug===APP&&r.metric===want&&inRange(r.day,set))
     .reduce((t,r)=>t+Number(r.v||0),0);
 }
-function seriesFor(metricKey, days){
+/* Ülke filtresi VARSA ülke bazlı günlük seriden, yoksa toplam seriden okur.
+   Seçici uzun süre boştaydı: doldurulmuş ama hiçbir olaya bağlanmamıştı, yani
+   kullanıcı ülke seçiyor ve hiçbir şey olmuyordu. İşlevsiz bir kontrol, yanlış
+   bir sayıdan farksız — ikisi de olmayan bir şey vadediyor.
+
+   `byCountryDaily` yalnız dört mağaza metriğini taşıyor (imp/pv/tap/dl) ve
+   `having sum>0` ile geliyor; bir ülkede o gün ölçüm yoksa satır hiç yok,
+   `by[d]||0` doğru davranıyor. */
+function seriesFor(metricKey, days, country){
   const want=METRIC[metricKey], by={};
-  (D.series||[]).filter(r=>r.slug===APP&&r.metric===want).forEach(r=>{by[r.day]=(by[r.day]||0)+Number(r.v||0)});
+  const src = country
+    ? (D.byCountryDaily||[]).filter(r=>r.slug===APP&&r.metric===want&&r.country===country)
+    : (D.series||[]).filter(r=>r.slug===APP&&r.metric===want);
+  src.forEach(r=>{by[r.day]=(by[r.day]||0)+Number(r.v||0)});
   return days.map(d=>by[d]||0);
 }
 function sourceRows(days){
@@ -1743,9 +1767,14 @@ function drawPrelaunch(){
 function drawRevenue(){
   const mrr=stockValue('rc_mrr'), subs=stockValue('rc_active_subscriptions'),
         trials=stockValue('rc_active_trials'), adRev=sumMetric(rangeDays(),'rev');
-  el('gMrr').textContent=money(mrr);
+  // WHY `money2` (iki ondalık): günlük reklam geliri sentlerle ölçülüyor.
+  // Kuruşları atan `money` burada "$0" yazıyordu — Para sekmesi "$6.74"
+  // derken Özet "$7", tek günlük aralıkta ise "$0". Aynı sayı iki sekmede
+  // farklı görünmemeli ve sıfır olmayan bir gelir "sıfır" diye okunmamalı.
+  // (`money` mağaza trafiği gibi büyük sayılarda doğru kalıyor.)
+  el('gMrr').textContent=money2(mrr);
   el('gSubs').textContent=subs==null?'–':num(subs)+(trials?' · '+num(trials)+' deneme':'');
-  el('gAdRev').textContent=money(adRev);
+  el('gAdRev').textContent=money2(adRev);
 }
 function drawKpis(){
   const days=rangeDays(), prev=prevRangeDays();
@@ -1788,17 +1817,33 @@ function drawKpis(){
   const productSteps=[["Yeni kullanıcı",newUsers,cur.imp&&newUsers!=null?newUsers/cur.imp*100:0,nuLabel],
                ["Aktif hane",activeHh,cur.imp&&activeHh!=null?activeHh/cur.imp*100:0,'güncel toplam']];
   const stageHtml=(nm,v,p,sub,cls)=>{
-    const on=Math.max(1,Math.round((p||0)/100*12));
+    // İKİ KORUMA, tek sebep: ürün adımlarının paydası (cur.imp) SEÇİLİ ARALIK
+    // gösterimi, payı (aktif hane) ise KÜMÜLATİF toplam. RANGE=1'de oran
+    // rahatlıkla %100'ü aşıyor. Kırpılmamış hâlinde çubuk sayısı 12'yi geçip
+    // hepsi doluyor ve ekranda "%450" gibi bir huni adımı çıkıyordu.
+    //   · çubuk: 12'de kırp (görsel taşma).
+    //   · yüzde: 100'ü aşınca yüzdeyi HİÇ yazma — o sayı bir dönüşüm oranı
+    //     değil, iki farklı pencerenin bölümü. Adet zaten altta duruyor.
+    const pct=(p==null||!isFinite(p))?null:p;
+    const on=Math.min(12, Math.max(1, Math.round((pct||0)/100*12)));
     const bars=Array.from({length:12},(_,i)=>`<i class="${i<on?'on':''}" style="height:${20+i*6}%"></i>`).join("");
-    return `<div class="fstage"><div class="fpct">${v==null?'–':(p||0).toFixed((p||0)<10?1:0)+'%'}</div><div class="fbars ${cls||''}">${bars}</div>
+    const head = v==null ? '–'
+      : (pct==null||pct>100) ? '<span style="font-size:11px;color:var(--ink-3)">oran yok</span>'
+      : pct.toFixed(pct<10?1:0)+'%';
+    return `<div class="fstage"><div class="fpct">${head}</div><div class="fbars ${cls||''}">${bars}</div>
       <div class="fname">${nm}${sub?` <span style="opacity:.6">· ${sub}</span>`:''}</div><div class="fval tnum">${num(v)}</div></div>`;
   };
   el('funnel').innerHTML =
     storeSteps.map(([nm,v,p])=>stageHtml(nm,v,p)).join("") +
     `<div class="fdiv"><span>mağaza · ürün</span></div>` +
     productSteps.map(([nm,v,p,sub])=>stageHtml(nm,v,p,sub,'product')).join("");
-  // en büyük kayıp — ardışık adımlar arası en büyük yüzde-puan düşüşü
-  const all=[...storeSteps,...productSteps].map(s=>[s[0],s[2]]).filter(([,p])=>p!=null);
+  // En büyük kayıp — YALNIZ mağaza zinciri.
+  //
+  // Kartın kendi dipnotu "son iki adım farklı kaynaktan, kohort eşleşmesi
+  // değildir" diyor; o adımları aynı zincire katıp "en büyük kayıp" seçmek
+  // tam da o uyarıyı yok saymak olurdu. İndirme → yeni kullanıcı farkı büyük
+  // ölçüde pencere ve kaynak farkının ürünü, gerçek bir kayıp değil.
+  const all=storeSteps.map(s=>[s[0],s[2]]).filter(([,p])=>p!=null);
   let worst=null,worstDrop=-1;
   for(let i=0;i<all.length-1;i++){
     const drop=all[i][1]-all[i+1][1];
@@ -1820,9 +1865,10 @@ function smooth(pts){
 }
 function drawChart(){
   const days=rangeDays(), scale=el('chartScale').value;
+  const cc=el('chartCountry').value||'';
   const W=600,H=230,top=14,bot=34;
   const on=Object.keys(seriesOn).filter(k=>seriesOn[k]);
-  const data={}; on.forEach(k=>data[k]=seriesFor(k,days));
+  const data={}; on.forEach(k=>data[k]=seriesFor(k,days,cc));
   let max=1; on.forEach(k=>data[k].forEach(v=>{if(v>max)max=v}));
   const y=v=>{const t=scale==='log'?Math.log10((v||0)+1)/Math.log10(max+1):(v||0)/max;return H-bot-t*(H-top-bot)};
   const x=i=>days.length<2?W/2:i*(W/(days.length-1));
@@ -2115,20 +2161,33 @@ function drawRev(){
 }
 
 /* ---------- seçiciler / kabuk ---------- */
+/* Ülke listeleri UYGULAMAYA ÖZEL, ama `fillSelects` her `renderAll`'da
+   (aralık değişimi dahil) koşuyor. İki ayrı hata birbirini kovalıyor:
+     · koşulsuz doldurmak → aralık değişince seçili ülke uçuyor;
+     · hiç doldurmamak    → uygulama değişince liste bayat kalıyor
+                            (Spendy'nin ülkeleri AstroScope'ta duruyor).
+   Çözüm: yalnız UYGULAMA değiştiğinde yeniden doldur ve o zaman seçimleri
+   bilinçli olarak sıfırla — çünkü eski seçim yeni uygulamada anlamsız. */
+let SELECTS_FOR=null;
 function fillSelects(){
+  const appChanged = SELECTS_FOR !== APP;
+  SELECTS_FOR = APP;
+  const refill=(id,html)=>{ const n=el(id); if(!n) return;
+    if(appChanged || !n.options.length){ n.innerHTML=html; n.value=''; } };
   const cs=[...new Set(gapsFor().map(r=>r.country))].sort();
   const opts=`<option value="">Tüm ülkeler</option>`+cs.map(c=>`<option value="${c}">${FLAG[c]||"🏳️"} ${c.toUpperCase()}</option>`).join("");
-  el('kwCountry').innerHTML=opts; el('ringCountry').innerHTML=opts;
+  refill('kwCountry',opts); refill('ringCountry',opts);
   const ccs=countryRows(allDays()).map(r=>r.cc).sort();
-  el('chartCountry').innerHTML=`<option value="">Tüm ülkeler</option>`+
-    ccs.map(c=>`<option value="${c}">${FLAG[c]||"🏳️"} ${c.toUpperCase()}</option>`).join("");
+  refill('chartCountry',`<option value="">Tüm ülkeler</option>`+
+    ccs.map(c=>`<option value="${c}">${FLAG[c]||"🏳️"} ${c.toUpperCase()}</option>`).join(""));
   const apps=(D.apps||[]).filter(a=>a.slug!=='__global__');
   el('appNav').innerHTML=apps.map(a=>
     `<button class="${a.slug===APP?'on':''}" data-app="${esc(a.slug)}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M11 18h2"/></svg>
       ${esc(a.name||a.slug)}</button>`).join("");
   el('appNav').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
-    APP=b.dataset.app; el('appNav').querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+    APP=b.dataset.app; PREF.set('app',APP);
+    el('appNav').querySelectorAll('button').forEach(x=>x.classList.remove('on'));
     b.classList.add('on'); renderAll();
   }));
   el('brandSub').textContent=`${apps.length} uygulama izleniyor`;
@@ -2228,6 +2287,7 @@ function bind(){
   el('pfSort').addEventListener('change',renderPortfoy);
   ['ctrySearch','ctrySort','ctryMin'].forEach(id=>el(id).addEventListener('input',drawCtry));
   ['hApp','hStatus'].forEach(id=>el(id).addEventListener('change',drawHealth));
+  el('chartCountry').addEventListener('change',drawChart);
   ['kwCountry','kwSearch','kwSort'].forEach(id=>el(id).addEventListener('input',drawKw));
   el('ringCountry').addEventListener('change',drawRing);
   el('lbSort').addEventListener('change',drawLb);
@@ -2242,9 +2302,15 @@ function bind(){
       if(b.dataset.range!=null){ RANGE=+b.dataset.range; syncRange(); renderAll(); }
     })));
   bindViews(); bindAnchors(); buildAnchors();
+  // Kayıtlı tema açılışta uygulanır; hiç seçim yapılmadıysa dokunulmaz ve
+  // işletim sisteminin tercihi (prefers-color-scheme) geçerli kalır.
+  const savedTheme=PREF.get('theme');
+  if(savedTheme==='dark'||savedTheme==='light') document.documentElement.setAttribute('data-theme',savedTheme);
   el('themeBtn').addEventListener('click',()=>{
     const r=document.documentElement;
-    r.setAttribute('data-theme', r.getAttribute('data-theme')==='dark'?'light':'dark');
+    const next = r.getAttribute('data-theme')==='dark'?'light':'dark';
+    r.setAttribute('data-theme', next);
+    PREF.set('theme', next);
   });
 }
 
@@ -3124,7 +3190,11 @@ async function load(){
       el('gateErr').textContent='Anahtar kabul edilmedi.'; return; }
     if(!res.ok) throw new Error('HTTP '+res.status);
     D=await res.json();
-    APP=((D.apps||[]).find(a=>a.slug!=='__global__')||{}).slug||null;
+    // Kayıtlı seçim HÂLÂ VARSA onu kullan. Silinmiş/yeniden adlandırılmış bir
+    // slug'a yapışıp boş ekran göstermemek için varlığı kontrol ediliyor.
+    const real=(D.apps||[]).filter(a=>a.slug!=='__global__');
+    const saved=PREF.get('app');
+    APP=(saved && real.some(a=>a.slug===saved)) ? saved : ((real[0]||{}).slug||null);
     if(!APP){ el('boot').textContent='Kayıtlı uygulama yok.'; return; }
     el('boot').style.display='none'; el('app').style.display='';
     bind(); renderAll();
