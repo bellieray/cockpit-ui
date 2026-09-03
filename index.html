@@ -1093,6 +1093,21 @@
           <div class="kpi-val tnum" id="paMiss">–</div>
         </div>
 
+        <!-- Gelir zaman çizgisi. NEDEN kümülatif de var: günlük çubuklar
+             "bugün ne kazandım"ı, kümülatif çizgi "bugüne dek ne kazandım"ı
+             söylüyor. İkincisi panelde hiç yoktu ve gelir hedefi olan biri
+             için asıl soru o. Kümülatif TÜM geçmişi kullanır, seçili aralığı
+             değil — aksi hâlde "7 gün" seçince toplam küçülür ve sayı yalan
+             söyler. -->
+        <div class="card c12">
+          <div class="card-head">
+            <div><div class="card-title">Gelir zaman çizgisi</div>
+                 <div class="card-sub" id="paTlSub">günlük reklam geliri · kümülatif</div></div>
+          </div>
+          <div id="paTimeline"></div>
+          <div class="funnel-note" id="paTlNote"></div>
+        </div>
+
         <div class="card c12">
           <div class="card-head">
             <div><div class="card-title">Format kırılımı</div>
@@ -2234,6 +2249,58 @@ function adAgg(rows){
    bilinmiyor; başka formatın eCPM'ini ödünç alıp sayı uydurmuyoruz. */
 function missedValue(a){ return a.rpm==null?null:a.missed*a.rpm/1000; }
 
+/* Günlük gelir çubukları + kümülatif çizgi.
+   Çubuklar SEÇİLİ aralığı, kümülatif çizgi o aralığın İÇİNDEKİ birikimi
+   gösterir; "bugüne dek toplam" ayrı bir sayı olarak TÜM geçmişten gelir
+   (aşağıda). İkisini karıştırmak, aralık değiştikçe "toplam kazancım azaldı"
+   gibi okunan bir yalan üretirdi. */
+function drawRevenueTimeline(fmtRows){
+  const host=el('paTimeline'); if(!host) return;
+  const days=rangeDays();
+  const earn=new Map(days.map(d=>[d,0]));
+  fmtRows.filter(r=>r.metric==='ad_estimated_earnings').forEach(r=>{
+    if(earn.has(r.day)) earn.set(r.day, earn.get(r.day)+Number(r.v||0));
+  });
+  const vals=days.map(d=>earn.get(d)||0);
+  if(!days.length || vals.every(v=>!v)){ host.innerHTML=''; el('paTlNote').textContent=''; return; }
+
+  let run=0; const cum=vals.map(v=>(run+=v));
+  const w=1000, h=180, pad=6;
+  const maxBar=Math.max(...vals), maxCum=cum[cum.length-1] || 1;
+  const bw=w/days.length;
+  const bars=vals.map((v,i)=>{
+    const bh=maxBar? (v/maxBar)*(h-pad*2) : 0;
+    return `<rect x="${(i*bw+bw*0.18).toFixed(1)}" y="${(h-pad-bh).toFixed(1)}"
+      width="${(bw*0.64).toFixed(1)}" height="${bh.toFixed(1)}" rx="1.5" fill="var(--brand)" opacity=".55"/>`;
+  }).join('');
+  const line=cum.map((v,i)=>{
+    const x=i*bw+bw/2, y=h-pad-(v/maxCum)*(h-pad*2);
+    return `${i===0?'M':'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+
+  host.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"
+      style="width:100%;height:180px;display:block;margin-top:6px">
+      ${bars}
+      <path d="${line}" fill="none" stroke="#c9a227" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>
+    <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-3);margin-top:4px">
+      <span>${esc(dShort(days[0]))}</span>
+      <span>en yüksek gün ${money2(maxBar)}</span>
+      <span>${esc(dShort(days[days.length-1]))}</span>
+    </div>`;
+
+  // "Bugüne dek": TÜM geçmiş, aralıktan bağımsız. Kaç günlük ölçüm olduğunu da
+  // yazıyoruz — konektör 2026-07-30'dan önce koşmadığı için o tarihten önceki
+  // kazanç panelde YOK ve toplam eksik; bunu gizlemek yerine söylüyoruz.
+  const all=(D.adByFormat||[]).filter(r=>r.slug===APP && r.metric==='ad_estimated_earnings');
+  const lifetime=all.reduce((s,r)=>s+Number(r.v||0),0);
+  const allDaysSet=new Set(all.map(r=>r.day));
+  const first=[...allDaysSet].sort()[0];
+  el('paTlNote').textContent=allDaysSet.size
+    ? `Bugüne dek toplam ${money2(lifetime)} · ${allDaysSet.size} gün ölçüldü (${first} başlangıçlı). Çubuklar seçili aralık, altın çizgi o aralıktaki birikim.`
+    : '';
+}
+
 function renderPara(){
   const days=new Set(rangeDays());
   const fmtRows=(D.adByFormat||[]).filter(r=>r.slug===APP && days.has(r.day));
@@ -2249,6 +2316,8 @@ function renderPara(){
   el('paMissSub').textContent=mv==null
     ? 'dolu geldi, basılmadı'
     : `dolu geldi, basılmadı · ~${money2(mv)} tahmini`;
+
+  drawRevenueTimeline(fmtRows);
 
   // Formatlar kazanca göre değil KAÇAN GÖSTERİME göre sıralı: bu tablonun işi
   // "en çok kazandıran hangisi" değil, "para nerede duruyor" sorusu.
