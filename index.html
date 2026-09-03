@@ -132,7 +132,9 @@
   .kpi-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
   .kpi-name{font-weight:600;font-size:14px;line-height:1.25}
   .kpi-val{font-family:Sora,sans-serif;font-weight:700;font-size:34px;letter-spacing:-.025em;line-height:1}
-  .kpi-foot{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--ink-3)}
+  /* flex-wrap: dar (mobil 2 kolonlu) kartta çipin yanındaki açıklama tek
+     kelimelik sütuna sıkışıp üç satıra bölünüyordu; kendi satırına insin. */
+  .kpi-foot{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--ink-3);flex-wrap:wrap}
 
   /* === mobil kompakt KPI === <680px: 7 KPI kartı tek sütunda iki ekran
      yüksekliği ediyordu (bkz. docs/backlog.md round 5/6, B2/B3) — 2 kolona
