@@ -2372,10 +2372,16 @@ function bind(){
      okunup gösteriliyor.
      WHY passive + preventDefault YOK: dokunulan öğe bir düğme olabilir
      (sürüm işareti) — kendi işini yapmaya devam etmeli. */
-  if(window.matchMedia && matchMedia('(pointer:coarse)').matches){
+  {
     const bar=el('tipBar');
     let hideT=null;
+    // WHY kontrol BAĞLAMA anında değil TIKLAMA anında: işaretçi türü sabit
+    // değil — kalemli/klavyeli bir tablette, harici fare takılan bir
+    // telefonda ya da dokunmatik bir masaüstünde yükleme anındaki cevap
+    // yanlış olabilir. Her tıklamada bakmak hem doğru hem ucuz.
+    const coarse=()=>!!(window.matchMedia && matchMedia('(pointer:coarse)').matches);
     document.addEventListener('click',ev=>{
+      if(!coarse()) return;
       const n=ev.target.closest && ev.target.closest('[title]');
       if(!n){ bar.classList.remove('on'); return; }
       const t=n.getAttribute('title'); if(!t) return;
