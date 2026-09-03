@@ -2071,7 +2071,14 @@ function renderAll(){
   const pre=isPrelaunch();
   el('v-ozet').classList.toggle('pre',pre);
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
-  el('crumb').innerHTML=`${esc(a?.name||APP)} · App Store · ${span}${versionChip()}`;
+  // Portföy görünümü uygulamadan ve aralıktan BAĞIMSIZ. Üstte seçili
+  // uygulamanın adını ve aktif bir aralık düğmesini bırakmak, aşağıdaki
+  // tablonun onlara göre filtrelendiğini ima ederdi — etmiyor.
+  const pf = VIEW==='portfoy';
+  el('crumb').innerHTML = pf
+    ? `${num((D.apps||[]).length)} uygulama · her biri kendi ölçülen geçmişiyle`
+    : `${esc(a?.name||APP)} · App Store · ${span}${versionChip()}`;
+  document.querySelectorAll('.seg').forEach(n=>{ n.style.display = pf ? 'none' : ''; });
   fillSelects(); renderSignals(); drawPrelaunch(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   if(VIEW==='aso') renderAso(); else if(VIEW==='portfoy') renderPortfoy(); else if(VIEW==='para') renderPara(); else if(VIEW==='urun') renderUrun(); else if(VIEW==='yorum') renderYorum(); else if(VIEW==='saglik') renderSaglik();
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
