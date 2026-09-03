@@ -2058,6 +2058,25 @@ function fillSelects(){
   }));
   el('brandSub').textContent=`${apps.length} uygulama izleniyor`;
 }
+/* Üst satır ve aralık şeridi. AYRI fonksiyon çünkü iki farklı olayla
+   değişiyor: veri/uygulama değişimi (renderAll) ve SEKME değişimi
+   (showView). Yalnız renderAll içinde kalınca sekme değiştirince bayat
+   kalıyordu — portföye geçildiğinde üstte hâlâ seçili uygulamanın adı
+   ve aktif bir aralık düğmesi duruyordu, ki portföy ikisini de yok sayar
+   ve bu, tablonun onlara göre filtrelendiğini ima ederdi.
+
+   `span` yalnız renderAll'ın hesapladığı bir metin; sekme değişiminde
+   elimizde yok, o yüzden son değeri saklanıyor. */
+let LAST_SPAN='';
+function drawCrumb(span){
+  if(span!=null) LAST_SPAN=span;
+  const a=(D.apps||[]).find(x=>x.slug===APP);
+  const pf = VIEW==='portfoy';
+  el('crumb').innerHTML = pf
+    ? `${num((D.apps||[]).length)} uygulama · her biri kendi ölçülen geçmişiyle`
+    : `${esc(a?.name||APP)} · App Store · ${LAST_SPAN}${versionChip()}`;
+  document.querySelectorAll('.seg').forEach(n=>{ n.style.display = pf ? 'none' : ''; });
+}
 function renderAll(){
   const days=rangeDays();
   const a=(D.apps||[]).find(x=>x.slug===APP);
@@ -2071,14 +2090,7 @@ function renderAll(){
   const pre=isPrelaunch();
   el('v-ozet').classList.toggle('pre',pre);
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
-  // Portföy görünümü uygulamadan ve aralıktan BAĞIMSIZ. Üstte seçili
-  // uygulamanın adını ve aktif bir aralık düğmesini bırakmak, aşağıdaki
-  // tablonun onlara göre filtrelendiğini ima ederdi — etmiyor.
-  const pf = VIEW==='portfoy';
-  el('crumb').innerHTML = pf
-    ? `${num((D.apps||[]).length)} uygulama · her biri kendi ölçülen geçmişiyle`
-    : `${esc(a?.name||APP)} · App Store · ${span}${versionChip()}`;
-  document.querySelectorAll('.seg').forEach(n=>{ n.style.display = pf ? 'none' : ''; });
+  drawCrumb(span);
   fillSelects(); renderSignals(); drawPrelaunch(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   if(VIEW==='aso') renderAso(); else if(VIEW==='portfoy') renderPortfoy(); else if(VIEW==='para') renderPara(); else if(VIEW==='urun') renderUrun(); else if(VIEW==='yorum') renderYorum(); else if(VIEW==='saglik') renderSaglik();
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
@@ -2168,6 +2180,7 @@ function showView(v){
   const titles={ozet:"Özet",portfoy:"Portföy",para:"Para",aso:"ASO & kelimeler",urun:"Ürün sağlığı",yorum:"Yorumlar",saglik:"Veri sağlığı"};
   el('pageTitle').textContent = titles[v]||v;
   document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on', b.dataset.view===v));
+  drawCrumb();      /* portföy uygulamadan/aralıktan bağımsız — üst satır da değişmeli */
   buildAnchors();   /* çıpalar görünüme ait — sekme değişince yeniden türetilir */
   if(v==="aso") renderAso(); else if(v==="portfoy") renderPortfoy(); else if(v==="para") renderPara(); else if(v==="urun") renderUrun(); else if(v==="yorum") renderYorum(); else if(v==="saglik") renderSaglik();
 }
