@@ -507,11 +507,14 @@
       </div>
       <div class="head-actions">
         <div class="seg"><button data-range="1">1G</button><button class="on" data-range="7">7G</button><button data-range="30">1A</button><button data-range="0">Baştan</button></div>
-        <button class="pillbtn">
+        <!-- Aralık etiketi. Eskiden metin SABİTTİ ("Son 7 gün") ve aralık
+             değişince güncellenmiyordu — "Baştan" seçiliyken bile 7 gün
+             yazıyordu, yani yanındaki seçicinin söylediğinin tersini
+             söylüyordu. Artık RANGE'ten türetiliyor. -->
+        <div class="pillbtn" id="rangeLabel">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
-          Son 7 gün
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
+          <span id="rangeLabelText">Son 7 gün</span>
+        </div>
         <button class="circbtn" id="themeBtn">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor" stroke="none"/></svg>
         </button>
@@ -2090,6 +2093,12 @@ function drawCrumb(span){
     ? `${num((D.apps||[]).length)} uygulama · her biri kendi ölçülen geçmişiyle`
     : `${esc(a?.name||APP)} · App Store · ${LAST_SPAN}${versionChip()}`;
   document.querySelectorAll('.seg').forEach(n=>{ n.style.display = pf ? 'none' : ''; });
+  const rl=el('rangeLabel');
+  if(rl){
+    rl.style.display = pf ? 'none' : '';
+    const txt={1:'Son 1 gün',7:'Son 7 gün',30:'Son 30 gün',0:'Tüm ölçülen geçmiş'}[RANGE];
+    el('rangeLabelText').textContent = txt || `Son ${RANGE} gün`;
+  }
 }
 function renderAll(){
   const days=rangeDays();
