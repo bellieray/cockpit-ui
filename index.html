@@ -1218,16 +1218,22 @@ function drawYList(){
 const hcls=r=>!r.enabled?'off':(r.is_stale?'stale':(r.never_measured?'nodata':'ok'));
 function renderSaglik(){
   const all=healthAll();
-  el('sOk').textContent=all.filter(r=>hcls(r)==='ok').length;
-  el('sNd').textContent=all.filter(r=>hcls(r)==='nodata').length;
-  el('sSt').textContent=all.filter(r=>hcls(r)==='stale').length;
-  el('sOff').textContent=all.filter(r=>hcls(r)==='off').length;
   const apps=[...new Set(all.map(r=>r.app_slug))].sort();
-  if(el('sApp').options.length<2)
+  if(el('sApp').options.length<2){
     el('sApp').innerHTML=`<option value="">Tüm uygulamalar</option>`+
       apps.map(a=>`<option value="${esc(a)}">${esc(a==='__global__'?'global':a)}</option>`).join("");
+    // WHY: seçili uygulamayla eşleşmeyen bir varsayılan (ör. astroscope'un
+    // konektörleri de sayılmış "14 kapalı"), kullanıcı Spendy'ye girdiğinde
+    // panelin kendi seçimiyle çelişir — burada global APP ile aynı görünüme başla.
+    if(apps.includes(APP)) el('sApp').value=APP;
+  }
+  const scoped=all.filter(r=>!el('sApp').value||r.app_slug===el('sApp').value);
+  el('sOk').textContent=scoped.filter(r=>hcls(r)==='ok').length;
+  el('sNd').textContent=scoped.filter(r=>hcls(r)==='nodata').length;
+  el('sSt').textContent=scoped.filter(r=>hcls(r)==='stale').length;
+  el('sOff').textContent=scoped.filter(r=>hcls(r)==='off').length;
   drawSTable();
-  const bl=(D.blocked||[]);
+  const bl=(D.blocked||[]).filter(b=>!el('sApp').value||b.slug===el('sApp').value);
   el('sBlocked').innerHTML=bl.length?bl.map(b=>`
     <div class="brk"><div class="brk-top">
       <span class="dot" style="background:var(--ink-3)"></span>
