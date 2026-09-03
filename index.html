@@ -1473,7 +1473,11 @@ function chip(d,n){
   // etmeden "belirsiz" göster (bkz. docs/backlog.md round 6, A1).
   if(n!=null && n>0){
     const se=100/Math.sqrt(n);
-    if(Math.abs(d)<2*se) return `<span class="chip flat" title="örneklem küçük (n=${n}) — güvenilir değişim eşiği aşılmadı">• ${r}%</span>`;
+    // NEDEN etiket GÖRÜNÜR: kapı hesabı zaten yapılıyordu ama sonucu yalnız
+    // çipin GRİ olmasıyla belli oluyordu — renk körü bir okuyucu için hiç,
+    // telefonda (`title` dokunmaya açılmıyor) hiç kimse için görünmüyordu.
+    // "Belirsiz olan bir sayı" ile "az değişmiş bir sayı" aynı görünüyordu.
+    if(Math.abs(d)<2*se) return `<span class="chip flat" title="örneklem küçük (n=${n}) — güvenilir değişim eşiği aşılmadı">• ${r}% <b style="font-weight:600;opacity:.75">belirsiz</b></span>`;
   }
   return d>=0 ? `<span class="chip up">▲ ${r}%</span>` : `<span class="chip down">▼ ${r}%</span>`;
 }
@@ -1833,8 +1837,20 @@ function drawKpis(){
     return `<div class="fstage"><div class="fpct">${head}</div><div class="fbars ${cls||''}">${bars}</div>
       <div class="fname">${nm}${sub?` <span style="opacity:.6">· ${sub}</span>`:''}</div><div class="fval tnum">${num(v)}</div></div>`;
   };
+  // ARDIŞIK kayıp: her adım şu an GÖSTERİME oranlanıyor ("indirme = gösterimin
+  // %6.4'ü"). Asıl aksiyon sorusu ise bir önceki adımdan ne kadarının düştüğü
+  // — "sayfaya gelenin %80'i indirmiyor" farklı bir cümle ve farklı bir işe
+  // yönlendiriyor. İki oran birlikte durunca hangi adımın kanadığı görünüyor.
+  // YALNIZ mağaza zincirinde: ürün adımları farklı kaynak/pencere, aralarındaki
+  // fark gerçek bir kayıp değil (aynı gerekçe "en büyük kayıp"ta da geçerli).
+  const withDrop=storeSteps.map(([nm,v,p],i)=>{
+    if(i===0) return [nm,v,p,null];
+    const prevV=storeSteps[i-1][1];
+    const keep=(prevV&&v!=null)?v/prevV*100:null;
+    return [nm,v,p, keep==null?null:`önceki adımdan %${keep.toFixed(keep<10?1:0)}`];
+  });
   el('funnel').innerHTML =
-    storeSteps.map(([nm,v,p])=>stageHtml(nm,v,p)).join("") +
+    withDrop.map(([nm,v,p,sub])=>stageHtml(nm,v,p,sub)).join("") +
     `<div class="fdiv"><span>mağaza · ürün</span></div>` +
     productSteps.map(([nm,v,p,sub])=>stageHtml(nm,v,p,sub,'product')).join("");
   // En büyük kayıp — YALNIZ mağaza zinciri.
@@ -2498,6 +2514,20 @@ function missedValue(a){ return a.rpm==null?null:a.missed*a.rpm/1000; }
 const SIG={
   RED:'var(--down)', AMBER:'var(--amber)', INFO:'var(--ink-3)',
 };
+/* "Nereye bak"ın üçüncü ekseni: hangi sürümden sonra.
+
+   Panel SEBEP önermiyor ve önermemeli — dönüşümün neden düştüğünü bilmiyor
+   (ekran görüntüsü, trafik kaynağı, mevsim, rakip kampanya). Ama üç şeyi
+   veriden ÇIKARABİLİYOR: hangi huni adımında, hangi ülkede, hangi sürümden
+   sonra. Kararı okuyan veriyor.
+
+   Sürüm yoksa boş string döner — uydurma bir bağlam eklemez. */
+function sinceVersion(app){
+  const rel=(D.docs||[]).filter(d=>d.slug===app&&d.subject==='self'&&d.released_at)
+    .map(d=>({v:d.version,day:String(d.released_at).slice(0,10)}))
+    .sort((a,b)=>a.day<b.day?1:-1);
+  return rel.length ? ` Mağazadaki son sürüm ${rel[0].v} (${rel[0].day}) — değişim onunla aynı döneme denk geliyor olabilir.` : '';
+}
 function signalsFor(app=APP){
   const out=[];
   // `tier` ŞART: sıralama tek bir sayı olamaz çünkü sinyaller FARKLI
@@ -2548,11 +2578,11 @@ function signalsFor(app=APP){
     if(c.pv===0){
       add(2, SIG.AMBER, c.imp,
         `${FLAG[cc]||'🏳️'} ${String(cc).toUpperCase()}: ${num(c.imp)} gösterim, 0 ürün sayfası`,
-        `Uygulama aramada çıkıyor ama kimse sayfaya girmiyor. İkon, başlık ya da ilk ekran görüntüsü o pazarda tutmuyor olabilir.`, null);
+        `Kayıp gösterim → ürün sayfası adımında.${sinceVersion(app)} Panel SEBEBİ bilmiyor (ikon, ekran görüntüsü, mevsim, rakip kampanya) — yalnız kaybın hangi adımda ve nerede olduğunu söyleyebiliyor.`, null);
     } else if(c.dl===0){
       add(2, SIG.AMBER, c.imp*0.8,
         `${FLAG[cc]||'🏳️'} ${String(cc).toUpperCase()}: ${num(c.pv)} sayfa ziyareti, 0 indirme`,
-        `Sayfaya giriyorlar, indirmiyorlar. Sayfa içeriği (görseller, açıklama, puan) o pazarda ikna etmiyor.`, null);
+        `Kayıp ürün sayfası → indirme adımında.${sinceVersion(app)} Panel SEBEBİ bilmiyor — yalnız kaybın hangi adımda ve nerede olduğunu söyleyebiliyor.`, null);
     }
   });
 
