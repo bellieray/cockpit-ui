@@ -2360,12 +2360,19 @@ function signalsFor(){
   }
 
   /* --- 4. Konektör sağlığı ------------------------------------------ */
+  // WHY lansman öncesi bastırılıyor: yayınlanmamış bir uygulamanın mağaza
+  // analitiği ve yorumları GERÇEKTEN boştur. "Koştu ama veri üretmedi" orada
+  // bir arıza değil, beklenen durum — ve tek sinyali o olan bir liste,
+  // kullanıcıya "sorun var" der, oysa yok. Bayat veri (is_stale) uyarısı ise
+  // lansman öncesinde de geçerli: konektör bir kez veri üretmişse ve
+  // eskimişse bu her durumda arızadır.
+  const pre=isPrelaunch();
   (D.health||[]).filter(r=>r.app_slug===APP&&r.enabled).forEach(r=>{
     if(r.is_stale){
       add(3, SIG.AMBER, 500,
         `${r.source}: veri bayat`,
         `Son ölçümün üstünden ${Math.round(Number(r.hours_since_data||0))} saat geçti. Bu kaynağın beslediği kartlar eski veriyi gösteriyor.`, null);
-    } else if(r.never_measured && Number(r.runs_total||0)>0){
+    } else if(!pre && r.never_measured && Number(r.runs_total||0)>0){
       add(3, SIG.AMBER, 400,
         `${r.source}: koştu ama veri üretmedi`,
         `${num(r.runs_total)} koşu yapıldı, hiç ölçüm yazılmadı. Ya kaynak gerçekten boş ya da ayrıştırma sessizce başarısız.`, null);
@@ -2408,7 +2415,9 @@ function renderSignals(){
         <span class="txt"><span class="hd">${esc(s.hd)}</span><div class="bd">${esc(s.bd)}</div></span>
         ${s.amt?`<span class="amt" style="color:${s.sev}">${esc(s.amt)}</span>`:''}
       </div>`).join('')
-    : `<div class="sig-none">İşaretlenecek bir şey yok — kurallar hacim eşiğinin altında kaldı ya da hiçbiri tetiklenmedi.</div>`;
+    : `<div class="sig-none">${isPrelaunch()
+        ? 'Uygulama henüz yayında değil — ölçülecek trafik, gelir ve kullanıcı yok. Yayına çıkınca kurallar kendiliğinden işlemeye başlar.'
+        : 'İşaretlenecek bir şey yok — kurallar hacim eşiğinin altında kaldı ya da hiçbiri tetiklenmedi.'}</div>`;
 }
 
 /* Günlük gelir çubukları + kümülatif çizgi.
