@@ -7,8 +7,15 @@
 <meta name="theme-color" content="#e8eaed" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#101416" media="(prefers-color-scheme: dark)">
 <title>App Cockpit</title>
+<!-- Fontlar `<style>` içindeki `@import` ile geliyordu: tarayıcı önce CSS'i
+     indirip AYRIŞTIRMAK zorunda, ancak sonra font isteğini başlatıyor —
+     zincirleme istek, ilk boyamayı geciktiriyor. `preconnect` + `<link>`
+     ikisini paralel başlatıyor. `gstatic` ayrı bir köken (font dosyaları
+     oradan geliyor) ve crossorigin şart, yoksa bağlantı yeniden kurulur. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
   :root{
     --page:#e8eaed; --app:#ffffff; --canvas:#f6f7f9; --card:#ffffff;
@@ -179,6 +186,18 @@
   .sig .bd{font-size:12px;color:var(--ink-2);margin-top:3px;line-height:1.45}
   .sig .amt{font:600 13px/1 Sora,sans-serif;white-space:nowrap;margin-left:auto;padding-left:10px}
   .sig-none{font-size:12.5px;color:var(--ink-3);padding:6px 2px}
+  /* Dokunmayla açılan açıklama. Panelde bağlamın çoğu `title=` içinde:
+     çipin neden gri olduğu, bölgesel rozetin hangi sayılardan geldiği,
+     konektörün neden kapalı olduğu. Telefonda `title` HİÇ görünmüyor ve
+     panelin birincil ekranı telefon — yani en çok açıklamaya ihtiyaç
+     duyulan yerde açıklama yok. Tek genel çözüm, 11 ayrı yeri elle
+     yeniden yazmak yerine. */
+  #tipBar{position:fixed;left:12px;right:12px;bottom:12px;z-index:60;display:none;
+    background:var(--ink);color:var(--card);border-radius:12px;padding:11px 14px;
+    font-size:12.5px;line-height:1.45;box-shadow:0 8px 28px rgba(0,0,0,.28)}
+  #tipBar.on{display:block}
+  #tipBar b{display:block;font-size:10.5px;opacity:.65;font-weight:600;margin-bottom:3px;
+    letter-spacing:.06em;text-transform:uppercase}
 
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:20px 22px;
     box-shadow:var(--sh-card);min-width:0;transition:box-shadow .18s ease,transform .18s ease}
@@ -1334,6 +1353,7 @@
 
   </main>
 </div>
+<div id="tipBar" role="status" aria-live="polite"></div>
 <script>
 /* =====================================================================
    App Cockpit — canlı panel.
@@ -1365,6 +1385,21 @@ let D = null;                 /* sunucudan gelen ham payload */
 let APP = null;               /* seçili uygulama slug'ı */
 let RANGE = 7;                /* 1 | 7 | 30 | 0 (=baştan) */
 
+/* Ülke kodundan okunabilir ad. `Intl.DisplayNames` her modern tarayıcıda
+   var; yoksa (ya da kod tanınmıyorsa) boş dönüp aramayı yalnız koda
+   düşürüyor — hata fırlatıp listeyi boşaltmıyor. Sonuç önbelleğe alınıyor,
+   her tuş vuruşunda 30 ülke için yeniden kurulmasın. */
+const _cnCache={};
+function countryName(cc){
+  if(cc in _cnCache) return _cnCache[cc];
+  let out='';
+  try{
+    const tr=new Intl.DisplayNames(['tr'],{type:'region'}).of(cc.toUpperCase())||'';
+    const en=new Intl.DisplayNames(['en'],{type:'region'}).of(cc.toUpperCase())||'';
+    out=(tr+' '+en).toLowerCase();
+  }catch{ out=''; }
+  return (_cnCache[cc]=out);
+}
 const FLAG={tr:"🇹🇷",us:"🇺🇸",es:"🇪🇸",de:"🇩🇪",gb:"🇬🇧",fr:"🇫🇷",it:"🇮🇹",nl:"🇳🇱",jp:"🇯🇵",kr:"🇰🇷",br:"🇧🇷",mx:"🇲🇽",ca:"🇨🇦",au:"🇦🇺",ar:"🇦🇷",in:"🇮🇳",ru:"🇷🇺",do:"🇩🇴",pa:"🇵🇦",pe:"🇵🇪",kz:"🇰🇿",se:"🇸🇪",ch:"🇨🇭",at:"🇦🇹",be:"🇧🇪",pl:"🇵🇱",pt:"🇵🇹",ie:"🇮🇪",dk:"🇩🇰",no:"🇳🇴",fi:"🇫🇮",cz:"🇨🇿",gr:"🇬🇷",hu:"🇭🇺",ro:"🇷🇴",ua:"🇺🇦",il:"🇮🇱",ae:"🇦🇪",sa:"🇸🇦",eg:"🇪🇬",za:"🇿🇦",ng:"🇳🇬",id:"🇮🇩",th:"🇹🇭",vn:"🇻🇳",ph:"🇵🇭",my:"🇲🇾",sg:"🇸🇬",hk:"🇭🇰",tw:"🇹🇼",cn:"🇨🇳",cl:"🇨🇱",co:"🇨🇴",py:"🇵🇾",uy:"🇺🇾",ec:"🇪🇨",bo:"🇧🇴",cr:"🇨🇷",gt:"🇬🇹",nz:"🇳🇿"};
 const VTAG={GAP:["gap","Fırsat"],COVERED:["cov","Kapsanan"],DEAD_WEIGHT:["dead","Ölü ağırlık"],NO_DEMAND:["nod","Talep yok"],UNMEASURED:["unm","Ölçülmemiş"]};
 const SRCCOL=["var(--violet)","var(--brand)","var(--amber)","var(--ink-3)","var(--pink)","var(--up)"];
@@ -1870,12 +1905,20 @@ function drawKpis(){
 
 /* ---------- grafik ---------- */
 const seriesOn={imp:true,pv:true,dl:true,tap:false};
+/* Catmull-Rom eğrisi sivri veride kontrol noktalarını komşu noktaların
+   DIŞINA taşırıyor: 0 → 40 → 0 gibi bir dizide eğri tabanın altına sarkıyor
+   ve sayım verisinde NEGATİF izlenimi veriyor — indirme sayısı eksiye
+   düşemez. `clampY` kontrol noktalarını iki uç değerin arasına kilitliyor;
+   eğri yumuşak kalıyor ama veri aralığının dışına çıkmıyor. */
 function smooth(pts){
   if(pts.length<2) return pts.length?`M${pts[0][0]},${pts[0][1]}`:"";
+  const clampY=(y,a,b)=>Math.min(Math.max(y,Math.min(a,b)),Math.max(a,b));
   let d=`M${pts[0][0]},${pts[0][1]}`;
   for(let i=0;i<pts.length-1;i++){
     const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;
-    d+=` C${(p1[0]+(p2[0]-p0[0])/6).toFixed(1)},${(p1[1]+(p2[1]-p0[1])/6).toFixed(1)} ${(p2[0]-(p3[0]-p1[0])/6).toFixed(1)},${(p2[1]-(p3[1]-p1[1])/6).toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    const c1y=clampY(p1[1]+(p2[1]-p0[1])/6, p1[1], p2[1]);
+    const c2y=clampY(p2[1]-(p3[1]-p1[1])/6, p1[1], p2[1]);
+    d+=` C${(p1[0]+(p2[0]-p0[0])/6).toFixed(1)},${c1y.toFixed(1)} ${(p2[0]-(p3[0]-p1[0])/6).toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
   }
   return d;
 }
@@ -1923,8 +1966,8 @@ function drawSrc(){
   const T=rows.reduce((t,r)=>({imp:t.imp+r.imp,pv:t.pv+r.pv,dl:t.dl+r.dl}),{imp:0,pv:0,dl:0});
   el('srcTable').innerHTML=
     `<thead><tr><th>Kaynak</th><th>Göst.</th><th>Sayfa</th><th>İnd.</th><th>Dön.%</th></tr></thead><tbody>`+
-    rows.map(r=>{const c=cr(r);return `<tr><td>${esc(r.name)}</td><td class="num">${r.imp||"–"}</td>
-      <td class="num">${r.pv||"–"}</td><td class="num">${r.dl||"–"}</td>
+    rows.map(r=>{const c=cr(r);return `<tr><td>${esc(r.name)}</td><td class="num">${r.imp?num(r.imp):"–"}</td>
+      <td class="num">${r.pv?num(r.pv):"–"}</td><td class="num">${r.dl?num(r.dl):"–"}</td>
       <td class="num">${c<0?"–":(c*100).toFixed(1)}</td></tr>`}).join("")+
     `</tbody><tfoot><tr><td>Toplam</td><td class="num">${num(T.imp)}</td><td class="num">${num(T.pv)}</td>
       <td class="num">${num(T.dl)}</td><td class="num">${T.imp?(T.dl/T.imp*100).toFixed(1):"–"}</td></tr></tfoot>`;
@@ -1935,7 +1978,11 @@ function drawCtry(){
   const all=countryRows(rangeDays());
   const q=el('ctrySearch').value.trim().toLowerCase(), s=el('ctrySort').value, min=+el('ctryMin').value;
   const cr=r=>r.imp?r.dl/r.imp:0;
-  let rows=all.filter(r=>!q||r.cc.includes(q));
+  // Arama yalnız ülke KODUNA bakıyordu: "türkiye" ya da "germany" yazınca
+  // sonuç yoktu, oysa listede bayrak var ve kullanıcı adı biliyor.
+  // `Intl.DisplayNames` ülke adını hem Türkçe hem İngilizce veriyor —
+  // ekstra bir sözlük tablosu tutmadan ikisiyle de eşleşiyor.
+  let rows=all.filter(r=>!q||r.cc.includes(q)||countryName(r.cc).includes(q));
   if(min===-1) rows=rows.filter(r=>r.pv>0&&r.dl===0); else if(min>0) rows=rows.filter(r=>r.dl>=min);
   rows.sort((a,b)=>s==='cr'?cr(b)-cr(a):(b[s]||0)-(a[s]||0));
   el('ctryTiles').innerHTML=[...all].sort((a,b)=>b.dl-a.dl||b.imp-a.imp).slice(0,6).map(r=>
@@ -2318,6 +2365,25 @@ function bind(){
       if(b.dataset.range!=null){ RANGE=+b.dataset.range; syncRange(); renderAll(); }
     })));
   bindViews(); bindAnchors(); buildAnchors();
+  /* WHY yalnız dokunmatikte: fareli cihazda tarayıcının kendi tooltip'i
+     zaten çalışıyor, ikinci bir katman gürültü olur. `pointer:coarse` kaba
+     işaretçiyi (parmak) ayırt ediyor.
+     WHY `title` KALDIRILMIYOR: masaüstünde hâlâ gerekli; burada yalnız
+     okunup gösteriliyor.
+     WHY passive + preventDefault YOK: dokunulan öğe bir düğme olabilir
+     (sürüm işareti) — kendi işini yapmaya devam etmeli. */
+  if(window.matchMedia && matchMedia('(pointer:coarse)').matches){
+    const bar=el('tipBar');
+    let hideT=null;
+    document.addEventListener('click',ev=>{
+      const n=ev.target.closest && ev.target.closest('[title]');
+      if(!n){ bar.classList.remove('on'); return; }
+      const t=n.getAttribute('title'); if(!t) return;
+      bar.innerHTML=`<b>${esc((n.textContent||'').trim().slice(0,40))}</b>${esc(t)}`;
+      bar.classList.add('on');
+      clearTimeout(hideT); hideT=setTimeout(()=>bar.classList.remove('on'), 7000);
+    }, true);
+  }
   // Kayıtlı tema açılışta uygulanır; hiç seçim yapılmadıysa dokunulmaz ve
   // işletim sisteminin tercihi (prefers-color-scheme) geçerli kalır.
   const savedTheme=PREF.get('theme');
