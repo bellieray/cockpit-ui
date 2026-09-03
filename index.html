@@ -767,7 +767,7 @@
         </div>
         <div class="filters">
           <select id="hApp"><option value="">Tüm uygulamalar</option><option value="spendy">Spendy</option><option value="astroscope">AstroScope</option><option value="__global__">Global</option></select>
-          <select id="hStatus"><option value="">Tüm durumlar</option><option value="ok">Sağlıklı</option><option value="nodata">Veri yok</option><option value="stale">Bayat</option><option value="off">Kapalı</option></select>
+          <select id="hStatus"><option value="">Tüm durumlar</option><option value="ok">Sağlıklı</option><option value="nodata">Veri yok</option><option value="stale">Bayat</option><option value="off">Kapalı (hepsi)</option><option value="blocked">Yalnız engelli</option></select>
           <span class="fcount" id="hCount"></span>
         </div>
         <div class="brk"><div class="brk-top"><span class="dot" style="background:var(--up)"></span>Sağlıklı<span class="v" id="brkOkV">–</span><span class="p" id="brkOkP"></span></div><div class="brk-track"><div class="brk-fill" id="brkOk" style="width:0;background:var(--up)"></div></div></div>
@@ -1290,7 +1290,7 @@
           <div class="filters">
             <select id="sApp"><option value="">Tüm uygulamalar</option></select>
             <select id="sStatus"><option value="">Tüm durumlar</option><option value="ok">Sağlıklı</option>
-              <option value="nodata">Veri yok</option><option value="stale">Bayat</option><option value="off">Kapalı</option></select>
+              <option value="nodata">Veri yok</option><option value="stale">Bayat</option><option value="off">Kapalı (hepsi)</option><option value="blocked">Yalnız engelli</option></select>
             <input id="sSearch" placeholder="Kaynak ara…">
             <span class="fcount" id="sCount"></span>
           </div>
@@ -1868,11 +1868,31 @@ function drawCtry(){
 }
 
 /* ---------- sağlık ---------- */
+/* Kapalı konektörün ÜÇ ayrı hâli var ve tek bir "kapalı" sayısı üçünü de
+   arıza gibi gösteriyordu ("18 açık · 15 kapalı" → 15 şey eksik sanılıyor):
+
+   · devredildi   — verisi başka kaynaktan geliyor (`superseded_by`). Eksik
+                    HİÇBİR ŞEY yok; bu satır yalnız tarihsel kayıt.
+   · lansman bekliyor — uygulama yayında değil, ölçülecek şey yok. Yayına
+                    çıkınca kendiliğinden anlamlı olacak.
+   · engelli      — gerçekten yapılacak iş/kimlik bilgisi var. Tek gerçek eksik.
+
+   Ayrım metinden DEĞİL yapıdan: `superseded_by` alanı ve uygulamanın lansman
+   öncesi olup olmadığı. Türkçe cümle ayrıştırmak kırılgan olurdu. */
+function closedKind(r){
+  const b=(D.blocked||[]).find(x=>x.slug===r.app_slug&&x.source===r.source);
+  if(b&&b.superseded_by) return 'super';
+  if(r.app_slug!=='__global__'&&isPrelaunch(r.app_slug)) return 'pre';
+  return 'blocked';
+}
 function drawHealth(){
   const app=el('hApp').value, st=el('hStatus').value;
   const cls=r=>!r.enabled?'off':(r.is_stale?'stale':(r.never_measured?'nodata':'ok'));
   const all=healthAll();
-  const rows=all.filter(r=>(!app||r.app_slug===app)&&(!st||cls(r)===st));
+  // 'blocked' gerçek bir `cls()` değeri değil, kapalıların alt kümesi —
+  // "gerçekten eksik olan ne?" sorusunun tek tıkla cevabı.
+  const rows=all.filter(r=>(!app||r.app_slug===app) && (!st
+    || (st==='blocked' ? (!r.enabled && closedKind(r)==='blocked') : cls(r)===st)));
   const en=all.filter(r=>r.enabled);
   const c={ok:en.filter(r=>cls(r)==='ok').length,nodata:en.filter(r=>cls(r)==='nodata').length,stale:en.filter(r=>cls(r)==='stale').length};
   const tot=en.length||1;
@@ -1883,8 +1903,12 @@ function drawHealth(){
     `<thead><tr><th>Kaynak</th><th>Koşu</th><th>Saat</th><th>Durum</th></tr></thead><tbody>`+
     (rows.length?rows.map(r=>{
       const k=cls(r);
+      const ck=k==='off'?closedKind(r):null;
       const tag=k==='ok'?'<span class="tag cov">Sağlıklı</span>':k==='nodata'?'<span class="tag nod">Veri yok</span>'
-        :k==='stale'?'<span class="tag dead">Bayat</span>':'<span class="tag unm">Kapalı</span>';
+        :k==='stale'?'<span class="tag dead">Bayat</span>'
+        :ck==='super'?'<span class="tag cov">Devredildi</span>'
+        :ck==='pre'?'<span class="tag unm">Lansman bekliyor</span>'
+        :'<span class="tag dead">Engelli</span>';
       const blocked=(D.blocked||[]).find(b=>b.slug===r.app_slug&&b.source===r.source);
       const t=blocked&&blocked.blocked_on?` title="${esc(blocked.blocked_on)}"`:"";
       return `<tr${t}><td>${esc(r.app_slug==='__global__'?'global':r.app_slug)}/${esc(r.source)}</td>
@@ -1893,7 +1917,14 @@ function drawHealth(){
         <td class="num">${tag}</td></tr>`;
     }).join(""):`<tr><td colspan="4" class="empty">Eşleşen konektör yok</td></tr>`)+`</tbody>`;
   el('hCount').textContent=`${rows.length} / ${all.length}`;
-  el('hMeta').textContent=`${en.length} açık · ${all.length-en.length} kapalı`;
+  // Özet satırı da üç sınıfı ayırıyor — "kapalı" tek sayı olarak asıl
+  // soruyu ("gerçekten eksik olan ne?") gizliyordu.
+  const off=all.filter(r=>!r.enabled);
+  const nSuper=off.filter(r=>closedKind(r)==='super').length;
+  const nPre=off.filter(r=>closedKind(r)==='pre').length;
+  const nBlocked=off.length-nSuper-nPre;
+  el('hMeta').textContent=`${en.length} açık · ${nSuper} devredildi · ${nPre} lansman bekliyor · `
+    + `${nBlocked} engelli`;
 }
 
 /* ---------- kelimeler ---------- */
