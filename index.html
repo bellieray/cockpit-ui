@@ -480,6 +480,7 @@
       <div class="nav">
         <button class="on" data-view="ozet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Özet</button>
         <button data-view="aso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>ASO &amp; kelimeler</button>
+        <button data-view="portfoy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Portföy</button>
         <button data-view="para"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Para</button>
         <button data-view="urun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/></svg>Ürün sağlığı</button>
         <button data-view="yorum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Yorumlar</button>
@@ -517,7 +518,7 @@
       </div>
     </div>
 
-    <nav class="tabs"><button class="on" data-view="ozet">Özet</button><button data-view="para">Para</button><button data-view="aso">ASO</button><button data-view="urun">Ürün sağlığı</button><button data-view="yorum">Yorumlar</button><button data-view="saglik">Veri sağlığı</button></nav>
+    <nav class="tabs"><button class="on" data-view="ozet">Özet</button><button data-view="portfoy">Portföy</button><button data-view="para">Para</button><button data-view="aso">ASO</button><button data-view="urun">Ürün sağlığı</button><button data-view="yorum">Yorumlar</button><button data-view="saglik">Veri sağlığı</button></nav>
 
     <!-- mobil sabit şerit: aralık seçici + bölge çıpaları. Masaüstünde gizli
          (aralık seçici orada başlıkta duruyor, sayfa da o kadar uzun değil).
@@ -1063,6 +1064,41 @@
       </div>
     </div>
 
+    <!-- ================= PORTFÖY =================
+         NEDEN var: bugün uygulama seçimi yan yana butonlar ve her uygulama
+         için 6 sekme. 2 uygulamada çalışır; 15 uygulamada portföyün durumunu
+         bilmek 90 sekme görüntüsü demek. Bu görünüm "hangi uygulama ilgimi
+         hak ediyor" sorusunu TEK ekranda cevaplıyor.
+
+         Aralık seçicisine bağlı DEĞİL — her uygulama kendi tüm geçmişiyle.
+         Uygulamalar farklı zamanlarda çıkıyor; ortak bir 7 günlük pencere
+         yenisini haksız yere sıfır gösterir. -->
+    <div class="view" id="v-portfoy" style="display:none">
+      <div class="grid">
+        <div class="c12 region-label">Portföy</div>
+        <div class="card c12">
+          <div class="card-head">
+            <div><div class="card-title">Uygulamalar</div>
+                 <div class="card-sub">her uygulama kendi tüm geçmişiyle · aralık seçicisinden bağımsız</div></div>
+            <select id="pfSort" style="font:inherit;font-size:12.5px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
+              <option value="lost">Masadaki para</option>
+              <option value="rev">Gelir</option>
+              <option value="dau">Günlük aktif</option>
+              <option value="users">Kullanıcı</option>
+              <option value="sig">Sinyal</option>
+            </select>
+          </div>
+          <div class="tw"><table class="dt" id="pfTable"></table></div>
+          <div class="funnel-note" id="pfNote"></div>
+        </div>
+
+        <div class="c12 region-label">Sinyaller · tüm portföy</div>
+        <div class="card c12">
+          <div class="siglist" id="pfSigList"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ================= PARA =================
          NEDEN ayrı sekme: Özet'teki "Gelir" bandı üç sayı (MRR, abonelik,
          reklam geliri toplamı) ve bu üç sayı paranın NEREDEN gelmediğini
@@ -1292,15 +1328,15 @@ const METRIC={imp:"store_impression",pv:"store_page_view",dl:"downloads_first_ti
 // self (rakip değil) tekil "stock" ölçümü — RC'nin Overview API'sinden gelen
 // MRR/aktif abone gibi anlık görüntü değerleri. bkz. panel/index.ts stocks
 // sorgusu: grain='stock' zaten filtresiz dönüyor, backend değişikliği yok.
-function stockValue(metric){
-  const r=stocksFor().find(x=>x.metric===metric && x.subject==='self');
+function stockValue(metric, app=APP){
+  const r=stocksFor(app).find(x=>x.metric===metric && x.subject==='self');
   return r?Number(r.value):null;
 }
 
 /* ---------- tarih aralığı ---------- */
-function allDays(){
+function allDays(app=APP){
   const s=new Set();
-  (D.series||[]).filter(r=>r.slug===APP).forEach(r=>s.add(r.day));
+  (D.series||[]).filter(r=>r.slug===app).forEach(r=>s.add(r.day));
   return [...s].sort();
 }
 function rangeDays(){
@@ -1354,7 +1390,10 @@ function countryRows(days){
 const gapsFor=()=> (D.gaps||[]).filter(r=>r.slug===APP);
 const reviewsFor=()=> (D.reviews||[]).filter(r=>r.slug===APP);
 const healthAll=()=> (D.health||[]);
-const stocksFor=()=> (D.stocks||[]).filter(r=>r.slug===APP);
+/* NEDEN opsiyonel `app` parametresi: portföy görünümü TÜM uygulamaları
+   yan yana hesaplıyor, yani seçili uygulamadan bağımsız okuma gerekiyor.
+   Varsayılan APP olduğu için mevcut 40+ çağrı hiç değişmedi. */
+const stocksFor=(app=APP)=> (D.stocks||[]).filter(r=>r.slug===app);
 
 /* ---------- KPI ---------- */
 function pctDelta(cur,prev){ if(!prev) return null; return (cur-prev)/prev*100; }
@@ -1577,14 +1616,14 @@ function versionChip(){
    ===================================================================== */
 const STORE_SELF_FACTS=['store_rating_count','store_rating_avg','store_binary_size'];
 const STORE_FLOW_METRICS=['store_impression','store_page_view','store_tap','downloads_first_time'];
-const storeWatcher=()=> (D.health||[]).find(r=>r.app_slug===APP&&r.source==='itunes_lookup')||null;
-function isPrelaunch(){
-  const w=storeWatcher();
+const storeWatcher=(app=APP)=> (D.health||[]).find(r=>r.app_slug===app&&r.source==='itunes_lookup')||null;
+function isPrelaunch(app=APP){
+  const w=storeWatcher(app);
   if(!w||!w.enabled||w.is_stale||w.never_measured) return false;
   const listed=
-    stocksFor().some(r=>(r.subject||'self')==='self'&&STORE_SELF_FACTS.includes(r.metric)) ||
-    (D.docs||[]).some(d=>d.slug===APP&&d.subject==='self'&&d.country) ||
-    (D.series||[]).some(r=>r.slug===APP&&STORE_FLOW_METRICS.includes(r.metric)&&Number(r.v||0)>0);
+    stocksFor(app).some(r=>(r.subject||'self')==='self'&&STORE_SELF_FACTS.includes(r.metric)) ||
+    (D.docs||[]).some(d=>d.slug===app&&d.subject==='self'&&d.country) ||
+    (D.series||[]).some(r=>r.slug===app&&STORE_FLOW_METRICS.includes(r.metric)&&Number(r.v||0)>0);
   return !listed;
 }
 /* Mağaza kontrolünün yaşı. `freshBadge` ISO METİN bekliyor, buradaki kaynak
@@ -2034,7 +2073,7 @@ function renderAll(){
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
   el('crumb').innerHTML=`${esc(a?.name||APP)} · App Store · ${span}${versionChip()}`;
   fillSelects(); renderSignals(); drawPrelaunch(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
-  if(VIEW==='aso') renderAso(); else if(VIEW==='para') renderPara(); else if(VIEW==='urun') renderUrun(); else if(VIEW==='yorum') renderYorum(); else if(VIEW==='saglik') renderSaglik();
+  if(VIEW==='aso') renderAso(); else if(VIEW==='portfoy') renderPortfoy(); else if(VIEW==='para') renderPara(); else if(VIEW==='urun') renderUrun(); else if(VIEW==='yorum') renderYorum(); else if(VIEW==='saglik') renderSaglik();
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
   // yukarıda değişiyor ve bazı region-label'lar görünür/gizli olabiliyor —
   // sekme değişmeden çıpa şeridi bayat kalmasın diye burada da yeniden kurulur.
@@ -2086,6 +2125,7 @@ function bind(){
   });
   el('chartScale').addEventListener('change',drawChart);
   el('srcSort').addEventListener('change',drawSrc);
+  el('pfSort').addEventListener('change',renderPortfoy);
   ['ctrySearch','ctrySort','ctryMin'].forEach(id=>el(id).addEventListener('input',drawCtry));
   ['hApp','hStatus'].forEach(id=>el(id).addEventListener('change',drawHealth));
   ['kwCountry','kwSearch','kwSort'].forEach(id=>el(id).addEventListener('input',drawKw));
@@ -2115,14 +2155,14 @@ function bind(){
 let VIEW = "ozet";
 function showView(v){
   VIEW = v;
-  ["ozet","para","aso","urun","yorum","saglik"].forEach(k=>{
+  ["ozet","portfoy","para","aso","urun","yorum","saglik"].forEach(k=>{
     const n=el("v-"+k); if(n) n.style.display = (k===v?"":"none");
   });
-  const titles={ozet:"Özet",para:"Para",aso:"ASO & kelimeler",urun:"Ürün sağlığı",yorum:"Yorumlar",saglik:"Veri sağlığı"};
+  const titles={ozet:"Özet",portfoy:"Portföy",para:"Para",aso:"ASO & kelimeler",urun:"Ürün sağlığı",yorum:"Yorumlar",saglik:"Veri sağlığı"};
   el('pageTitle').textContent = titles[v]||v;
   document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on', b.dataset.view===v));
   buildAnchors();   /* çıpalar görünüme ait — sekme değişince yeniden türetilir */
-  if(v==="aso") renderAso(); else if(v==="para") renderPara(); else if(v==="urun") renderUrun(); else if(v==="yorum") renderYorum(); else if(v==="saglik") renderSaglik();
+  if(v==="aso") renderAso(); else if(v==="portfoy") renderPortfoy(); else if(v==="para") renderPara(); else if(v==="urun") renderUrun(); else if(v==="yorum") renderYorum(); else if(v==="saglik") renderSaglik();
 }
 
 /* ---------- ASO ---------- */
@@ -2206,8 +2246,8 @@ function drawAKw(){
 /* ---------- ÜRÜN SAĞLIĞI ---------- */
 // bkz. ADR-0035. Hepsi app_export'un `stock` metrikleri — revenue band'la
 // aynı desen (stockValue), backend değişikliği yok.
-function stockSeriesFor(metric){
-  return (D.stockSeries||[]).filter(r=>r.slug===APP&&r.metric===metric)
+function stockSeriesFor(metric, app=APP){
+  return (D.stockSeries||[]).filter(r=>r.slug===app&&r.metric===metric)
     .map(r=>({day:r.day,v:Number(r.value)})).sort((a,b)=>a.day<b.day?-1:a.day>b.day?1:0);
 }
 // app_export bugün kuruldu — 1-2 günlük geçmişle bir çizgi çizmek sahte bir
@@ -2291,7 +2331,7 @@ function missedValue(a){ return a.rpm==null?null:a.missed*a.rpm/1000; }
 const SIG={
   RED:'var(--down)', AMBER:'var(--amber)', INFO:'var(--ink-3)',
 };
-function signalsFor(){
+function signalsFor(app=APP){
   const out=[];
   // `tier` ŞART: sıralama tek bir sayı olamaz çünkü sinyaller FARKLI
   // BİRİMLERDE (dolar, gösterim adedi, saat). "$6.74 kayıp" ile "92 gösterim"
@@ -2301,7 +2341,7 @@ function signalsFor(){
   const add=(tier,sev,rank,hd,bd,amt)=>out.push({tier,sev,rank,hd,bd,amt});
 
   /* --- 1. Reklam: dolu gelen envanter basılmıyor --------------------- */
-  const fmtRows=(D.adByFormat||[]).filter(r=>r.slug===APP);
+  const fmtRows=(D.adByFormat||[]).filter(r=>r.slug===app);
   const formats=[...new Set(fmtRows.map(r=>r.format))];
   formats.forEach(f=>{
     const a=adAgg(fmtRows.filter(r=>r.format===f));
@@ -2321,9 +2361,12 @@ function signalsFor(){
   });
 
   /* --- 2. Ülke: mağaza gösterimi var, ürün sayfası yok --------------- */
-  const days=new Set(rangeDays());
+  // Portföyde aralık seçicisi yok — her uygulama kendi TÜM geçmişiyle
+  // değerlendirilir; "hangi app ilgimi hak ediyor" sorusu 7 günlük bir
+  // pencereye sığmıyor.
+  const days=new Set(app===APP?rangeDays():allDays(app));
   const cAgg={};
-  (D.byCountryDaily||[]).filter(r=>r.slug===APP&&days.has(r.day)).forEach(r=>{
+  (D.byCountryDaily||[]).filter(r=>r.slug===app&&days.has(r.day)).forEach(r=>{
     const c=cAgg[r.country]||(cAgg[r.country]={imp:0,pv:0,dl:0});
     if(r.metric===METRIC.imp) c.imp+=Number(r.v||0);
     else if(r.metric===METRIC.pv) c.pv+=Number(r.v||0);
@@ -2347,7 +2390,7 @@ function signalsFor(){
   });
 
   /* --- 3. Ödemeye dönüşüm sıfır ------------------------------------- */
-  const conv=(D.stockSeries||[]).filter(r=>r.slug===APP&&r.metric==='rc_initial_conversion');
+  const conv=(D.stockSeries||[]).filter(r=>r.slug===app&&r.metric==='rc_initial_conversion');
   if(conv.length){
     const n=conv.reduce((s,r)=>s+Number(r.num||0),0);
     const d=conv.reduce((s,r)=>s+Number(r.den||0),0);
@@ -2366,8 +2409,8 @@ function signalsFor(){
   // kullanıcıya "sorun var" der, oysa yok. Bayat veri (is_stale) uyarısı ise
   // lansman öncesinde de geçerli: konektör bir kez veri üretmişse ve
   // eskimişse bu her durumda arızadır.
-  const pre=isPrelaunch();
-  (D.health||[]).filter(r=>r.app_slug===APP&&r.enabled).forEach(r=>{
+  const pre=isPrelaunch(app);
+  (D.health||[]).filter(r=>r.app_slug===app&&r.enabled).forEach(r=>{
     if(r.is_stale){
       add(3, SIG.AMBER, 500,
         `${r.source}: veri bayat`,
@@ -2380,7 +2423,7 @@ function signalsFor(){
   });
 
   /* --- 5. Haftalık aktif kullanıcı düşüşü --------------------------- */
-  const wau=stockSeriesFor('rc_active_customers_7d');
+  const wau=stockSeriesFor('rc_active_customers_7d', app);
   if(wau.length>=2){
     const last=wau[wau.length-1].v, prev=wau[wau.length-2].v;
     // Kapı: önceki hafta en az 20 kişi VE düşüş en az %30. Küçük sayılarda
@@ -2394,8 +2437,8 @@ function signalsFor(){
   }
 
   /* --- 6. Son 30 günün yorum puanı, ömür boyu puanın altında -------- */
-  const rr=(D.reviewRecent||[]).find(r=>r.slug===APP&&r.subject==='self');
-  const life=stockValue('store_rating_avg');
+  const rr=(D.reviewRecent||[]).find(r=>r.slug===app&&r.subject==='self');
+  const life=stockValue('store_rating_avg', app);
   // Kapı: son 30 günde en az 5 yazılı yorum VE en az 0.5 yıldız fark.
   if(rr && rr.n30>=5 && life!=null && rr.avg30!=null && life-rr.avg30>=0.5){
     add(3, SIG.AMBER, 600,
@@ -2404,6 +2447,79 @@ function signalsFor(){
   }
 
   return out.sort((a,b)=> a.tier-b.tier || b.rank-a.rank);
+}
+
+/* ---------- PORTFÖY ----------
+   Uygulama başına TEK satır. Her sayı o uygulamanın kendi tüm geçmişinden.
+
+   NEDEN aralık seçicisi yok: uygulamalar farklı zamanlarda çıkıyor. Ortak
+   bir "son 7 gün" penceresi, dün yayınlanmış bir uygulamayı iki yıllık
+   olanla aynı kefeye koyup haksız yere sıfır gösterir. Portföy sorusu
+   ("hangisine zaman ayırayım") zaten kümülatif bir sorudur. */
+function portfolioRow(a){
+  const slug=a.slug;
+  const fmt=(D.adByFormat||[]).filter(r=>r.slug===slug);
+  const agg=adAgg(fmt);
+  // Masadaki para: format başına, harmanlanmış eCPM ile DEĞİL (bkz. Para
+  // sekmesindeki aynı gerekçe — kayıp yüksek eCPM'li formatlarda yoğunlaşıyor).
+  const lost=[...new Set(fmt.map(r=>r.format))]
+    .reduce((s,f)=>s+(missedValue(adAgg(fmt.filter(r=>r.format===f)))||0),0);
+  const dl=(D.series||[]).filter(r=>r.slug===slug&&r.metric===METRIC.dl)
+    .reduce((s,r)=>s+Number(r.v||0),0);
+  const dauPts=stockSeriesFor('rc_active_customers_1d',slug);
+  const sig=signalsFor(slug);
+  return {
+    slug, name:a.name,
+    pre:isPrelaunch(slug),
+    rev:agg.earn, lost,
+    dl,
+    dau:dauPts.length?dauPts[dauPts.length-1].v:null,
+    users:stockValue('app_export_total_users',slug),
+    rating:stockValue('store_rating_avg',slug),
+    mrr:stockValue('rc_mrr',slug),
+    sig, sigMoney:sig.filter(x=>x.tier===1).length,
+    unhealthy:Number(a.connectors_unhealthy||0),
+  };
+}
+function renderPortfoy(){
+  const rows=(D.apps||[]).map(portfolioRow);
+  const key=el('pfSort')?.value||'lost';
+  const val=r=>({lost:r.lost, rev:r.rev, dau:r.dau||0, users:r.users||0, sig:r.sig.length}[key]||0);
+  rows.sort((x,y)=>val(y)-val(x));
+
+  el('pfTable').innerHTML=
+    `<thead><tr><th>Uygulama</th><th class="num">Gelir</th><th class="num">Masadaki</th>
+      <th class="num">İndirme</th><th class="num">Günlük aktif</th><th class="num">Kullanıcı</th>
+      <th class="num">Puan</th><th class="num">Sinyal</th></tr></thead><tbody>`
+    + rows.map(r=>`<tr${r.slug===APP?' style="background:var(--canvas)"':''}>
+        <td><b>${esc(r.name)}</b>${r.pre?' <span class="chip flat">lansman öncesi</span>':''}</td>
+        <td class="num">${r.rev?money2(r.rev):'–'}</td>
+        <td class="num"${r.lost?' style="color:var(--down);font-weight:600"':''}>${r.lost?'~'+money2(r.lost):'–'}</td>
+        <td class="num">${r.dl?num(r.dl):'–'}</td>
+        <td class="num">${r.dau!=null?num(r.dau):'–'}</td>
+        <td class="num">${r.users!=null?num(r.users):'–'}</td>
+        <td class="num">${r.rating!=null?r.rating.toFixed(2):'–'}</td>
+        <td class="num">${r.sig.length?`${r.sig.length}${r.sigMoney?` <span style="color:var(--down)">(${r.sigMoney} para)</span>`:''}`:'–'}</td>
+      </tr>`).join('')
+    + `</tbody>`;
+
+  const totLost=rows.reduce((s,r)=>s+r.lost,0), totRev=rows.reduce((s,r)=>s+r.rev,0);
+  el('pfNote').textContent=`Portföy toplamı: ${money2(totRev)} kazanç · en az ~${money2(totLost)} masada. `
+    + `"Masadaki", dolu gelen ama ekrana basılmayan reklam envanterinin o formatın kendi eCPM'iyle karşılığı; `
+    + `eCPM'i hiç ölçülmemiş formatlar bu toplama katılMIYOR, yani gerçek rakam daha yüksek.`;
+
+  // Tüm portföyün sinyalleri tek listede, uygulama adıyla etiketli. 15
+  // uygulamada "hangisinde ne var" sorusunu sekme gezmeden cevaplar.
+  const all=[];
+  rows.forEach(r=>r.sig.forEach(s=>all.push({...s, app:r.name})));
+  all.sort((a,b)=> a.tier-b.tier || b.rank-a.rank);
+  el('pfSigList').innerHTML = all.length
+    ? all.map(s=>`<div class="sig">
+        <span class="dot" style="background:${s.sev}"></span>
+        <span class="txt"><span class="hd">${esc(s.app)} · ${esc(s.hd)}</span><div class="bd">${esc(s.bd)}</div></span>
+        ${s.amt?`<span class="amt" style="color:${s.sev}">${esc(s.amt)}</span>`:''}
+      </div>`).join('')
+    : `<div class="sig-none">Portföyde işaretlenecek bir şey yok.</div>`;
 }
 
 function renderSignals(){
