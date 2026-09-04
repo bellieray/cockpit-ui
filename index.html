@@ -516,6 +516,9 @@
   .errcalls{margin-top:6px;font-size:11.5px;color:var(--ink-3);
     font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
   .errcalls b{color:var(--down)}
+  /* Çözülmüş hata: silinmiyor ama soluk — "şu an bakılacak" ile "geçmişte
+     olmuş" aynı ağırlıkta görünmemeli. */
+  .brk.resolved{opacity:.6}
   @keyframes spin{to{transform:rotate(360deg)}}
   #syncBtn.busy svg{animation:spin 1.1s linear infinite}
   @media (prefers-reduced-motion:reduce){#syncBtn.busy svg{animation:none}}
@@ -3565,19 +3568,24 @@ function drawSyncErrors(){
   const app=el('sApp').value;
   /* `!== 'OK'` DEĞİL `=== 'FAILED'`: durum üçlü (RUNNING/OK/FAILED) ve
      hâlâ koşan bir çalışma hata değil — ilk hâli onu da hata listesine
-     koyuyordu, yani panel var olmayan bir arıza uyduruyordu. */
-  const rows=(D.syncRecent||[])
-    .filter(r=>r.status==='FAILED' && (!app||r.slug===app));
+     koyuyordu, yani panel var olmayan bir arıza uyduruyordu.
+     Sıralama: hâlâ açık olanlar üstte. Çözülmüşler SİLİNMİYOR — dün ne
+     patladığı yarın aynı şey olunca aranacak ilk bilgi. */
+  const rows=syncErrRows().filter(r=>!app||r.slug===app)
+    .sort((a,b)=>(a.resolved?1:0)-(b.resolved?1:0));
+  const open=rows.filter(r=>!r.resolved).length;
   el('sErrSub').textContent = rows.length
-    ? `${rows.length} başarısız çalışma · son 24 saat`
+    ? `${open} açık · ${rows.length-open} çözülmüş · son 24 saat`
     : 'son 24 saatte başarısız çalışma yok';
   el('sErrors').innerHTML = rows.length ? rows.map(r=>{
     const calls=failedCalls(r.log_tail, r.error);
-    return `<div class="brk"><div class="brk-top">
-      <span class="dot" style="background:var(--down)"></span>
+    return `<div class="brk${r.resolved?' resolved':''}"><div class="brk-top">
+      <span class="dot" style="background:${r.resolved?'var(--ink-3)':'var(--down)'}"></span>
       <b style="font-family:Sora">${esc(r.slug==='__global__'?'global':r.slug)}/${esc(r.source)}</b>
       <span class="p" style="width:auto">${esc(String(r.started_at||'').slice(11,16))}</span>
-      <span class="tag dead" style="margin-left:auto">${esc(r.failure_class||'HATA')}</span></div>
+      ${r.resolved?`<span class="tag cov" style="margin-left:auto">çözüldü</span>
+        <span class="tag unm">${esc(r.failure_class||'HATA')}</span>`
+       :`<span class="tag dead" style="margin-left:auto">${esc(r.failure_class||'HATA')}</span>`}</div>
       <div class="errmsg">${esc(r.error||'hata metni yazılmamış')}</div>
       ${calls.length?`<div class="errcalls">${calls.map(c=>
         `<div><b>${esc(String(c.status))}</b> ${esc(String(c.url||''))}</div>`).join("")}</div>`:''}
@@ -3671,16 +3679,32 @@ function drawSyncLabel(){
   el('syncBtnText').textContent = t ? 'Senkron · '+agoText(new Date(t)) : 'Senkron';
   drawSyncErrBadge();
 }
-/* Sayı tek başına eyleme dönüşmüyor — "6 hata" gördükten sonra hangi
+/* Bir hata "çözülmüş" sayılır: aynı uygulama+kaynak o hatadan SONRA
+   başarıyla koşmuşsa. `syncRecent` en yeniden eskiye sıralı, o yüzden bir
+   anahtarı ilk gördüğümüz satır o kaynağın SON hâli.
+
+   NEDEN önemli: 24 saatlik pencere, düzelmiş bir hatayı bir gün boyunca
+   sayar. Dün patlayıp bugün 168 satır yazan bir konektör için rozetin
+   "hata" demesi, bakınca bozuk bir şey bulamamak demek — rozet birkaç
+   kez böyle yaparsa artık okunmaz. Rozet YALNIZ hâlâ bozuk olanı sayıyor;
+   çözülmüş olanlar listede kalıyor ama "çözüldü" diye işaretli. */
+function syncErrRows(){
+  const rows=(D.syncRecent||[]);
+  const latest=new Map();
+  rows.forEach(r=>{ const k=r.slug+'/'+r.source; if(!latest.has(k)) latest.set(k, r.status); });
+  return rows.filter(r=>r.status==='FAILED')
+             .map(r=>({...r, resolved: latest.get(r.slug+'/'+r.source)==='OK'}));
+}
+/* Sayı tek başına eyleme dönüşmüyor — "2 hata" gördükten sonra hangi
    kaynak, ne hatası sorusunun cevabı bir tık ötede olmalı. Rozet listeye
-   götürüyor; sayı da orada listelenen satır sayısıyla AYNI olmak zorunda,
-   yoksa panel kendi kendisiyle çelişir (bkz. blended eCPM dersi). */
+   götürüyor; sayı da orada AÇIK olarak listelenen satır sayısıyla AYNI
+   olmak zorunda, yoksa panel kendi kendisiyle çelişir. */
 function drawSyncErrBadge(){
-  const n=(D.syncRecent||[]).filter(r=>r.status==='FAILED').length;
+  const n=syncErrRows().filter(r=>!r.resolved).length;
   const b=el('syncErrBtn');
   b.hidden = n===0;
   el('syncErrText').textContent = `${n} hata`;
-  b.title = `Son 24 saatte ${n} başarısız senkron çalışması — listeyi aç`;
+  b.title = `${n} kaynak hâlâ hatalı — listeyi aç`;
 }
 function bindSyncErr(){
   el('syncErrBtn').addEventListener('click',()=>{
