@@ -3576,11 +3576,15 @@ function bindSync(){
            denmiyor). */
         await new Promise(r=>setTimeout(r,25000));
         await refetch();
-        const fresh=new Set((D.health||[])
-          .filter(r=>r.last_run_at && new Date(r.last_run_at).getTime()>=t0-2000)
+        /* BİTEN kaynak sayısı `finished_at`ten okunuyor, `health`ten DEĞİL:
+           `vw_connector_health.last_run_at` çalışmanın BAŞLAMA anı, yani
+           hâlâ koşan `itunes_search` orada da "taze" görünür ve buton
+           "tazelendi" diye yalan söylerdi. */
+        const done=new Set((D.syncRecent||[])
+          .filter(r=>r.finished_at && new Date(r.started_at).getTime()>=t0-2000)
           .map(r=>r.source));
-        txt.textContent = fresh.size>=total
-          ? 'Tazelendi' : `${fresh.size}/${total} bitti · kalanı arkada`;
+        txt.textContent = done.size>=total
+          ? 'Tazelendi' : `${done.size}/${total} bitti · kalanı arkada`;
       }
     }catch(e){ txt.textContent='Ağ hatası'; }
     /* Sonucu okunacak kadar tut, sonra normal etikete dön. */
