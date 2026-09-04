@@ -2826,9 +2826,9 @@ function drawAKw(){
    Kapsam bilinçli olarak ÖLÇÜLEN ülkelerle sınırlı; 175 mağazanın tamamı
    için tahmin yazmak, doğrulanmamış veri üretmek olurdu. */
 const CC_LANG={
-  us:'en',gb:'en',au:'en',ca:'en',ie:'en',nz:'en',in:'en',sg:'en',my:'en',za:'en',ph:'en',ng:'en',
+  us:'en',gb:'en',au:'en',ca:'en',ie:'en',nz:'en',in:'en',sg:'en',my:'en',za:'en',ph:'en',ng:'en',zw:'en',ke:'en',gh:'en',
   de:'de',at:'de',ch:'de',
-  es:'es',mx:'es',ar:'es',cl:'es',co:'es',pe:'es',ec:'es',do:'es',pa:'es',uy:'es',cr:'es',gt:'es',bo:'es',py:'es',ve:'es',
+  es:'es',mx:'es',ar:'es',cl:'es',co:'es',pe:'es',ec:'es',do:'es',pa:'es',uy:'es',cr:'es',gt:'es',bo:'es',py:'es',ve:'es',sv:'es',hn:'es',ni:'es',
   fr:'fr',be:'fr',lu:'fr',
   it:'it',br:'pt',pt:'pt',nl:'nl',tr:'tr',jp:'ja',kr:'ko',
   ru:'ru',kz:'ru',kg:'ru',ua:'ru',md:'ru',by:'ru',am:'ru',az:'ru',ge:'ru',uz:'ru',
@@ -2888,6 +2888,18 @@ function pazarByCountry(app=APP){
 /* Hacim kapıları. Mevcut sinyal motoruyla aynı mantık: bir oranı ancak
    payda yeterince büyükse yazıyoruz. Sayılar burada TEK yerde duruyor ve
    ekranda da yazılıyor — okuyan, neyin elendiğini görebilsin. */
+/* `countryName` bir ARAMA dizini: Türkçe ve İngilizce adı birleştirip
+   küçültüyor ("amerika birleşik devletleri united states") — ülke
+   süzgecinin iki dilde de eşleşmesi için. Ekrana basmak için ayrı bir ad
+   gerekiyor; aynı fonksiyonu iki işe koşmak, tabloya çift ad yazdırdı. */
+const _clCache={};
+function countryLabel(cc){
+  const k=String(cc||'').toLowerCase();
+  if(k in _clCache) return _clCache[k];
+  let out=k.toUpperCase();
+  try{ out=new Intl.DisplayNames(['tr'],{type:'region'}).of(k.toUpperCase())||out; }catch{}
+  return (_clCache[k]=out);
+}
 const PZ_GATE={ searchImp:50, pv:40 };
 /* Yüzde biçimi panelin geri kalanıyla aynı: önde `%`, küçük değerlerde bir
    ondalık. `!isFinite` payda sıfırdan gelen `Infinity`yi yakalıyor. */
@@ -2896,9 +2908,14 @@ const fmtPct=v=>(v==null||!isFinite(v))?'–':'%'+(v<10?v.toFixed(1):v.toFixed(0
 function renderPazar(){
   const rows=pazarByCountry();
   const langs=storeLangs();
-  const days=allDays();
-  el('pzWin').textContent = days.length
-    ? `${dShort(days[0])} – ${dShort(days[days.length-1])}` : 'ölçüm yok';
+  /* Pencere `allDays()`ten ALINMIYOR: o, reklam verisini de kapsıyor ve
+     37 gün sürüyor, oysa bu sekmedeki huninin tamamı mağaza verisinden
+     geliyor ve o yalnız 7 gün. Üstteki kartta reklam penceresini yazmak,
+     yanındaki dönüşüm oranını olduğundan geniş bir tabana dayanıyormuş
+     gibi gösterirdi. Tarih, GÖSTERİLEN verinin kendi tarihi. */
+  const sDays=[...new Set((D.countryBySource||[]).filter(r=>r.slug===APP).map(r=>r.day))].sort();
+  el('pzWin').textContent = sDays.length
+    ? `mağaza ${dShort(sDays[0])} – ${dShort(sDays[sDays.length-1])}` : 'mağaza ölçümü yok';
   el('pzCountries').textContent=num(rows.length);
   const dlRows=rows.filter(r=>r.dl>0);
   el('pzDlCountries').textContent=num(dlRows.length);
@@ -2917,7 +2934,11 @@ function renderPazar(){
     o.ccs.push(r.cc); o.imp+=r.imp; o.pv+=r.pv; o.dl+=r.dl; o.rev+=r.rev;
     byLang.set(key,o);
   });
-  const langRows=[...byLang.values()].sort((a,b)=>b.dl-a.dl||b.pv-a.pv||b.imp-a.imp);
+  /* Hiçbir ölçümü olmayan satır atılıyor: bir ülkenin yalnız `store_tap`
+     satırı olabiliyor ve tabloya sıfırlarla girip "eksik dil" listesini
+     gerçekte olduğundan uzun gösteriyordu. */
+  const langRows=[...byLang.values()].filter(r=>r.imp||r.pv||r.dl)
+    .sort((a,b)=>b.dl-a.dl||b.pv-a.pv||b.imp-a.imp);
   const noLocPv=langRows.reduce((t,r)=>t+r.pv,0);
   el('pzNoLoc').textContent=num(noLocPv);
   const totalDl=rows.reduce((t,r)=>t+r.dl,0);
@@ -2935,7 +2956,7 @@ function renderPazar(){
         <td class="num sec" data-l="sayfa">${num(r.pv)}</td>
         <td class="num pri" data-l="indirme">${num(r.dl)}</td>
         <td class="num sec" data-l="pay">${share>=0.05?fmtPct(share):'–'}</td>
-        <td class="num sec hide-m" data-l="gelir">${r.rev>0?money(r.rev):'–'}</td></tr>`;
+        <td class="num sec hide-m" data-l="gelir">${r.rev>=0.005?money(r.rev):'–'}</td></tr>`;
     }).join(""):`<tr><td colspan="7" class="empty">Trafiği olan her pazarın dili listelemede var</td></tr>`)+`</tbody>`;
 
   /* --- yapısal: talebi hiç ölçülmemiş pazarlar --- */
@@ -2945,7 +2966,7 @@ function renderPazar(){
   el('pzUnmeasured').innerHTML = unmeasured.length ? unmeasured.slice(0,12).map(r=>
     `<div class="brk"><div class="brk-top">
       <span class="dot" style="background:#d18e18"></span>
-      <b style="font-family:Sora">${FLAG[r.cc]||"🏳️"} ${esc(countryName(r.cc)||r.cc.toUpperCase())}</b>
+      <b style="font-family:Sora">${FLAG[r.cc]||"🏳️"} ${esc(countryLabel(r.cc))}</b>
       <span class="v">${num(r.dl)} ind.</span></div>
       <div style="font-size:12.5px;color:var(--ink-2)">${num(r.pv)} sayfa görüntüleme · bu ülkede hiç anahtar kelime talebi ölçmedik</div></div>`).join("")
     : `<div class="empty">Trafiği olan her ülkede talep ölçümü var</div>`;
@@ -2978,7 +2999,7 @@ function renderPazar(){
       /* "Kötü" ancak AYNI tabloda bir karşılaştırma varsa söylenebilir:
          tek ülkeli bir listede medyan kendisidir, oradan yorum çıkmaz. */
       const weak = tap.length>=3 && tapMed!=null && r.rate < tapMed/2;
-      return `<tr><td>${FLAG[r.cc]||"🏳️"} ${esc(countryName(r.cc)||r.cc.toUpperCase())}</td>
+      return `<tr><td>${FLAG[r.cc]||"🏳️"} ${esc(countryLabel(r.cc))}</td>
         <td class="num sec" data-l="göst.">${num(r.searchImp)}</td>
         <td class="num sec" data-l="sayfa">${num(r.searchPv)}</td>
         <td class="num pri" data-l="tıklanma">${fmtPct(r.rate)}</td>
@@ -2995,7 +3016,7 @@ function renderPazar(){
     (conv.length?conv.map(r=>{
       const l=CC_LANG[r.cc];
       const has=l?langs.has(l):null;
-      return `<tr><td>${FLAG[r.cc]||"🏳️"} ${esc(countryName(r.cc)||r.cc.toUpperCase())}</td>
+      return `<tr><td>${FLAG[r.cc]||"🏳️"} ${esc(countryLabel(r.cc))}</td>
         <td class="num sec" data-l="sayfa">${num(r.pv)}</td>
         <td class="num sec" data-l="indirme">${num(r.dl)}</td>
         <td class="num pri" data-l="dönüşüm">${fmtPct(r.rate)}</td>
