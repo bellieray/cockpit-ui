@@ -3541,8 +3541,11 @@ function failedCalls(logTail){
    200 yazıyordu (son çağrının durumu), yani yanıltıcı. */
 function drawSyncErrors(){
   const app=el('sApp').value;
+  /* `!== 'OK'` DEĞİL `=== 'FAILED'`: durum üçlü (RUNNING/OK/FAILED) ve
+     hâlâ koşan bir çalışma hata değil — ilk hâli onu da hata listesine
+     koyuyordu, yani panel var olmayan bir arıza uyduruyordu. */
   const rows=(D.syncRecent||[])
-    .filter(r=>r.status!=='OK' && (!app||r.slug===app));
+    .filter(r=>r.status==='FAILED' && (!app||r.slug===app));
   el('sErrSub').textContent = rows.length
     ? `${rows.length} başarısız çalışma · son 24 saat`
     : 'son 24 saatte başarısız çalışma yok';
@@ -3643,7 +3646,7 @@ function agoText(d){
    zaten her sekmede başlıkta duruyor. */
 function drawSyncLabel(){
   const btn=el('syncBtn');
-  const bad=(D.syncRecent||[]).filter(r=>r.status!=='OK').length;
+  const bad=(D.syncRecent||[]).filter(r=>r.status==='FAILED').length;
   const t=(D.health||[]).map(r=>r.last_run_at).filter(Boolean).sort().pop();
   btn.classList.toggle('bad', bad>0);
   el('syncBtnText').textContent = bad
@@ -3695,7 +3698,7 @@ function bindSync(){
           .filter(r=>new Date(r.started_at).getTime()>=t0-2000);
         const key=r=>r.slug+'/'+r.source;
         const ok=new Set(mine.filter(r=>r.finished_at&&r.status==='OK').map(key));
-        const bad=new Set(mine.filter(r=>r.finished_at&&r.status!=='OK').map(key));
+        const bad=new Set(mine.filter(r=>r.status==='FAILED').map(key));
         const pending=total-ok.size-bad.size;
         btn.classList.toggle('bad', bad.size>0);
         txt.textContent = bad.size
