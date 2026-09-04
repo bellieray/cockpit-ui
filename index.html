@@ -2904,6 +2904,11 @@ const PZ_GATE={ searchImp:50, pv:40 };
 /* Yüzde biçimi panelin geri kalanıyla aynı: önde `%`, küçük değerlerde bir
    ondalık. `!isFinite` payda sıfırdan gelen `Infinity`yi yakalıyor. */
 const fmtPct=v=>(v==null||!isFinite(v))?'–':'%'+(v<10?v.toFixed(1):v.toFixed(0));
+/* `money()` sıfır ondalıkla biçimliyor (büyük toplamlar için doğru), ama
+   ülke başına reklam geliri bu ölçekte kuruşla ifade ediliyor: 0.05 dolar
+   "$0" olarak basılıyor ve "hiç kazanmadık" gibi okunuyordu. Burada iki
+   ondalık. */
+const moneyCents=v=>'$'+Number(v).toFixed(2);
 
 function renderPazar(){
   const rows=pazarByCountry();
@@ -2942,9 +2947,16 @@ function renderPazar(){
   const noLocPv=langRows.reduce((t,r)=>t+r.pv,0);
   el('pzNoLoc').textContent=num(noLocPv);
   const totalDl=rows.reduce((t,r)=>t+r.dl,0);
-  el('pzLangSub').textContent = langRows.length
-    ? `${langRows.length} dil · bu pazarlardan ${num(langRows.reduce((t,r)=>t+r.dl,0))} indirme geldi`
-    : 'trafiği olan her pazarın dili listelemede var';
+  /* Dil listesi HİÇ yoksa "eksik yok" YAZILAMAZ: karşılaştıracak bir şey
+     olmadığı için tablo boş kalıyor, ama bu "her dil tamam" demek değil —
+     "henüz bakmadık" demek. İkisini aynı cümleyle geçmek, panelin
+     yapmaması gereken sessiz onay olurdu. */
+  el('pzLangSub').textContent = !langs.size
+    ? 'ASC dil listesi bu uygulama için hiç çekilmedi — eksik olup olmadığı bilinmiyor'
+    : !rows.length ? 'henüz ülke bazında ölçüm yok'
+    : langRows.length
+      ? `${langRows.length} dil · bu pazarlardan ${num(langRows.reduce((t,r)=>t+r.dl,0))} indirme geldi`
+      : 'trafiği olan her pazarın dili listelemede var';
   el('pzLangTable').innerHTML=
     `<thead><tr><th>Dil</th><th>Ülkeler</th><th>Göst.</th><th>Sayfa</th><th>İnd.</th><th>İnd. payı</th><th>Reklam geliri</th></tr></thead><tbody>`+
     (langRows.length?langRows.map(r=>{
@@ -2956,8 +2968,11 @@ function renderPazar(){
         <td class="num sec" data-l="sayfa">${num(r.pv)}</td>
         <td class="num pri" data-l="indirme">${num(r.dl)}</td>
         <td class="num sec" data-l="pay">${share>=0.05?fmtPct(share):'–'}</td>
-        <td class="num sec hide-m" data-l="gelir">${r.rev>=0.005?money(r.rev):'–'}</td></tr>`;
-    }).join(""):`<tr><td colspan="7" class="empty">Trafiği olan her pazarın dili listelemede var</td></tr>`)+`</tbody>`;
+        <td class="num sec hide-m" data-l="gelir">${r.rev>=0.005?moneyCents(r.rev):'–'}</td></tr>`;
+    }).join(""):`<tr><td colspan="7" class="empty">${!langs.size
+        ? 'Bu uygulamanın ASC dil listesi henüz çekilmedi'
+        : !rows.length ? 'Ülke bazında ölçüm yok'
+        : 'Trafiği olan her pazarın dili listelemede var'}</td></tr>`)+`</tbody>`;
 
   /* --- yapısal: talebi hiç ölçülmemiş pazarlar --- */
   const measured=new Set(gapsFor().map(r=>r.country));
