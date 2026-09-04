@@ -493,6 +493,13 @@
      ve metinden bir satır aşağı — aynı satırda kalınca cümlenin parçası
      gibi okunup basılabilir olduğu fark edilmiyordu. */
   .efb{margin:10px auto 0;display:flex;font-size:12.5px;padding:0 14px;min-height:34px}
+  /* Senkron sürerken: buton pasif görünür ve ikon döner. Dönme
+     `prefers-reduced-motion` ile kapanıyor — o zaman soluklaşma tek
+     göstergedir, ki yeterli. */
+  #syncBtn.busy{opacity:.65;pointer-events:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #syncBtn.busy svg{animation:spin 1.1s linear infinite}
+  @media (prefers-reduced-motion:reduce){#syncBtn.busy svg{animation:none}}
 </style></head>
 <body>
 
@@ -561,6 +568,15 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
           <span id="rangeLabelText">Son 7 gün</span>
         </div>
+        <!-- Elle senkron. Sunucu 10 dakikalık bekleme ve "zaten çalışıyor"
+             kilidi uyguluyor; buton bunu ARAYÜZDE de saklamıyor, reddi
+             olduğu gibi yazıyor — "bir şey olmadı" hissi en kötüsü.
+             Alt satır son toplama zamanını gösteriyor, yani basmadan önce
+             verinin gerçekten bayat olup olmadığı görülüyor. -->
+        <button class="pillbtn" id="syncBtn" title="Tüm kaynakları şimdi topla (10 dakikada bir)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 0 1-15.5 6.2M3 12a9 9 0 0 1 15.5-6.2"/><path d="M3 19v-5h5M21 5v5h-5"/></svg>
+          <span id="syncBtnText">Senkron</span>
+        </button>
         <button class="circbtn" id="themeBtn">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor" stroke="none"/></svg>
         </button>
@@ -2454,7 +2470,7 @@ function renderAll(){
   el('v-ozet').classList.toggle('pre',pre);
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
   drawCrumb(span);
-  fillSelects(); renderSignals(); drawPrelaunch(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
+  fillSelects(); drawSyncLabel(); renderSignals(); drawPrelaunch(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   if(VIEW==='aso') renderAso(); else if(VIEW==='portfoy') renderPortfoy(); else if(VIEW==='para') renderPara(); else if(VIEW==='urun') renderUrun(); else if(VIEW==='yorum') renderYorum(); else if(VIEW==='saglik') renderSaglik();
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
   // yukarıda değişiyor ve bazı region-label'lar görünür/gizli olabiliyor —
@@ -2538,7 +2554,7 @@ function bind(){
       g.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
       if(b.dataset.range!=null){ RANGE=+b.dataset.range; syncRange(); renderAll(); }
     })));
-  bindViews(); bindAnchors(); buildAnchors();
+  bindViews(); bindAnchors(); buildAnchors(); bindSync();
   /* WHY yalnız dokunmatikte: fareli cihazda tarayıcının kendi tooltip'i
      zaten çalışıyor, ikinci bir katman gürültü olur. `pointer:coarse` kaba
      işaretçiyi (parmak) ayırt ediyor.
@@ -3506,6 +3522,70 @@ function bindViews(){
   el('yDistWho').addEventListener('change',drawYDist);
   ['yWho','ySrc','yStar','yCountry','ySearch'].forEach(id=>el(id).addEventListener('input',drawYList));
   ['sApp','sStatus','sSearch'].forEach(id=>el(id).addEventListener('input',drawSTable));
+}
+
+/* ---------- elle senkron ---------- */
+/* Yeniden ÇEKME için `load()` KULLANILMAZ: `load()` sonunda `bind()`
+   çağırıyor, ikinci kez bağlanmak her dinleyiciyi çiftler (tek tıklama iki
+   kez işlenir, çipler kendi kendini geri alır). Burada yalnız veri yenilenir. */
+async function refetch(){
+  const res=await fetch(API,{method:'POST',
+    headers:{'content-type':'application/json','x-panel-secret':getKey()},
+    body:JSON.stringify({view:'dashboard'})});
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  D=await res.json(); renderAll();
+}
+function agoText(d){
+  const m=Math.round((Date.now()-d.getTime())/60000);
+  if(m<1) return 'az önce';
+  if(m<60) return m+' dk önce';
+  const h=Math.round(m/60);
+  return h<24 ? h+' sa önce' : Math.round(h/24)+' gün önce';
+}
+/* Butonun kendi etiketi son toplama zamanını taşıyor: basmadan ÖNCE
+   verinin gerçekten bayat olup olmadığı görülsün. En yeni `last_run_at`
+   alınıyor — "en az bir kaynak ne zaman koştu"; kaynak kaynak tazelik
+   zaten Veri sağlığı sekmesinde. */
+function drawSyncLabel(){
+  const t=(D.health||[]).map(r=>r.last_run_at).filter(Boolean).sort().pop();
+  el('syncBtnText').textContent = t ? 'Senkron · '+agoText(new Date(t)) : 'Senkron';
+}
+let SYNCING=false;
+function bindSync(){
+  el('syncBtn').addEventListener('click',async()=>{
+    if(SYNCING) return;
+    SYNCING=true;
+    const btn=el('syncBtn'), txt=el('syncBtnText');
+    btn.classList.add('busy'); txt.textContent='Tetikleniyor…';
+    const t0=Date.now();
+    try{
+      const res=await fetch(API,{method:'POST',
+        headers:{'content-type':'application/json','x-panel-secret':getKey()},
+        body:JSON.stringify({action:'sync'})});
+      const j=await res.json().catch(()=>({}));
+      if(res.status===429) txt.textContent=`${j.waitMin||'?'} dk sonra`;
+      else if(res.status===409) txt.textContent='Zaten çalışıyor';
+      else if(!res.ok) txt.textContent='Hata '+res.status;
+      else{
+        const total=(j.sources||[]).length;
+        txt.textContent=`${total} kaynak · toplanıyor…`;
+        /* Sabit bekleme, ilerleme çubuğu DEĞİL: ölçmediğimiz bir ilerlemeyi
+           çizmek uydurmaktır. 25 sn, konektörlerin çoğunun bittiği süre
+           (`itunes_search` — Apple Ads kelime ölçümü — dakikalar sürüyor;
+           o yüzden aşağıda "bitti" sayısı DÜRÜSTÇE yazılıyor, "tamam"
+           denmiyor). */
+        await new Promise(r=>setTimeout(r,25000));
+        await refetch();
+        const fresh=new Set((D.health||[])
+          .filter(r=>r.last_run_at && new Date(r.last_run_at).getTime()>=t0-2000)
+          .map(r=>r.source));
+        txt.textContent = fresh.size>=total
+          ? 'Tazelendi' : `${fresh.size}/${total} bitti · kalanı arkada`;
+      }
+    }catch(e){ txt.textContent='Ağ hatası'; }
+    /* Sonucu okunacak kadar tut, sonra normal etikete dön. */
+    setTimeout(()=>{ btn.classList.remove('busy'); SYNCING=false; drawSyncLabel(); }, 4000);
+  });
 }
 
 /* ---------- yükleme ---------- */
