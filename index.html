@@ -3024,7 +3024,7 @@ function renderPazarPre(){
       <div style="font-size:12.5px;color:var(--ink-2)">Bu mağazalarda talep de rakip de ÖLÇÜLMEDİ — "fırsat yok" demek değil, "bakmadık" demek. Lansman pazarını yalnız 5 ölçüme dayandırmadan önce bunlar ölçülmeli.</div></div>`+
     `<div class="brk"><div class="brk-top"><span class="dot" style="background:#8f96a3"></span>
       <b style="font-family:Sora">${num(SF_ABSENT)} mağaza Apple Ads dizininde yok</b></div>
-      <div style="font-size:12.5px;color:var(--ink-2)">${SF_TOTAL} mağazanın tamamı ${dShort(SF_SCAN_DAY)} ${String(SF_SCAN_DAY).slice(0,4)}'te tarandı; bu ${num(SF_ABSENT)}'ü iki turda da boş döndü. Bunlar yapılacak iş değil, bu araçla ölçülemeyen mağazalar — mağaza düzeyinde kalıcı bir özellik.</div></div>`+
+      <div style="font-size:12.5px;color:var(--ink-2)">${SF_TOTAL} mağazanın tamamı ${dShort(SF_SCAN_DAY)} ${String(SF_SCAN_DAY).slice(0,4)}'da tarandı; bu ${num(SF_ABSENT)}'ü iki turda da boş döndü. Bunlar yapılacak iş değil, bu araçla ölçülemeyen mağazalar — mağaza düzeyinde kalıcı bir özellik.</div></div>`+
     (stale?`<div class="brk"><div class="brk-top"><span class="dot" style="background:#e8705f"></span>
       <b style="font-family:Sora">asa_popularity konektörü KAPALI</b></div>
       <div style="font-size:12.5px;color:var(--ink-2)">Bu sayılar elle alınmış bir anlık ölçüm; kendiliğinden tazelenmiyor ve bayatladığında Veri sağlığı uyarmaz. Yeni mağaza ölçmek Apple Ads oturumu açmayı gerektiriyor.</div></div>`:'');
@@ -3049,7 +3049,7 @@ function renderPazarPre(){
         ? `${esc(r.topRival.name)} <span class="lb-sub">${num(r.topRival.votes)} oy${
             r.topRival.rating!=null?' · '+r.topRival.rating.toFixed(2):''}</span>`
         : '<span class="lb-sub">rakip hiç ölçülmedi</span>';
-      return `<tr><td>${FLAG[r.cc]||"🏳️"} ${esc(countryLabel(r.cc))} <span class="lb-sub">${r.terms} terim ölçüldü</span></td>
+      return `<tr><td>${FLAG[r.cc]||"🏳️"} ${esc(countryLabel(r.cc))} <span class="lb-sub">${r.terms} terim</span></td>
         <td class="num sec" data-l="taban üstü">${r.above}</td>
         <td class="sec" data-l="terim">${esc(r.top||'–')}</td>
         <td class="num pri" data-l="talep">${r.topD>0?r.topD:'–'}</td>
