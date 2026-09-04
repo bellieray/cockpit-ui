@@ -1390,50 +1390,74 @@
       <div class="grid">
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#4a90d9,#1f5fa8)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
-          <span class="kpi-name">Ölçülen ülke<br><span class="card-sub" id="pzWin">–</span></span></div>
+          <span class="kpi-name" id="pzK1">Ölçülen ülke<br><span class="card-sub" id="pzWin">–</span></span></div>
           <div class="kpi-val tnum" id="pzCountries">–</div></div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#3fbf7a,#17864f)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v13M7 12l5 5 5-5M5 21h14"/></svg></span>
-          <span class="kpi-name">İndirme gelen<br><span class="card-sub" id="pzDlSub">–</span></span></div>
+          <span class="kpi-name" id="pzK2">İndirme gelen<br><span class="card-sub" id="pzDlSub">–</span></span></div>
           <div class="kpi-val tnum" id="pzDlCountries">–</div></div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#9b7ede,#6a4bb0)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h10M9 3v2M11 5c0 5-3 9-7 11M7 9c1 3 4 6 7 7M14 21l4-10 4 10M15.5 18h5"/></svg></span>
-          <span class="kpi-name">Listeleme dili<br><span class="card-sub" id="pzLocSub">–</span></span></div>
+          <span class="kpi-name" id="pzK3">Listeleme dili<br><span class="card-sub" id="pzLocSub">–</span></span></div>
           <div class="kpi-val tnum" id="pzLocales">–</div></div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#eeb04a,#d18e18)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 7v6M12 17v.5"/><circle cx="12" cy="12" r="9"/></svg></span>
-          <span class="kpi-name">Dilsiz trafik<br><span class="card-sub">dili olmayan ülkelerden</span></span></div>
+          <span class="kpi-name" id="pzK4">Dilsiz trafik<br><span class="card-sub" id="pzNoLocSub">dili olmayan ülkelerden</span></span></div>
           <div class="kpi-val tnum" id="pzNoLoc">–</div></div>
 
-        <div class="region-label c12">YAPISAL EKSİKLER · ÖRNEKLEME BAĞLI DEĞİL</div>
-        <div class="card c12">
+        <!-- ---- ÖN-LANSMAN BÖLGESİ ----
+             Yayında olmayan bir uygulamanın kendi trafiği YOKTUR; aşağıdaki
+             canlı bölgelerin hepsi trafikten türüyor ve boş beş tablo olarak
+             çizilirdi. Boş tablo "veri yok" değil "sonuç yok" gibi okunur.
+             Bu yüzden ön-lansmanda canlı bölgeler tamamen gizleniyor ve
+             yerine ELDE OLAN kanıt geçiyor: mağaza başına ölçülmüş terim
+             talebi ve ölçülmüş rakip gücü. -->
+        <div class="region-label c12" id="pzPreLabel" style="display:none">LANSMAN PAZARI SEÇİMİ · UYGULAMA HENÜZ YAYINDA DEĞİL</div>
+        <div class="card c12" id="pzPreCoverCard" style="display:none">
+          <div class="card-head"><div><div class="card-title">Hiç ölçülmemiş mağazalar</div>
+            <div class="card-sub" id="pzPreCoverSub">–</div></div></div>
+          <div id="pzPreCover"></div>
+        </div>
+        <div class="card c12" id="pzPreDemandCard" style="display:none">
+          <div class="card-head"><div><div class="card-title">Ölçülen mağazalar</div>
+            <div class="card-sub" id="pzPreDemandSub">–</div></div></div>
+          <div class="tw tw-cards"><table class="dt dt-cards" id="pzPreDemandTable"></table></div>
+        </div>
+        <div class="card c12" id="pzPreTermCard" style="display:none">
+          <div class="card-head"><div><div class="card-title">Tavanın üstündeki terimler</div>
+            <div class="card-sub" id="pzPreTermSub">–</div></div></div>
+          <div class="tw tw-cards"><table class="dt dt-cards" id="pzPreTermTable"></table></div>
+        </div>
+
+        <div class="region-label c12" id="pzStructLabel">YAPISAL EKSİKLER · ÖRNEKLEME BAĞLI DEĞİL</div>
+        <div class="card c12" id="pzLangCard">
           <div class="card-head"><div><div class="card-title">Listelemesi olmayan diller</div>
             <div class="card-sub" id="pzLangSub">–</div></div></div>
           <div class="tw tw-cards"><table class="dt dt-cards" id="pzLangTable"></table></div>
         </div>
-        <div class="card c6">
+        <div class="card c6" id="pzUnmeasuredCard">
           <div class="card-head"><div><div class="card-title">Talebi hiç ölçülmemiş pazarlar</div>
             <div class="card-sub">trafik var, ASA anahtar kelime ölçümü yok</div></div></div>
           <div id="pzUnmeasured"></div>
         </div>
-        <div class="card c6">
+        <div class="card c6" id="pzGapCard">
           <div class="card-head"><div><div class="card-title">Ülke bazında kelime fırsatı</div>
             <div class="card-sub">talebi ölçülmüş, metadata'da olmayan terimler</div></div></div>
           <div class="tw" style="max-height:340px"><table class="dt" id="pzGapTable"></table></div>
         </div>
 
-        <div class="region-label c12">ÖLÇÜLEBİLİR BULGULAR · HACİM KAPISI VAR</div>
-        <div class="card c12">
+        <div class="region-label c12" id="pzGateLabel">ÖLÇÜLEBİLİR BULGULAR · HACİM KAPISI VAR</div>
+        <div class="card c12" id="pzTapCard">
           <div class="card-head"><div><div class="card-title">Aramada görünüp tıklanmama</div>
             <div class="card-sub" id="pzTapSub">–</div></div></div>
           <div class="tw tw-cards"><table class="dt dt-cards" id="pzTapTable"></table></div>
         </div>
-        <div class="card c12">
+        <div class="card c12" id="pzConvCard">
           <div class="card-head"><div><div class="card-title">Sayfaya gelip indirmeme</div>
             <div class="card-sub" id="pzConvSub">–</div></div></div>
           <div class="tw tw-cards"><table class="dt dt-cards" id="pzConvTable"></table></div>
         </div>
-        <div class="card c12">
+        <div class="card c12" id="pzThinCard">
           <div class="card-head"><div><div class="card-title">Ölçüm yetersiz</div>
             <div class="card-sub" id="pzThinSub">–</div></div></div>
           <div id="pzThin"></div>
@@ -2910,7 +2934,142 @@ const fmtPct=v=>(v==null||!isFinite(v))?'–':'%'+(v<10?v.toFixed(1):v.toFixed(0
    ondalık. */
 const moneyCents=v=>'$'+Number(v).toFixed(2);
 
+/* Apple Search Ads popülerlik ölçeği 5-100 ve TABANI 5. Yani 5 "düşük
+   talep" DEĞİL, "ölçülebilir talep yok" demek. Bu ayrım kritik: paneldeki
+   428 talep satırının 248'i tam olarak 5 ve 6 ile 32 arasında TEK bir değer
+   bile yok — dağılım iki tepeli, aradaki boşluk taban değerinin kanıtı.
+   Ülke başına "ortalama talep" yazmak bu tabanı gerçek bir sayı sanıp
+   ortalamaya katardı ve her pazarı birbirine benzetirdi. */
+const ASA_FLOOR=5;
+/* App Store mağaza (storefront) sayısı — Apple'ın kendi sayısı, panelin bir
+   ölçümü DEĞİL. Yalnız "kaçında hiç ölçüm yok" cümlesinin paydası olarak
+   kullanılıyor ve ekranda kaynağı yazıyor. */
+const ASC_STOREFRONTS=175;
+
+/* Ön-lansman: uygulama hiçbir mağazada yayında değil, dolayısıyla KENDİ
+   trafiği yok. Elde olan tek kanıt dışarıdan ölçülen iki şey: mağaza başına
+   terim talebi ve mağaza başına rakip gücü. İkisi AYNI ölçekte değil
+   (popülerlik 5-100, rakip oy sayısı on binler) — bu yüzden yan yana iki
+   sütun olarak gösteriliyor, tek bir "fırsat puanı"nda TOPLANMIYOR. */
+function renderPazarPre(){
+  const gaps=gapsFor();
+  const health=(D.health||[]).find(h=>h.app_slug===APP&&h.source==='asa_popularity');
+  const st=stocksFor().filter(r=>r.subject&&r.subject!=='self'&&r.country);
+
+  /* Rakip gücü ülke bazında: en çok oy alan rakip o mağazanın giriş
+     bariyerini temsil ediyor. Oy sayısı ile puan AYRI metrikler, aynı
+     rakipte eşleştirmek için subject anahtarı kullanılıyor. */
+  const rivalBy=new Map();
+  st.forEach(r=>{
+    const o=rivalBy.get(r.country)||{cc:r.country,subs:new Map()};
+    const s=o.subs.get(r.subject)||{name:r.subject_name||r.subject,votes:0,rating:null};
+    if(r.metric==='store_rating_count') s.votes=Number(r.value||0);
+    else if(r.metric==='store_rating_avg') s.rating=Number(r.value||0);
+    o.subs.set(r.subject,s); rivalBy.set(r.country,o);
+  });
+
+  const by=new Map();
+  gaps.forEach(g=>{
+    const o=by.get(g.country)||{cc:g.country,terms:0,above:0,top:null,topD:-1,day:null};
+    o.terms++;
+    const d=g.demand==null?null:Number(g.demand);
+    if(d!=null&&d>ASA_FLOOR){ o.above++; if(d>o.topD){o.topD=d;o.top=g.term;} }
+    if(g.measured_on&&(!o.day||g.measured_on>o.day)) o.day=g.measured_on;
+    by.set(g.country,o);
+  });
+  const rows=[...by.values()].map(r=>{
+    const rv=rivalBy.get(r.cc);
+    const top=rv?[...rv.subs.values()].sort((a,b)=>b.votes-a.votes)[0]:null;
+    return {...r, rivals:rv?rv.subs.size:0, topRival:top};
+  }).sort((a,b)=>b.topD-a.topD||b.above-a.above);
+
+  const days=[...new Set(gaps.map(g=>g.measured_on).filter(Boolean))].sort();
+  el('pzK1').innerHTML=`Talebi ölçülen mağaza<br><span class="card-sub" id="pzWin">${
+    days.length?'son ölçüm '+dShort(days[days.length-1]):'ölçüm yok'}</span>`;
+  el('pzCountries').textContent=num(rows.length);
+  el('pzK2').innerHTML=`Ölçülmemiş mağaza<br><span class="card-sub" id="pzDlSub">${ASC_STOREFRONTS} App Store mağazasından</span>`;
+  el('pzDlCountries').textContent=num(Math.max(0,ASC_STOREFRONTS-rows.length));
+  el('pzK3').innerHTML=`Rakibi ölçülen mağaza<br><span class="card-sub" id="pzLocSub">${
+    rows.length?rows.filter(r=>!r.rivals).length+' mağazada rakip ölçümü yok':'–'}</span>`;
+  el('pzLocales').textContent=num(rows.filter(r=>r.rivals>0).length);
+  el('pzK4').innerHTML=`Taban üstü terim<br><span class="card-sub" id="pzNoLocSub">talep &gt; ${ASA_FLOOR}, tüm mağazalar</span>`;
+  el('pzNoLoc').textContent=num(rows.reduce((t,r)=>t+r.above,0));
+
+  /* Kapsam kartı BAŞTA: lansman pazarı seçen biri için asıl bilgi
+     ölçtüğümüz 5 mağaza değil, hakkında hiçbir şey bilmediğimiz 170'i.
+     Ayrıca ölçümü tazeleyecek konektör KAPALIYSA bu açıkça yazılıyor —
+     "Veri sağlığı" onu bayat diye işaretlemez, çünkü kapalı bir konektörün
+     bayatlayacak bir çalışması yoktur. */
+  const stale = health && health.enabled===false;
+  el('pzPreCoverSub').textContent =
+    `${num(rows.length)} mağaza ölçüldü · ${num(Math.max(0,ASC_STOREFRONTS-rows.length))} mağaza hiç ölçülmedi`;
+  el('pzPreCover').innerHTML =
+    `<div class="brk"><div class="brk-top"><span class="dot" style="background:#d18e18"></span>
+      <b style="font-family:Sora">Ölçülen: ${rows.map(r=>`${FLAG[r.cc]||"🏳️"} ${String(r.cc).toUpperCase()}`).join(' ')||'yok'}</b></div>
+      <div style="font-size:12.5px;color:var(--ink-2)">Geri kalan ${num(Math.max(0,ASC_STOREFRONTS-rows.length))} mağaza için talep de rakip de ÖLÇÜLMEDİ — bu "fırsat yok" demek değil, "bakmadık" demek. Aşağıdaki tablo yalnız ölçülen mağazalar arasında bir seçim yapar.</div></div>`+
+    (stale?`<div class="brk"><div class="brk-top"><span class="dot" style="background:#e8705f"></span>
+      <b style="font-family:Sora">asa_popularity konektörü KAPALI</b></div>
+      <div style="font-size:12.5px;color:var(--ink-2)">Bu sayılar elle alınmış bir anlık ölçüm; kendiliğinden tazelenmiyor ve bayatladığında Veri sağlığı uyarmaz. Yeni mağaza ölçmek Apple Ads oturumu açmayı gerektiriyor.</div></div>`:'');
+
+  el('pzPreDemandSub').textContent = rows.length
+    ? `talep ve rakip AYRI ölçekte — tek puana toplanmıyor · sıralama en yüksek terim talebine göre`
+    : 'bu uygulama için hiç talep ölçümü yok';
+  el('pzPreDemandTable').innerHTML=
+    `<thead><tr><th>Mağaza</th><th>Taban üstü</th><th>En yüksek terim</th><th>Talep</th><th>Rakip</th><th>En güçlü rakip</th></tr></thead><tbody>`+
+    (rows.length?rows.map(r=>{
+      /* Rakip ölçümü OLMAYAN mağazada hücre BOŞ BIRAKILMIYOR: boş hücre
+         "rakip yok" diye okunur, oysa doğrusu "bakmadık". */
+      const rc = r.rivals
+        ? `<span class="tag cov">${r.rivals}</span>`
+        : `<span class="tag dead">ölçülmedi</span>`;
+      const tr = r.topRival
+        ? `${esc(r.topRival.name)} <span class="lb-sub">${num(r.topRival.votes)} oy${
+            r.topRival.rating!=null?' · '+r.topRival.rating.toFixed(2):''}</span>`
+        : '<span class="lb-sub">rakip hiç ölçülmedi</span>';
+      return `<tr><td>${FLAG[r.cc]||"🏳️"} ${esc(countryLabel(r.cc))}</td>
+        <td class="num sec" data-l="taban üstü">${r.above}/${r.terms}</td>
+        <td class="sec" data-l="terim">${esc(r.top||'–')}</td>
+        <td class="num pri" data-l="talep">${r.topD>0?r.topD:'–'}</td>
+        <td class="num sec hide-m" data-l="rakip">${rc}</td>
+        <td class="sec" data-l="">${tr}</td></tr>`;
+    }).join(""):`<tr><td colspan="6" class="empty">Bu uygulama için hiçbir mağazada anahtar kelime talebi ölçülmedi</td></tr>`)+`</tbody>`;
+
+  /* Terim tablosu: hangi kelimenin hangi mağazada gerçekten talebi var.
+     Taban değerindekiler dışarıda — 248 satırlık bir "5" listesi ekranı
+     doldurur ve hiçbir şey söylemez. */
+  const terms=gaps.filter(g=>g.demand!=null&&Number(g.demand)>ASA_FLOOR)
+    .map(g=>({...g,d:Number(g.demand)})).sort((a,b)=>b.d-a.d);
+  el('pzPreTermSub').textContent =
+    `${num(terms.length)} terim tabanın üstünde · taban (${ASA_FLOOR}) = ölçülebilir talep yok, ${num(gaps.length-terms.length)} terim orada`;
+  el('pzPreTermTable').innerHTML=
+    `<thead><tr><th>Terim</th><th>Mağaza</th><th>Talep</th><th>Metadata</th></tr></thead><tbody>`+
+    (terms.length?terms.map(g=>
+      `<tr><td>${esc(g.term)}</td>
+        <td class="sec" data-l="mağaza">${FLAG[g.country]||"🏳️"} ${String(g.country).toUpperCase()}</td>
+        <td class="num pri" data-l="talep">${g.d}</td>
+        <td class="sec" data-l="">${g.in_metadata?'<span class="tag cov">var</span>':'<span class="tag dead">yok</span>'}</td></tr>`).join("")
+      :`<tr><td colspan="4" class="empty">Ölçülen hiçbir terim tabanın üstünde değil — bu mağazalarda ölçtüğümüz kelimelerde talep yok</td></tr>`)+`</tbody>`;
+}
+
 function renderPazar(){
+  /* Yayında olan / olmayan AYRIMI tek yerde: `isPrelaunch` zaten paneldeki
+     diğer ön-lansman kurallarını da sürüyor, ikinci bir bayrak icat etmek
+     ikisinin ayrışması demekti. */
+  const pre=isPrelaunch();
+  [['pzPreLabel',pre],['pzPreCoverCard',pre],['pzPreDemandCard',pre],['pzPreTermCard',pre],
+   ['pzStructLabel',!pre],['pzLangCard',!pre],['pzUnmeasuredCard',!pre],['pzGapCard',!pre],
+   ['pzGateLabel',!pre],['pzTapCard',!pre],['pzConvCard',!pre],['pzThinCard',!pre]
+  ].forEach(([id,on])=>{ const n=el(id); if(n) n.style.display=on?'':'none'; });
+  if(pre) return renderPazarPre();
+  /* KPI başlıkları iki mod arasında AYNI dört kutuyu paylaşıyor; ön-lansman
+     dalı bunların içeriğini değiştiriyor. Yayındaki dal kendi başlıklarını
+     geri YAZMAZSA, ön-lansman bir uygulamadan yayındakine geçmek başlıkları
+     yanlış bırakıyor — sayı doğru, üstündeki ad başka bir şeyi anlatıyor. */
+  el('pzK1').innerHTML='Ölçülen ülke<br><span class="card-sub" id="pzWin">–</span>';
+  el('pzK2').innerHTML='İndirme gelen<br><span class="card-sub" id="pzDlSub">–</span>';
+  el('pzK3').innerHTML='Listeleme dili<br><span class="card-sub" id="pzLocSub">–</span>';
+  el('pzK4').innerHTML='Dilsiz trafik<br><span class="card-sub" id="pzNoLocSub">dili olmayan ülkelerden</span>';
+
   const rows=pazarByCountry();
   const langs=storeLangs();
   /* Pencere `allDays()`ten ALINMIYOR: o, reklam verisini de kapsıyor ve
