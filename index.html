@@ -1484,6 +1484,17 @@
           <span class="kpi-name">Kapalı<br><span class="card-sub">gerekçesi yazılı</span></span></div>
           <div class="kpi-val tnum" id="sOff">–</div></div>
 
+        <!-- Otomasyonun HALLEDEMEYECEĞİ iş. Bir konektörün kapalı olması iki
+             ayrı şey olabilir: bilinçli karar, ya da eksik bir kimlik/oturum.
+             İkisi aynı listede durursa eksik bir AdMob kimliği sonsuza kadar
+             "kapalı" diye orada kalır ve o gelir hiç ölçülmez. Bu kart yalnız
+             SENİN yapman gerekeni en üste alır; geri kalanı katlanmış durur. -->
+        <div class="card c12" id="sBlockCard">
+          <div class="card-head"><div><div class="card-title">Senin yapman gereken</div>
+            <div class="card-sub" id="sBlockSub">–</div></div></div>
+          <div id="sBlockList"></div>
+        </div>
+
         <div class="card c7">
           <div class="card-head"><div><div class="card-title">Tüm konektörler</div>
             <div class="card-sub" id="sMeta">–</div></div></div>
@@ -4035,6 +4046,33 @@ function drawYList(){
 
 /* ---------- VERİ SAĞLIĞI ---------- */
 const hcls=r=>!r.enabled?'off':(r.is_stale?'stale':(r.never_measured?'nodata':'ok'));
+/* Engel listesi. `yapilacak` = senin bir şey yapman gerekiyor (kimlik gir,
+   oturum aç, anahtar yenile) — otomasyonun yapamayacağı tek sınıf.
+   `bilgi` = biliyoruz, şimdilik böyle; gizlenmiyor ama katlanmış duruyor,
+   yoksa 16 satırlık bir liste tek bir gerçek işi görünmez kılar. */
+function blockersFor(slug){
+  return (D.blockers||[]).filter(r=>!slug||r.slug===slug);
+}
+function blockerTodoCount(){ return (D.blockers||[]).filter(r=>r.urgency==='yapilacak').length; }
+function drawBlockers(slug){
+  const rows=blockersFor(slug);
+  const todo=rows.filter(r=>r.urgency==='yapilacak');
+  const info=rows.filter(r=>r.urgency!=='yapilacak');
+  el('sBlockSub').textContent = todo.length
+    ? `${todo.length} iş seni bekliyor · ${info.length} bilgi notu`
+    : rows.length ? `Seni bekleyen iş yok · ${info.length} bilgi notu`
+    : 'Engel yok';
+  const row=(r,urgent)=>`<div class="brk"><div class="brk-top">
+      <span class="dot" style="background:${urgent?'#e8705f':'#8f96a3'}"></span>
+      <b style="font-family:Sora">${esc(r.slug)} · ${esc(r.source)}</b>
+      <span class="v">${esc(r.kind||'')}</span></div>
+      <div style="font-size:12.5px;color:var(--ink-2)">${esc(r.action||r.note||'')}</div></div>`;
+  el('sBlockList').innerHTML = rows.length
+    ? todo.map(r=>row(r,true)).join("")+
+      (info.length?`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--ink-3)">${info.length} bilgi notu — bilinçli kararlar ve henüz gelmemiş uçlar</summary>${info.map(r=>row(r,false)).join("")}</details>`:'')
+    : `<div class="empty">Eksik kimlik, süresi geçmiş anahtar veya reddedilmiş oturum yok</div>`;
+}
+
 function renderSaglik(){
   const all=healthAll();
   const apps=[...new Set(all.map(r=>r.app_slug))].sort();
@@ -4047,6 +4085,7 @@ function renderSaglik(){
     if(apps.includes(APP)) el('sApp').value=APP;
   }
   const scoped=all.filter(r=>!el('sApp').value||r.app_slug===el('sApp').value);
+  drawBlockers(el('sApp').value);
   el('sOk').textContent=scoped.filter(r=>hcls(r)==='ok').length;
   el('sNd').textContent=scoped.filter(r=>hcls(r)==='nodata').length;
   el('sSt').textContent=scoped.filter(r=>hcls(r)==='stale').length;
@@ -4219,12 +4258,19 @@ function syncErrRows(){
    kaynak, ne hatası sorusunun cevabı bir tık ötede olmalı. Rozet listeye
    götürüyor; sayı da orada AÇIK olarak listelenen satır sayısıyla AYNI
    olmak zorunda, yoksa panel kendi kendisiyle çelişir. */
+/* Rozet İKİ şeyi birden taşıyor: koşan bir şeyin hatası ve senin yapman
+   gereken bir iş. İkincisi olmadan panel "her şey yolunda" der ve eksik bir
+   kimlik yüzünden hiç ölçülmeyen bir gelir kalemi sessizce orada durur —
+   hata YOKTUR çünkü konektör hiç koşmamıştır. Hata varsa hata öncelikli
+   (bozulan bir şey, hiç başlamamış bir şeyden acildir). */
 function drawSyncErrBadge(){
   const n=syncErrRows().filter(r=>!r.resolved).length;
+  const todo=blockerTodoCount();
   const b=el('syncErrBtn');
-  b.hidden = n===0;
-  el('syncErrText').textContent = `${n} hata`;
-  b.title = `${n} kaynak hâlâ hatalı — listeyi aç`;
+  b.hidden = (n===0 && todo===0);
+  el('syncErrText').textContent = n ? `${n} hata` : `${todo} iş sende`;
+  b.title = n ? `${n} kaynak hâlâ hatalı — listeyi aç`
+              : `${todo} konektör eksik kimlik/oturum yüzünden açılamıyor — listeyi aç`;
 }
 function bindSyncErr(){
   el('syncErrBtn').addEventListener('click',()=>{
