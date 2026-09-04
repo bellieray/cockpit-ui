@@ -3029,8 +3029,15 @@ function renderPazarPre(){
       <b style="font-family:Sora">asa_popularity konektörü KAPALI</b></div>
       <div style="font-size:12.5px;color:var(--ink-2)">Bu sayılar elle alınmış bir anlık ölçüm; kendiliğinden tazelenmiyor ve bayatladığında Veri sağlığı uyarmaz. Yeni mağaza ölçmek Apple Ads oturumu açmayı gerektiriyor.</div></div>`:'');
 
+  /* Talep skoru HER MAĞAZANIN KENDİ İÇİNDE normalize (100 o mağazanın
+     tavanı). Küçük bir pazardaki 49 ile büyük bir pazardaki 52 benzer
+     HACİM değil, benzer DURUŞ. Tablo mecburen bir eksende sıralanıyor ve
+     sıralamanın kendisi "karşılaştırılabilir" izlenimi veriyor — bu
+     yüzden pazar BÜYÜKLÜĞÜNÜN mutlak ölçüsünün rakip oy sütunu olduğu
+     açıkça yazılıyor. Kanıt aynı tabloda duruyor: PL talep 49 ama lideri
+     1.046 oy, BR talep 52 ve lideri 23.153 oy. */
   el('pzPreDemandSub').textContent = rows.length
-    ? `talep ve rakip AYRI ölçekte — tek puana toplanmıyor · sıralama en yüksek terim talebine göre · terim listeleri mağazaya göre farklı, taban üstü SAYILARI oran gibi karşılaştırılamaz`
+    ? `talep ve rakip AYRI ölçekte, tek puana toplanmıyor · talep skoru her mağazanın KENDİ içinde normalize — mağazalar arası hacim karşılaştırması için rakip oy sütununa bak · terim listeleri farklı, taban üstü SAYILARI da oran gibi okunamaz`
     : 'bu uygulama için hiç talep ölçümü yok';
   /* "Taban üstü" bir ORAN DEĞİL, sayı. Önceki hâli `2/23` yazıyordu ve
      okuyan bunu %8,7 diye US'in `3/12`siyle (%25) karşılaştırıyordu — oysa
