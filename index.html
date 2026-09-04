@@ -3049,7 +3049,7 @@ function renderPazarPre(){
         ? `${esc(r.topRival.name)} <span class="lb-sub">${num(r.topRival.votes)} oy${
             r.topRival.rating!=null?' · '+r.topRival.rating.toFixed(2):''}</span>`
         : '<span class="lb-sub">rakip hiç ölçülmedi</span>';
-      return `<tr><td>${FLAG[r.cc]||"🏳️"} ${esc(countryLabel(r.cc))} <span class="lb-sub">${r.terms} terim</span></td>
+      return `<tr><td>${FLAG[r.cc]||"🏳️"} ${esc(countryLabel(r.cc))} <span class="lb-sub" style="display:block">${r.terms} terim ölçüldü</span></td>
         <td class="num sec" data-l="taban üstü">${r.above}</td>
         <td class="sec" data-l="terim">${esc(r.top||'–')}</td>
         <td class="num pri" data-l="talep">${r.topD>0?r.topD:'–'}</td>
