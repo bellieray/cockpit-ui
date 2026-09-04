@@ -489,6 +489,10 @@
   #v-ozet:not(.pre) [data-prelaunch-only]{display:none}
 
   .empty{color:var(--ink-3);font-size:13px;padding:18px 0;text-align:center}
+  /* Boş tablodaki "Filtreleri temizle": 44px dokunma hedefi (iOS asgarisi)
+     ve metinden bir satır aşağı — aynı satırda kalınca cümlenin parçası
+     gibi okunup basılabilir olduğu fark edilmiyordu. */
+  .efb{margin:10px auto 0;display:flex;font-size:12.5px;padding:0 14px;min-height:34px}
 </style></head>
 <body>
 
@@ -2078,7 +2082,7 @@ function drawCtry(){
     (rows.length?rows.map(r=>`<tr><td>${FLAG[r.cc]||"🏳️"} ${r.cc.toUpperCase()}</td><td class="num sec" data-l="göst.">${num(r.imp)}</td>
       <td class="num sec" data-l="sayfa">${num(r.pv)}</td><td class="num pri" data-l="indirme">${num(r.dl)}</td>
       <td class="num sec ${cr(r)>=.1?'up':(cr(r)===0?'flat':'')}" data-l="dön.%">${(cr(r)*100).toFixed(1)}</td></tr>`).join("")
-      :`<tr><td colspan="5" class="empty">Bu filtreyle eşleşen ülke yok</td></tr>`)+`</tbody>`;
+      :emptyFiltered("ctry","ülke",5))+`</tbody>`;
   el('ctryCount').textContent=`${rows.length} / ${all.length} ülke`;
   el('ctryMeta').textContent=`${all.length} ülkede ölçüm var`;
 }
@@ -2187,7 +2191,7 @@ function drawKw(){
         <td class="num sec ${dcls}" data-l="Δ">${dl==null?"–":(dl>0?"+":"")+dl}</td>
         <td class="num hide-m">${r.in_metadata?"✓":"–"}</td><td class="num hide-m">${r.measured_on||"–"}</td>
         <td class="num pri"><span class="tag ${t[0]}">${t[1]}</span></td></tr>`;
-    }).join(""):`<tr><td colspan="7" class="empty">Bu filtreyle eşleşen terim yok</td></tr>`)+`</tbody>`;
+    }).join(""):emptyFiltered("kw","terim",7))+`</tbody>`;
   el('kwCount').textContent=`${rows.length} / ${all.length} terim`;
 }
 
@@ -2298,9 +2302,72 @@ function drawRev(){
       <div class="rev-title">${esc(r.title||"")}</div>
       <div class="rev-body">${esc((r.body||"").slice(0,320))}</div>
       <div class="rev-date">${String(r.submitted_at||"").slice(0,10)}</div></div>`;
-  }).join("") : `<div class="empty">Bu filtreyle eşleşen yorum yok</div>`;
+  }).join("") : emptyFiltered("rev","yorum");
   el('revCount').textContent=`${rows.length} / ${all.length}`;
   el('revMeta').textContent=`${all.filter(r=>r.subject==='self').length} bizim · ${all.filter(r=>r.subject!=='self').length} rakip yorumu`;
+}
+
+/* ---------- filtre yüzünden boş kalan tablolar ----------
+   "Bu filtreyle eşleşen X yok" iki AYRI durumu tek cümleye çöktürüyordu:
+   (a) veri gerçekten yok, (b) kullanıcının unuttuğu bir filtre her satırı
+   eliyor. İkisi ekranda birebir aynı görünüyordu — ve uygulama değişince
+   metin araması ile karar çipi (kasten) korunduğu için (b) sık: Spendy'de
+   "budget" arayıp AstroScope'a geçen biri, ekranın dışında kalmış bir
+   arama kutusu yüzünden 198 satırlık tabloyu 0 satır olarak görüyor.
+   Artık boş satır AÇIK FİLTRELERİ adıyla yazıyor ve tek dokunuşla siliyor.
+
+   Bir denetimin "açık" sayılması, değerinin İLK seçenekten farklı olması:
+   `ctryMin`in varsayılanı boş string değil `"0"` (Hepsi) — düz doğruluk
+   kontrolü onu sürekli açık filtre sanardı. */
+function filterState(ids, chipSel){
+  const on=[], reset=[];
+  ids.forEach(id=>{
+    const n=el(id); if(!n) return;
+    const base = n.tagName==='SELECT' ? (n.options[0] ? n.options[0].value : '') : '';
+    reset.push([n, base]);
+    if(n.value===base) return;
+    on.push(n.tagName==='SELECT'
+      ? ((n.selectedOptions[0]||{}).textContent||n.value).trim()
+      : `"${n.value}"`);
+  });
+  if(chipSel){
+    const c=document.querySelector(chipSel+'.on');
+    const v=c && (c.dataset.v||c.dataset.av);
+    if(c && v && v!=='ALL') on.push(c.textContent.trim());
+  }
+  return {on, reset};
+}
+/* Her filtre kümesinin TEK tanımı: hangi denetimler, hangi çip grubu,
+   hangi modül değişkeni, temizleyince ne yeniden çizilir. */
+const FILTER_SETS={
+  kw  :{ids:['kwCountry','kwSearch'],  chip:'[data-v]',  clear:()=>{kwVerdict='ALL'},  draw:()=>drawKw()},
+  akw :{ids:['aKwCountry','aKwSearch'],chip:'[data-av]', clear:()=>{aKwVerdict='ALL'},draw:()=>drawAKw()},
+  ctry:{ids:['ctrySearch','ctryMin'],                                                  draw:()=>drawCtry()},
+  ylist:{ids:['yWho','ySrc','yStar','yCountry','ySearch'],                              draw:()=>drawYList()},
+  rev :{ids:['revWho','revStar','revSearch'],                                           draw:()=>drawRev()},
+};
+function emptyFiltered(key, noun, cols){
+  const f=FILTER_SETS[key];
+  const {on}=filterState(f.ids, f.chip);
+  const body = on.length
+    ? `${on.length} filtre açık — ${esc(on.join(' · '))}
+       <button class="pillbtn efb" data-clearf="${key}">Filtreleri temizle</button>`
+    : `Gösterilecek ${esc(noun)} yok`;
+  return cols
+    ? `<tr><td colspan="${cols}" class="empty">${body}</td></tr>`
+    : `<div class="empty">${body}</div>`;
+}
+function clearFilters(key){
+  const f=FILTER_SETS[key]; if(!f) return;
+  filterState(f.ids, f.chip).reset.forEach(([n,base])=>{ n.value=base; });
+  if(f.chip){
+    const chips=[...document.querySelectorAll(f.chip)];
+    chips.forEach(x=>x.classList.remove('on'));
+    const all=chips.find(x=>(x.dataset.v||x.dataset.av)==='ALL');
+    if(all) all.classList.add('on');
+  }
+  if(f.clear) f.clear();
+  f.draw();
 }
 
 /* ---------- seçiciler / kabuk ---------- */
@@ -2309,17 +2376,30 @@ function drawRev(){
      · koşulsuz doldurmak → aralık değişince seçili ülke uçuyor;
      · hiç doldurmamak    → uygulama değişince liste bayat kalıyor
                             (Spendy'nin ülkeleri AstroScope'ta duruyor).
-   Çözüm: yalnız UYGULAMA değiştiğinde yeniden doldur ve o zaman seçimleri
-   bilinçli olarak sıfırla — çünkü eski seçim yeni uygulamada anlamsız. */
+   Çözüm: yalnız UYGULAMA değiştiğinde yeniden doldur.
+
+   SEÇİM KORUNUR — koşulsuz sıfırlanmaz. Eski davranış her uygulama
+   değişiminde seçili ülkeyi atıyordu, oysa ülkelerin çoğu iki uygulamada
+   da var (tr/us/de/es/gb): kullanıcı `us`'i seçip uygulama değiştirince
+   filtresi sessizce kayboluyordu — "filtre tutmuyor". Yeni kural: seçim
+   yeni uygulamada da GEÇERLİYSE kalır, değilse (o ülke yok) düşer. */
 let SELECTS_FOR=null;
 function fillSelects(){
   const appChanged = SELECTS_FOR !== APP;
   SELECTS_FOR = APP;
   const refill=(id,html)=>{ const n=el(id); if(!n) return;
-    if(appChanged || !n.options.length){ n.innerHTML=html; n.value=''; } };
+    if(!(appChanged || !n.options.length)) return;
+    const keep=n.value;
+    n.innerHTML=html;
+    n.value = [...n.options].some(o=>o.value===keep) ? keep : '';
+  };
   const cs=[...new Set(gapsFor().map(r=>r.country))].sort();
   const opts=`<option value="">Tüm ülkeler</option>`+cs.map(c=>`<option value="${c}">${FLAG[c]||"🏳️"} ${c.toUpperCase()}</option>`).join("");
-  refill('kwCountry',opts); refill('ringCountry',opts);
+  /* `aKwCountry` de buraya AİT: eskiden `renderAso` içinde
+     `if(!options.length)` ile bir kez doldurulup bir daha hiç
+     tazelenmiyordu — AstroScope'ta 5 ülke varken açılır liste Spendy'nin
+     14 ülkesini gösteriyor, 9'u hiçbir satırla eşleşmiyordu. Tek kaynak. */
+  refill('kwCountry',opts); refill('ringCountry',opts); refill('aKwCountry',opts);
   const ccs=countryRows(allDays()).map(r=>r.cc).sort();
   refill('chartCountry',`<option value="">Tüm ülkeler</option>`+
     ccs.map(c=>`<option value="${c}">${FLAG[c]||"🏳️"} ${c.toUpperCase()}</option>`).join(""));
@@ -2435,8 +2515,22 @@ function bind(){
   el('ringCountry').addEventListener('change',drawRing);
   el('lbSort').addEventListener('change',drawLb);
   ['revWho','revStar','revSearch'].forEach(id=>el(id).addEventListener('input',drawRev));
-  document.querySelectorAll('.fchip').forEach(b=>b.addEventListener('click',()=>{
-    document.querySelectorAll('.fchip').forEach(x=>x.classList.remove('on'));
+  /* WHY `[data-v]` ve `.fchip` DEĞİL: `.fchip` yalnız bir GÖRÜNÜŞ sınıfı ve
+     iki ayrı tabloda kullanılıyor — Özet'in kelime tablosu (`data-v`) ve
+     ASO sekmesininki (`data-av`). Sınıfa göre bağlanınca ASO çipleri BU
+     dinleyiciyi de alıyordu: bir ASO çipine basmak `kwVerdict`i
+     `undefined` yapıp Özet tablosunu sessizce boşaltıyor (198 → 0), ters
+     yönde de her iki gruptaki `.on` işaretini siliyordu. Ölçüt hangi
+     DEĞİŞKENİ yazdığıysa, seçici de o veri niteliği olmalı. */
+  /* Temizle düğmesi tablonun İÇİNDE ve tablo her çizimde yeniden
+     yazılıyor — düğmeye tek tek bağlanmak, bir sonraki çizimde ölü
+     dinleyici bırakırdı. Belge seviyesinde tek delegasyon. */
+  document.addEventListener('click',e=>{
+    const b=e.target.closest && e.target.closest('[data-clearf]');
+    if(b) clearFilters(b.dataset.clearf);
+  });
+  document.querySelectorAll('[data-v]').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('[data-v]').forEach(x=>x.classList.remove('on'));
     b.classList.add('on'); kwVerdict=b.dataset.v; drawKw();
   }));
   document.querySelectorAll('.seg').forEach(g=>g.querySelectorAll('button').forEach(b=>
@@ -2509,10 +2603,10 @@ function renderAso(){
   el('aGap').textContent=c.GAP; el('aCov').textContent=c.COVERED;
   el('aDead').textContent=c.DEAD_WEIGHT; el('aUnm').textContent=c.UNMEASURED;
 
+  /* Ülke açılır listesi burada DOLDURULMAZ — `fillSelects` dolduruyor
+     (uygulama değişimini o izliyor). İki yerde doldurmak, ikisinden
+     birinin bayat kalması demekti. `cs` yalnız alt başlıktaki sayı için. */
   const cs=[...new Set(all.map(r=>r.country))].sort();
-  if(!el('aKwCountry').options.length)
-    el('aKwCountry').innerHTML=`<option value="">Tüm ülkeler</option>`+
-      cs.map(x=>`<option value="${x}">${FLAG[x]||"🏳️"} ${x.toUpperCase()}</option>`).join("");
 
   const newest=all.map(r=>r.measured_on).filter(Boolean).sort().pop();
   el('aKwSub').innerHTML=`${all.length} terim · ${cs.length} ülke · en yeni ölçüm ${newest||"–"} ${asaFreshness()}`;
@@ -2574,7 +2668,7 @@ function drawAKw(){
         <td class="num hide-m">${r.in_metadata?"✓":"–"}</td><td class="num hide-m">${esc(r.origin||"–")}</td>
         <td class="num hide-m">${r.measured_on||"–"}</td>
         <td class="num pri"><span class="tag ${t[0]}">${t[1]}</span></td></tr>`;
-    }).join(""):`<tr><td colspan="8" class="empty">Bu filtreyle eşleşen terim yok</td></tr>`)+`</tbody>`;
+    }).join(""):emptyFiltered("akw","terim",8))+`</tbody>`;
   el('aKwCount').textContent=`${rows.length} / ${all.length} terim`;
 }
 
@@ -3348,7 +3442,7 @@ function drawYList(){
       <div class="rev-title">${esc(r.title||"")}</div>
       <div class="rev-body">${esc(r.body||"")}</div>
       <div class="rev-date">${String(r.submitted_at||"").slice(0,10)}</div></div>`;
-  }).join(""):`<div class="empty">Bu filtreyle eşleşen yorum yok</div>`;
+  }).join(""):emptyFiltered("ylist","yorum");
   el('yCount').textContent=`${rows.length} / ${all.length}`;
   el('yMeta').textContent=`${all.filter(r=>r.subject==='self').length} bizim · ${all.filter(r=>r.subject!=='self').length} rakip yorumu`;
 }
