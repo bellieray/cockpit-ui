@@ -500,7 +500,7 @@
   /* Hata durumu: kenarlık ve metin kırmızı. Yalnız renkle anlatılmıyor —
      etiketin kendisi "N hata" yazıyor, çünkü renk körlüğü ve küçük ekranda
      ince bir kenarlık tek başına bir mesaj değil. */
-  #syncBtn.bad{border-color:var(--down);color:var(--down)}
+  #syncBtn.bad,.pillbtn.bad{border-color:var(--down);color:var(--down)}
   /* Hata metni ham makine çıktısı: sarmalanmalı ve kırılmalı, ama okunaklı
      kalmalı — uzun URL'ler yatay kaydırma yaratmasın. */
   .errmsg{font-size:12.5px;color:var(--ink-2);white-space:pre-wrap;
@@ -584,6 +584,14 @@
              olduğu gibi yazıyor — "bir şey olmadı" hissi en kötüsü.
              Alt satır son toplama zamanını gösteriyor, yani basmadan önce
              verinin gerçekten bayat olup olmadığı görülüyor. -->
+        <!-- Hata rozeti AYRI bir düğme: senkron düğmesinin işi toplamayı
+             başlatmak, hatayı açmak değil — ikisini tek düğmeye bindirmek
+             "tazelemek istedim, başka bir ekrana attı" demekti. Yalnız hata
+             varken görünüyor; hatasız günde başlıkta yer kaplamıyor. -->
+        <button class="pillbtn bad" id="syncErrBtn" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 7v6M12 17v.5"/><circle cx="12" cy="12" r="9"/></svg>
+          <span id="syncErrText">–</span>
+        </button>
         <button class="pillbtn" id="syncBtn" title="Tüm kaynakları şimdi topla (10 dakikada bir)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 0 1-15.5 6.2M3 12a9 9 0 0 1 15.5-6.2"/><path d="M3 19v-5h5M21 5v5h-5"/></svg>
           <span id="syncBtnText">Senkron</span>
@@ -1394,10 +1402,10 @@
              kendisini (kaynağın verdiği metin) ve varsa >=400 dönen çağrının
              URL'sini gösteriyor — "bir şeyler ters gitti" tek başına
              düzeltilebilir bir bilgi değil. -->
-        <div class="card c7">
+        <div class="card c7" id="sErrCard">
           <div class="card-head"><div><div class="card-title">Senkron hataları</div>
             <div class="card-sub" id="sErrSub">–</div></div></div>
-          <div id="sErrors"></div>
+          <div class="tw" style="max-height:520px"><div id="sErrors"></div></div>
         </div>
 
         <!-- Geri çekilmiş kaynaklar: bir hatadan sonra konektör bir süre
@@ -1406,7 +1414,7 @@
         <div class="card c5">
           <div class="card-head"><div><div class="card-title">Bekleyen kaynaklar</div>
             <div class="card-sub" id="sDefSub">–</div></div></div>
-          <div id="sDeferred"></div>
+          <div class="tw" style="max-height:520px"><div id="sDeferred"></div></div>
         </div>
       </div>
     </div>
@@ -2585,7 +2593,7 @@ function bind(){
       g.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
       if(b.dataset.range!=null){ RANGE=+b.dataset.range; syncRange(); renderAll(); }
     })));
-  bindViews(); bindAnchors(); buildAnchors(); bindSync();
+  bindViews(); bindAnchors(); buildAnchors(); bindSync(); bindSyncErr();
   /* WHY yalnız dokunmatikte: fareli cihazda tarayıcının kendi tooltip'i
      zaten çalışıyor, ikinci bir katman gürültü olur. `pointer:coarse` kaba
      işaretçiyi (parmak) ayırt ediyor.
@@ -3645,16 +3653,36 @@ function agoText(d){
    yapmaması gereken tek şey. Ayrı bir uyarı şeridi eklenmedi; bu etiket
    zaten her sekmede başlıkta duruyor. */
 function drawSyncLabel(){
-  const btn=el('syncBtn');
-  const bad=(D.syncRecent||[]).filter(r=>r.status==='FAILED').length;
   const t=(D.health||[]).map(r=>r.last_run_at).filter(Boolean).sort().pop();
-  btn.classList.toggle('bad', bad>0);
-  el('syncBtnText').textContent = bad
-    ? `Senkron · ${bad} hata`
-    : (t ? 'Senkron · '+agoText(new Date(t)) : 'Senkron');
-  btn.title = bad
-    ? `Son 24 saatte ${bad} başarısız çalışma — ayrıntı Veri sağlığı sekmesinde`
-    : 'Tüm kaynakları şimdi topla (10 dakikada bir)';
+  el('syncBtnText').textContent = t ? 'Senkron · '+agoText(new Date(t)) : 'Senkron';
+  drawSyncErrBadge();
+}
+/* Sayı tek başına eyleme dönüşmüyor — "6 hata" gördükten sonra hangi
+   kaynak, ne hatası sorusunun cevabı bir tık ötede olmalı. Rozet listeye
+   götürüyor; sayı da orada listelenen satır sayısıyla AYNI olmak zorunda,
+   yoksa panel kendi kendisiyle çelişir (bkz. blended eCPM dersi). */
+function drawSyncErrBadge(){
+  const n=(D.syncRecent||[]).filter(r=>r.status==='FAILED').length;
+  const b=el('syncErrBtn');
+  b.hidden = n===0;
+  el('syncErrText').textContent = `${n} hata`;
+  b.title = `Son 24 saatte ${n} başarısız senkron çalışması — listeyi aç`;
+}
+function bindSyncErr(){
+  el('syncErrBtn').addEventListener('click',()=>{
+    /* Uygulama süzgeci TEMİZLENİYOR: başlıktaki sayı tüm uygulamaları
+       kapsıyor, Veri sağlığı sekmesi ise seçili uygulamaya süzülü açılıyor.
+       Temizlenmezse rozet "6" derken liste 5 satır gösterir. */
+    const a=el('sApp'); if(a) a.value='';
+    showView('saglik');
+    const card=el('sErrCard');
+    if(card){
+      const off=el('mbar').getBoundingClientRect().height+12;
+      const soft=!matchMedia('(prefers-reduced-motion:reduce)').matches;
+      window.scrollTo({top:Math.max(0,card.getBoundingClientRect().top+window.scrollY-off),
+        behavior:soft?'smooth':'auto'});
+    }
+  });
 }
 let SYNCING=false;
 function bindSync(){
@@ -3700,7 +3728,7 @@ function bindSync(){
         const ok=new Set(mine.filter(r=>r.finished_at&&r.status==='OK').map(key));
         const bad=new Set(mine.filter(r=>r.status==='FAILED').map(key));
         const pending=total-ok.size-bad.size;
-        btn.classList.toggle('bad', bad.size>0);
+        btn.classList.toggle('bad', bad.size>0); drawSyncErrBadge();
         txt.textContent = bad.size
           ? `${bad.size} hata · Veri sağlığı'nda`
           : pending>0 ? `${ok.size}/${total} bitti · kalanı arkada`
