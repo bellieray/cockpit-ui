@@ -3535,10 +3535,16 @@ function renderSaglik(){
    duran JSON dizisi). Ayrıştırma try/catch içinde: bekçi tarafından kapatılan
    bir çalışmada bu alan boş string oluyor ve `JSON.parse` patlıyor — hata
    ekranının kendisi hata vermemeli. */
-function failedCalls(logTail){
+/* `err` de veriliyor çünkü bazı konektörler hata METNİNE zaten patlayan
+   URL'yi yazıyor ("504 https://…"). O durumda alttaki tek satırlık çağrı
+   listesi birebir aynı şeyi tekrar ediyordu — gürültü, üstelik "iki ayrı
+   bulgu var" izlenimi veriyor. Zaten metinde geçen çağrı elenir. */
+function failedCalls(logTail, err){
   try{
     const a=JSON.parse(logTail||'');
-    return Array.isArray(a)?a.filter(c=>Number(c&&c.status)>=400):[];
+    if(!Array.isArray(a)) return [];
+    const e=String(err||'');
+    return a.filter(c=>Number(c&&c.status)>=400 && !e.includes(String(c.url||'')));
   }catch{ return []; }
 }
 /* NEDEN `error` başrolde, başarısız çağrı yardımcı: hataların bir kısmında
@@ -3558,7 +3564,7 @@ function drawSyncErrors(){
     ? `${rows.length} başarısız çalışma · son 24 saat`
     : 'son 24 saatte başarısız çalışma yok';
   el('sErrors').innerHTML = rows.length ? rows.map(r=>{
-    const calls=failedCalls(r.log_tail);
+    const calls=failedCalls(r.log_tail, r.error);
     return `<div class="brk"><div class="brk-top">
       <span class="dot" style="background:var(--down)"></span>
       <b style="font-family:Sora">${esc(r.slug==='__global__'?'global':r.slug)}/${esc(r.source)}</b>
