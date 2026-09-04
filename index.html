@@ -2860,18 +2860,12 @@ function drawAKw(){
    yapmaması gereken şey.
    Kapsam bilinçli olarak ÖLÇÜLEN ülkelerle sınırlı; 175 mağazanın tamamı
    için tahmin yazmak, doğrulanmamış veri üretmek olurdu. */
-const CC_LANG={
-  us:'en',gb:'en',au:'en',ca:'en',ie:'en',nz:'en',in:'en',sg:'en',my:'en',za:'en',ph:'en',ng:'en',zw:'en',ke:'en',gh:'en',
-  de:'de',at:'de',ch:'de',
-  es:'es',mx:'es',ar:'es',cl:'es',co:'es',pe:'es',ec:'es',do:'es',pa:'es',uy:'es',cr:'es',gt:'es',bo:'es',py:'es',ve:'es',sv:'es',hn:'es',ni:'es',
-  fr:'fr',be:'fr',lu:'fr',
-  it:'it',br:'pt',pt:'pt',nl:'nl',tr:'tr',jp:'ja',kr:'ko',
-  ru:'ru',kz:'ru',kg:'ru',ua:'ru',md:'ru',by:'ru',am:'ru',az:'ru',ge:'ru',uz:'ru',
-  eg:'ar',sa:'ar',kw:'ar',ae:'ar',qa:'ar',bh:'ar',om:'ar',jo:'ar',ma:'ar',dz:'ar',tn:'ar',iq:'ar',lb:'ar',
-  pl:'pl',se:'sv',no:'no',dk:'da',fi:'fi',ro:'ro',lt:'lt',lv:'lv',ee:'et',
-  cz:'cs',sk:'sk',hu:'hu',gr:'el',bg:'bg',hr:'hr',rs:'sr',si:'sl',
-  th:'th',vn:'vi',id:'id',tw:'zh',hk:'zh',cn:'zh',il:'he',ir:'fa',pk:'ur',bd:'bn',lk:'si',np:'ne',
-};
+/* Mağaza → listeleme dili. Değerler VERİTABANINDAN (`panel.country_lang`)
+   geliyor, burada sabit DEĞİL: aynı eşleme `panel.refresh_in_metadata`
+   içinde de kullanılıyor ve iki kopya bir gün ayrışır. Veri gelene kadar
+   boş; boş bir eşleme "dil bilinmiyor" (`?`) demek, "dil yok" değil. */
+let CC_LANG={};
+function loadCcLang(){ CC_LANG={}; (D.countryLang||[]).forEach(r=>{ CC_LANG[r.country]=r.lang; }); }
 const LANG_NAME={en:'İngilizce',de:'Almanca',es:'İspanyolca',fr:'Fransızca',it:'İtalyanca',pt:'Portekizce',
   nl:'Felemenkçe',tr:'Türkçe',ja:'Japonca',ko:'Korece',ru:'Rusça',ar:'Arapça',pl:'Lehçe',sv:'İsveççe',
   no:'Norveççe',da:'Danca',fi:'Fince',ro:'Romence',lt:'Litvanca',lv:'Letonca',et:'Estonca',cs:'Çekçe',
@@ -4215,7 +4209,7 @@ async function refetch(){
     headers:{'content-type':'application/json','x-panel-secret':getKey()},
     body:JSON.stringify({view:'dashboard'})});
   if(!res.ok) throw new Error('HTTP '+res.status);
-  D=await res.json(); renderAll();
+  D=await res.json(); loadCcLang(); renderAll();
 }
 function agoText(d){
   const m=Math.round((Date.now()-d.getTime())/60000);
@@ -4360,7 +4354,7 @@ async function load(){
       el('boot').style.display='none'; el('gate').style.display='block';
       el('gateErr').textContent='Anahtar kabul edilmedi.'; return; }
     if(!res.ok) throw new Error('HTTP '+res.status);
-    D=await res.json();
+    D=await res.json(); loadCcLang();
     // Kayıtlı seçim HÂLÂ VARSA onu kullan. Silinmiş/yeniden adlandırılmış bir
     // slug'a yapışıp boş ekran göstermemek için varlığı kontrol ediliyor.
     const real=(D.apps||[]).filter(a=>a.slug!=='__global__');
