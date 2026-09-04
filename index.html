@@ -3670,11 +3670,15 @@ function drawSyncErrBadge(){
 }
 function bindSyncErr(){
   el('syncErrBtn').addEventListener('click',()=>{
-    /* Uygulama süzgeci TEMİZLENİYOR: başlıktaki sayı tüm uygulamaları
-       kapsıyor, Veri sağlığı sekmesi ise seçili uygulamaya süzülü açılıyor.
-       Temizlenmezse rozet "6" derken liste 5 satır gösterir. */
-    const a=el('sApp'); if(a) a.value='';
+    /* Sıra ÖNEMLİ: önce görünüm, SONRA süzgeci temizle, sonra yeniden çiz.
+       `renderSaglik` ilk çalışmasında `sApp`i doldurup varsayılan olarak
+       seçili uygulamaya AYARLIYOR — önce temizlersek o ayar temizliğimizi
+       eziyor ve rozet "5 hata" derken liste 4 satır gösteriyordu (panelin
+       kendi kendisiyle çeliştiği tam olarak o hâl).
+       Uygulama süzgeci temizleniyor çünkü başlıktaki sayı TÜM uygulamaları
+       kapsıyor; liste tek uygulamaya süzülü açılırsa sayı tutmaz. */
     showView('saglik');
+    const a=el('sApp'); if(a && a.value){ a.value=''; renderSaglik(); }
     const card=el('sErrCard');
     if(card){
       const off=el('mbar').getBoundingClientRect().height+12;
