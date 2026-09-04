@@ -3252,9 +3252,18 @@ function renderYorum(){
      `store_rating_count` ile bu sayı AYRI kitlelerdir, birbirine bölünmez —
      `spendy/self`'te yazılı yorum (5) tr oy sayısından (3) fazla, bölen bir
      kart %167 yazardı. */
-  const ceilingAt = ns => { const m={}; ns.forEach(n=>m[n]=(m[n]||0)+1);
-    const top=Object.entries(m).sort((a,b)=>b[1]-a[1])[0];
-    return (top && top[1]>=3 && Number(top[0])>=20) ? Number(top[0]) : null; };
+  // Tavan tespiti KÜMELENMEYE bakıyor, tam eşitliğe değil: feed sayfa boyutu
+  // 50 ama farklı zamanlarda çekilen özneler 50-53 arasına dağılıyor (canlı:
+  // 53,52,51,50,50). Tam eşitlik arayan bir kontrol bu tabloda yalnız iki
+  // özneyi eşleştirip tavanı KAÇIRIYORDU — yani en gerekli olduğu yerde
+  // susuyordu. Üst uçtan dar bir bant + en az üç özne yeterli kanıt.
+  const ceilingAt = ns => {
+    if(ns.length<3) return null;
+    const max=Math.max(...ns);
+    if(max<20) return null;
+    const band=ns.filter(n=>n>=max-5);
+    return band.length>=3 ? Math.min(...band) : null;
+  };
   const span = r => r ? `${r.first_on} → ${r.last_on}` : '';
   el('ySelfSub').textContent = sSelf ? `toplanan · ${span(sSelf)}` : 'henüz yorum toplanmadı';
   const cap = ceilingAt(sRival.map(r=>Number(r.n)));
