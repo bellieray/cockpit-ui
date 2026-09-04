@@ -1442,7 +1442,7 @@
         </div>
         <div class="card c6" id="pzGapCard">
           <div class="card-head"><div><div class="card-title">Ülke bazında kelime fırsatı</div>
-            <div class="card-sub">talebi ölçülmüş, metadata'da olmayan terimler</div></div></div>
+            <div class="card-sub" id="pzGapSub">talebi ölçülmüş, metadata'da olmayan terimler</div></div></div>
           <div class="tw" style="max-height:340px"><table class="dt" id="pzGapTable"></table></div>
         </div>
 
@@ -3183,13 +3183,33 @@ function renderPazar(){
     gapByC[r.country].n++;
     if(d>gapByC[r.country].topD){gapByC[r.country].topD=d;gapByC[r.country].top=r.term;}
   });
-  const gapRows=Object.values(gapByC).sort((a,b)=>b.topD-a.topD||b.n-a.n);
+  /* `GAP` = "talep var, terim metadata'mızda yok". Bu, o mağazada bir
+     listelememiz OLDUĞU varsayımına dayanıyor — çünkü olmayan bir
+     metadata'ya kelime eklenemez. Talebini ölçtüğümüz ama dilinde
+     listelememiz olmayan bir mağaza aynı tabloda görününce, yapılacak iş
+     yanlış okunuyor: oradaki eylem "kelime ekle" değil "önce listelemeyi
+     aç". Dil bilgisi ZATEN burada (`storeLangs` + `CC_LANG`); aynı eşlemeyi
+     görünüm/SQL tarafında ikinci kez tanımlamak iki kaynak yaratırdı. */
+  const gapRows=Object.values(gapByC).map(r=>{
+    const l=CC_LANG[r.cc];
+    /* Üç durum, ikisi değil: dil listesi hiç çekilmediyse "var" da
+       diyemeyiz "yok" da — bilinmiyor. */
+    const listed = !langs.size ? null : (l ? langs.has(l) : null);
+    return {...r, listed};
+  }).sort((a,b)=>(a.listed===false)-(b.listed===false)||b.topD-a.topD||b.n-a.n);
+  const noListing=gapRows.filter(r=>r.listed===false).length;
+  el('pzGapSub').textContent = !gapRows.length ? 'talebi ölçülmüş, metadata\'da olmayan terimler'
+    : noListing ? `${noListing} mağazada listeleme dili yok — orada iş kelime eklemek değil, önce listelemeyi açmak`
+    : 'talebi ölçülmüş, metadata\'da olmayan terimler';
   el('pzGapTable').innerHTML=
-    `<thead><tr><th>Ülke</th><th>Fırsat</th><th>En yüksek talepli terim</th><th>Talep</th></tr></thead><tbody>`+
+    `<thead><tr><th>Ülke</th><th>Fırsat</th><th>En yüksek talepli terim</th><th>Talep</th><th>Listeleme</th></tr></thead><tbody>`+
     (gapRows.length?gapRows.map(r=>
       `<tr><td>${FLAG[r.cc]||"🏳️"} ${String(r.cc).toUpperCase()}</td><td class="num">${r.n}</td>
-        <td>${esc(r.top||'–')}</td><td class="num">${r.topD>=0?r.topD:'–'}</td></tr>`).join("")
-      :`<tr><td colspan="4" class="empty">Ölçülen ülkelerde kapatılacak kelime fırsatı yok</td></tr>`)+`</tbody>`;
+        <td>${esc(r.top||'–')}</td><td class="num">${r.topD>=0?r.topD:'–'}</td>
+        <td>${r.listed===null?'<span class="tag nod">?</span>'
+          :r.listed?'<span class="tag cov">var</span>'
+          :'<span class="tag dead">yok</span>'}</td></tr>`).join("")
+      :`<tr><td colspan="5" class="empty">Ölçülen ülkelerde kapatılacak kelime fırsatı yok</td></tr>`)+`</tbody>`;
 
   /* --- ölçülebilir: arama gösterimi → sayfa (aynı kaynak içinde) --- */
   const tap=rows.filter(r=>r.searchImp>=PZ_GATE.searchImp)
