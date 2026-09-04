@@ -2941,10 +2941,18 @@ const moneyCents=v=>'$'+Number(v).toFixed(2);
    Ülke başına "ortalama talep" yazmak bu tabanı gerçek bir sayı sanıp
    ortalamaya katardı ve her pazarı birbirine benzetirdi. */
 const ASA_FLOOR=5;
-/* App Store mağaza (storefront) sayısı — Apple'ın kendi sayısı, panelin bir
-   ölçümü DEĞİL. Yalnız "kaçında hiç ölçüm yok" cümlesinin paydası olarak
-   kullanılıyor ve ekranda kaynağı yazıyor. */
-const ASC_STOREFRONTS=175;
+/* Mağaza evreni ÜÇE ayrılıyor, ikiye değil. 2026-08-26'da 175 mağazanın
+   TAMAMI Apple Ads'e soruldu (ASC'den çekilen tam ülke listesiyle): 86'sı
+   veri döndürdü, 84'ü `{}` döndürdü ve İKİNCİ bir turda yine boş geldi —
+   yani o mağazalar Apple Ads dizininde YOK, bu dizinin kalıcı bir özelliği.
+   Kalan 5'i kendi dilinde ölçüldü. "175 - ölçtüğümüz = bakmadığımız"
+   demek, ölçülmesi MÜMKÜN OLMAYAN 84 mağazayı yapılacak iş listesine
+   yazmak olurdu — panelin bu oturumda dört kez düzelttiği sessiz ima
+   hatasının tersi. Bunlar panelin canlı ölçümü değil, o taramanın sabiti;
+   ekranda tarihi ve yöntemi yazıyor. Popülerlik MAĞAZA düzeyinde bir
+   özellik (uygulamaya göre değişmiyor), o yüzden sabit her uygulama için
+   geçerli. */
+const SF_TOTAL=175, SF_INDEXED=91, SF_ABSENT=84, SF_SCAN_DAY='2026-08-26';
 
 /* Ön-lansman: uygulama hiçbir mağazada yayında değil, dolayısıyla KENDİ
    trafiği yok. Elde olan tek kanıt dışarıdan ölçülen iki şey: mağaza başına
@@ -2987,8 +2995,12 @@ function renderPazarPre(){
   el('pzK1').innerHTML=`Talebi ölçülen mağaza<br><span class="card-sub" id="pzWin">${
     days.length?'son ölçüm '+dShort(days[days.length-1]):'ölçüm yok'}</span>`;
   el('pzCountries').textContent=num(rows.length);
-  el('pzK2').innerHTML=`Ölçülmemiş mağaza<br><span class="card-sub" id="pzDlSub">${ASC_STOREFRONTS} App Store mağazasından</span>`;
-  el('pzDlCountries').textContent=num(Math.max(0,ASC_STOREFRONTS-rows.length));
+  /* Payda 175 DEĞİL 91: ölçülebilir mağaza sayısı. 84 mağaza Apple Ads
+     dizininde hiç yok, onları "ölçülmedi" saymak yapılamaz bir işi eksik
+     gibi gösterirdi. */
+  const openLeft=Math.max(0,SF_INDEXED-rows.length);
+  el('pzK2').innerHTML=`Ölçülebilir ama ölçülmemiş<br><span class="card-sub" id="pzDlSub">${SF_INDEXED} ölçülebilir mağazadan</span>`;
+  el('pzDlCountries').textContent=num(openLeft);
   el('pzK3').innerHTML=`Rakibi ölçülen mağaza<br><span class="card-sub" id="pzLocSub">${
     rows.length?rows.filter(r=>!r.rivals).length+' mağazada rakip ölçümü yok':'–'}</span>`;
   el('pzLocales').textContent=num(rows.filter(r=>r.rivals>0).length);
@@ -3002,18 +3014,29 @@ function renderPazarPre(){
      bayatlayacak bir çalışması yoktur. */
   const stale = health && health.enabled===false;
   el('pzPreCoverSub').textContent =
-    `${num(rows.length)} mağaza ölçüldü · ${num(Math.max(0,ASC_STOREFRONTS-rows.length))} mağaza hiç ölçülmedi`;
+    `${num(rows.length)} ölçüldü · ${num(openLeft)} ölçülebilir ama ölçülmedi · ${num(SF_ABSENT)} Apple Ads dizininde yok`;
   el('pzPreCover').innerHTML =
-    `<div class="brk"><div class="brk-top"><span class="dot" style="background:#d18e18"></span>
+    `<div class="brk"><div class="brk-top"><span class="dot" style="background:#3fbf7a"></span>
       <b style="font-family:Sora">Ölçülen: ${rows.map(r=>`${FLAG[r.cc]||"🏳️"} ${String(r.cc).toUpperCase()}`).join(' ')||'yok'}</b></div>
-      <div style="font-size:12.5px;color:var(--ink-2)">Geri kalan ${num(Math.max(0,ASC_STOREFRONTS-rows.length))} mağaza için talep de rakip de ÖLÇÜLMEDİ — bu "fırsat yok" demek değil, "bakmadık" demek. Aşağıdaki tablo yalnız ölçülen mağazalar arasında bir seçim yapar.</div></div>`+
+      <div style="font-size:12.5px;color:var(--ink-2)">Aşağıdaki tablo yalnız bu mağazalar arasında bir seçim yapar.</div></div>`+
+    `<div class="brk"><div class="brk-top"><span class="dot" style="background:#d18e18"></span>
+      <b style="font-family:Sora">${num(openLeft)} mağaza ölçülebilir ama ölçülmedi</b></div>
+      <div style="font-size:12.5px;color:var(--ink-2)">Bu mağazalarda talep de rakip de ÖLÇÜLMEDİ — "fırsat yok" demek değil, "bakmadık" demek. Lansman pazarını yalnız 5 ölçüme dayandırmadan önce bunlar ölçülmeli.</div></div>`+
+    `<div class="brk"><div class="brk-top"><span class="dot" style="background:#8f96a3"></span>
+      <b style="font-family:Sora">${num(SF_ABSENT)} mağaza Apple Ads dizininde yok</b></div>
+      <div style="font-size:12.5px;color:var(--ink-2)">${SF_TOTAL} mağazanın tamamı ${dShort(SF_SCAN_DAY)} ${String(SF_SCAN_DAY).slice(0,4)}'te tarandı; bu ${num(SF_ABSENT)}'ü iki turda da boş döndü. Bunlar yapılacak iş değil, bu araçla ölçülemeyen mağazalar — mağaza düzeyinde kalıcı bir özellik.</div></div>`+
     (stale?`<div class="brk"><div class="brk-top"><span class="dot" style="background:#e8705f"></span>
       <b style="font-family:Sora">asa_popularity konektörü KAPALI</b></div>
       <div style="font-size:12.5px;color:var(--ink-2)">Bu sayılar elle alınmış bir anlık ölçüm; kendiliğinden tazelenmiyor ve bayatladığında Veri sağlığı uyarmaz. Yeni mağaza ölçmek Apple Ads oturumu açmayı gerektiriyor.</div></div>`:'');
 
   el('pzPreDemandSub').textContent = rows.length
-    ? `talep ve rakip AYRI ölçekte — tek puana toplanmıyor · sıralama en yüksek terim talebine göre`
+    ? `talep ve rakip AYRI ölçekte — tek puana toplanmıyor · sıralama en yüksek terim talebine göre · terim listeleri mağazaya göre farklı, taban üstü SAYILARI oran gibi karşılaştırılamaz`
     : 'bu uygulama için hiç talep ölçümü yok';
+  /* "Taban üstü" bir ORAN DEĞİL, sayı. Önceki hâli `2/23` yazıyordu ve
+     okuyan bunu %8,7 diye US'in `3/12`siyle (%25) karşılaştırıyordu — oysa
+     paydalar farklı terim listeleri: TR'nin 23'ünde US'te hiç olmayan 11
+     Türkçe terim var. Bileşik puan için reddedilen ölçek uyumsuzluğunun
+     kesir kılığındaki hâli. Payda artık ülke hücresinde, ayrı bir bilgi. */
   el('pzPreDemandTable').innerHTML=
     `<thead><tr><th>Mağaza</th><th>Taban üstü</th><th>En yüksek terim</th><th>Talep</th><th>Rakip</th><th>En güçlü rakip</th></tr></thead><tbody>`+
     (rows.length?rows.map(r=>{
@@ -3026,12 +3049,12 @@ function renderPazarPre(){
         ? `${esc(r.topRival.name)} <span class="lb-sub">${num(r.topRival.votes)} oy${
             r.topRival.rating!=null?' · '+r.topRival.rating.toFixed(2):''}</span>`
         : '<span class="lb-sub">rakip hiç ölçülmedi</span>';
-      return `<tr><td>${FLAG[r.cc]||"🏳️"} ${esc(countryLabel(r.cc))}</td>
-        <td class="num sec" data-l="taban üstü">${r.above}/${r.terms}</td>
+      return `<tr><td>${FLAG[r.cc]||"🏳️"} ${esc(countryLabel(r.cc))} <span class="lb-sub">${r.terms} terim ölçüldü</span></td>
+        <td class="num sec" data-l="taban üstü">${r.above}</td>
         <td class="sec" data-l="terim">${esc(r.top||'–')}</td>
         <td class="num pri" data-l="talep">${r.topD>0?r.topD:'–'}</td>
         <td class="num sec hide-m" data-l="rakip">${rc}</td>
-        <td class="sec" data-l="">${tr}</td></tr>`;
+        <td class="sec" data-l="rakip">${tr}</td></tr>`;
     }).join(""):`<tr><td colspan="6" class="empty">Bu uygulama için hiçbir mağazada anahtar kelime talebi ölçülmedi</td></tr>`)+`</tbody>`;
 
   /* Terim tablosu: hangi kelimenin hangi mağazada gerçekten talebi var.
