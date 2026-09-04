@@ -1434,12 +1434,76 @@ function stockValue(metric, app=APP){
   return r?Number(r.value):null;
 }
 
-/* ---------- tarih aralığı ---------- */
-function allDays(app=APP){
-  const s=new Set();
-  (D.series||[]).filter(r=>r.slug===app).forEach(r=>s.add(r.day));
-  return [...s].sort();
+/* ---------- payload indeksi ----------
+   NEDEN: her `renderAll()` ham payload'ı BAŞTAN tarıyordu. Yalnız `sumMetric`
+   render başına 12+ kez çağrılıyor ve her çağrı `D.series`in TAMAMINI süzüyor;
+   üstelik `portfolioRow` her uygulama için `signalsFor` → `allDays` zincirini
+   işletiyor, yani UYGULAMA SAYISI ile SATIR SAYISI çarpılıyor. Bugünkü hacimde
+   (birkaç yüz satır, iki uygulama) ölçülebilir bir sorun yok — bir yıllık
+   geçmiş × birkaç uygulamada portföy görünümü lineer büyüyen veriye karesel iş
+   yapar. İndeks payload başına BİR KEZ, TEK geçişte kuruluyor; uygulama başına
+   ayrı tarama yapmak tam da düzeltilmek istenen çarpımı indeksin içine taşırdı.
+
+   NEDEN anahtar `D`, `APP` DEĞİL — buradaki tek gerçek tuzak bu. `SELECTS_FOR`
+   ile aynı fikir (bir kez hesapla, girdisi değişince at) ama DOĞRU EKSENDE:
+   `allDays`/`stockSeriesFor` opsiyonel bir `app` parametresi taşıyor ve portföy
+   görünümü onları SEÇİLİ OLMAYAN uygulamalar için çağırıyor. `APP`e göre
+   anahtarlanmış bir indeks bu çağrılarda ya YANLIŞ uygulamanın sayısını
+   döndürürdü (sessiz — ekranda makul bir sayı durur, hiçbir kontrol yakalamaz)
+   ya da portföyün her satırında baştan kurulup kazancı yerdi. Slug'a göre
+   anahtarlayınca uygulama değişimi bir geçersizleştirme DEĞİL, yalnızca başka
+   bir kovanın seçimi olur — yanlış yapılamaz. Geriye tek geçersizleştirme
+   sebebi kalıyor: payload'ın kendisi. `D` KİMLİĞİNE bakmak bunu yakalar; bugün
+   tek bir `load()` var ama bir gün yenileme eklenirse indeks kendiliğinden
+   tazelenir, çağıranların hiçbirine dokunulmadan.
+
+   Kovalar SALT OKUNUR sayılır ve okuyucular dizi KOPYASI döndürür: indekslenen
+   yardımcılar bugüne kadar hep taze dizi veriyordu, çağıranlardan biri (bu
+   dosyada zaten var olan `rk.sort()` deseni gibi) bir gün yerinde sıralarsa
+   önbellek sessizce bozulurdu. Kopya `slice()` — maliyeti gün sayısı kadar,
+   kaldırılan iş ise SATIR sayısı kadardı. */
+const _EMPTY_IDX={days:[],sum:new Map(),ctry:new Map(),stock:new Map()};
+let IDX_FOR=null, IDX=null;
+function payloadIdx(){
+  if(IDX_FOR===D) return IDX;
+  IDX_FOR=D; IDX=new Map();
+  const B=slug=>{ let x=IDX.get(slug);
+    if(!x) IDX.set(slug, x={days:[],sum:new Map(),ctry:new Map(),stock:new Map()});
+    return x; };
+  const sub=(m,k)=>{ let x=m.get(k); if(!x) m.set(k, x=new Map()); return x; };
+  const add=(m,day,v)=>m.set(day,(m.get(day)||0)+v);
+
+  /* Gün→TOPLAM saklanıyor, satır listesi değil: `sumMetric` ve `seriesFor`
+     ikisi de yalnız toplam istiyor. Satır tutmak indeksi ham diziden büyütür
+     ve hiçbir okuyucuya yaramaz. */
+  const dset=new Map();   /* allDays YALNIZ `series`ten türüyor — kapsam aynı kalmalı */
+  (D.series||[]).forEach(r=>{
+    add(sub(B(r.slug).sum, r.metric), r.day, Number(r.v||0));
+    let s=dset.get(r.slug); if(!s) dset.set(r.slug, s=new Set());
+    s.add(r.day);
+  });
+  dset.forEach((s,slug)=>{ B(slug).days=[...s].sort(); });
+
+  (D.byCountryDaily||[]).forEach(r=>{
+    add(sub(sub(B(r.slug).ctry, r.metric), r.country), r.day, Number(r.v||0));
+  });
+
+  (D.stockSeries||[]).forEach(r=>{
+    const st=B(r.slug).stock; let a=st.get(r.metric); if(!a) st.set(r.metric, a=[]);
+    a.push({day:r.day,v:Number(r.value)});
+  });
+  /* Sıralama indeks kurulurken BİR KEZ — `stockSeriesFor` her çağrıda
+     sıralıyordu. Karşılaştırıcı özgün hâliyle birebir aynı: eşit günlerde
+     kararlı sıralama satırların payload sırasını korur. */
+  IDX.forEach(x=>x.stock.forEach(a=>a.sort((p,q)=>p.day<q.day?-1:p.day>q.day?1:0)));
+  return IDX;
 }
+/* Hiç satırı olmayan uygulama (ör. lansman öncesi) için boş kova — çağıranlar
+   `null` kontrolü yapmasın diye. Asla yazılmaz. */
+function appIdx(app){ return payloadIdx().get(app)||_EMPTY_IDX; }
+
+/* ---------- tarih aralığı ---------- */
+function allDays(app=APP){ return appIdx(app).days.slice(); }
 function rangeDays(){
   const days=allDays();
   if(!days.length) return [];
@@ -1455,9 +1519,16 @@ const inRange=(day,set)=>set.has(day);
 
 /* ---------- toplayıcılar ---------- */
 function sumMetric(days, metricKey){
-  const set=new Set(days), want=METRIC[metricKey];
-  return (D.series||[]).filter(r=>r.slug===APP&&r.metric===want&&inRange(r.day,set))
-    .reduce((t,r)=>t+Number(r.v||0),0);
+  const by=appIdx(APP).sum.get(METRIC[metricKey]);
+  if(!by) return 0;
+  /* `new Set` ŞART, süsleme değil: özgün hâli satırları gün KÜMESİNE göre
+     süzüyordu, yani `days` içinde tekrar eden bir gün toplama iki kez
+     GİRMİYORDU. Günleri doğrudan dolaşmak o günü iki kez sayardı — bugünkü
+     çağıranların hepsi tekilsiz gün veriyor (hepsi `allDays()` dilimi), ama
+     bu çağıranların bir özelliği, `sumMetric`in sözleşmesi değil. */
+  let t=0;
+  new Set(days).forEach(d=>{ t+=by.get(d)||0; });
+  return t;
 }
 /* Ülke filtresi VARSA ülke bazlı günlük seriden, yoksa toplam seriden okur.
    Seçici uzun süre boştaydı: doldurulmuş ama hiçbir olaya bağlanmamıştı, yani
@@ -1468,12 +1539,12 @@ function sumMetric(days, metricKey){
    `having sum>0` ile geliyor; bir ülkede o gün ölçüm yoksa satır hiç yok,
    `by[d]||0` doğru davranıyor. */
 function seriesFor(metricKey, days, country){
-  const want=METRIC[metricKey], by={};
-  const src = country
-    ? (D.byCountryDaily||[]).filter(r=>r.slug===APP&&r.metric===want&&r.country===country)
-    : (D.series||[]).filter(r=>r.slug===APP&&r.metric===want);
-  src.forEach(r=>{by[r.day]=(by[r.day]||0)+Number(r.v||0)});
-  return days.map(d=>by[d]||0);
+  const x=appIdx(APP), want=METRIC[metricKey];
+  const cm = country ? x.ctry.get(want) : null;
+  const by = country ? (cm && cm.get(country)) : x.sum.get(want);
+  /* `days` KÜMEYE çevrilmiyor (bkz. `sumMetric`): burada çıktı, girdi dizisiyle
+     KONUM KONUM eşleşen bir seri — tekilleştirmek grafiği kaydırırdı. */
+  return days.map(d=>(by&&by.get(d))||0);
 }
 function sourceRows(days){
   const set=new Set(days), by={};
@@ -2510,9 +2581,12 @@ function drawAKw(){
 /* ---------- ÜRÜN SAĞLIĞI ---------- */
 // bkz. ADR-0035. Hepsi app_export'un `stock` metrikleri — revenue band'la
 // aynı desen (stockValue), backend değişikliği yok.
+/* Süzme + eşleme + sıralama artık indekste, çağrı başına değil (portföy bunu
+   uygulama × metrik kez çağırıyor). Dönen DİZİ kopya; içindeki noktalar
+   paylaşılıyor ve salt okunur — bugün hiçbir çağıran onlara yazmıyor. */
 function stockSeriesFor(metric, app=APP){
-  return (D.stockSeries||[]).filter(r=>r.slug===app&&r.metric===metric)
-    .map(r=>({day:r.day,v:Number(r.value)})).sort((a,b)=>a.day<b.day?-1:a.day>b.day?1:0);
+  const a=appIdx(app).stock.get(metric);
+  return a?a.slice():[];
 }
 // app_export bugün kuruldu — 1-2 günlük geçmişle bir çizgi çizmek sahte bir
 // trend izlenimi verir (bkz. round 5/6 gürültü/dürüstlük ilkesi). En az 3
