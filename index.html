@@ -501,6 +501,14 @@
      etiketin kendisi "N hata" yazıyor, çünkü renk körlüğü ve küçük ekranda
      ince bir kenarlık tek başına bir mesaj değil. */
   #syncBtn.bad,.pillbtn.bad{border-color:var(--down);color:var(--down)}
+  /* Telefonda hata rozeti çıkınca başlık ikinci satıra taşıyordu (40px → 88px).
+     Kurban `#rangeLabel`: mobilde zaten GEREKSİZ — hemen altındaki şeritte
+     1G/7G/1A/Baştan düğmelerinden hangisinin seçili olduğu görünüyor, etiket
+     onu tekrarlıyor. Hata rozeti ise yeni bilgi. `:has()` desteklenmezse
+     kural düşer ve başlık eskisi gibi sarar — bozulmaz, sadece iki satır. */
+  @media (max-width:679.98px){
+    .head-actions:has(#syncErrBtn:not([hidden])) #rangeLabel{display:none}
+  }
   /* Hata metni ham makine çıktısı: sarmalanmalı ve kırılmalı, ama okunaklı
      kalmalı — uzun URL'ler yatay kaydırma yaratmasın. */
   .errmsg{font-size:12.5px;color:var(--ink-2);white-space:pre-wrap;
