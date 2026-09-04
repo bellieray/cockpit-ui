@@ -1282,11 +1282,11 @@
           <div class="kpi-foot" id="yRating30"></div></div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#7679e4,#4f53c9)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
-          <span class="kpi-name">Bizim yorum<br><span class="card-sub">toplanan</span></span></div>
+          <span class="kpi-name">Bizim yorum<br><span class="card-sub" id="ySelfSub">toplanan</span></span></div>
           <div class="kpi-val tnum" id="ySelf">–</div></div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#8f96a3,#5f6773)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/></svg></span>
-          <span class="kpi-name">Rakip yorum<br><span class="card-sub">izlenen rakiplerden</span></span></div>
+          <span class="kpi-name">Rakip yorum<br><span class="card-sub" id="yRivalSub">izlenen rakiplerden</span></span></div>
           <div class="kpi-val tnum" id="yRival">–</div></div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#e8705f,#c33a2b)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v5M12 16v.5"/><circle cx="12" cy="12" r="9"/></svg></span>
@@ -3220,11 +3220,47 @@ function renderUrun(){
 }
 
 /* ---------- YORUMLAR ---------- */
+/* Özne başına KIRPILMAMIŞ yorum sayımı (bkz. panel/index.ts `reviewStats`).
+
+   `reviews` dizisi `limit 300` ile geliyor ve bu sınır BÖLÜMSÜZ — 300 satır
+   tüm uygulamalar ve tüm özneler arasında ortak bir havuzdan, yalnız tarihe
+   göre paylaştırılıyor. Ölçüldü: veritabanında 511 satır var, uç 300
+   döndürüyor; tek bir rakip için tuttuğumuz 50 satırın yalnız 4'ü pencereye
+   giriyor. Yani o diziden sayı türetmek elimizdeki veriyi %92'ye varan oranda
+   EKSİK gösteriyordu ve bunu hiçbir yerde itiraf etmiyordu.
+
+   Liste (aşağıdaki `drawYList`) kırpılmış diziden okumaya devam ediyor ve bu
+   DOĞRU: o zaten "son N yorum" göstermek istiyor. Yanlış olan, bir örneklemden
+   TOPLAM saymaktı. */
+function statsFor(app=APP){ return (D.reviewStats||[]).filter(r=>r.slug===app); }
 function renderYorum(){
   const all=reviewsFor();
-  const self=all.filter(r=>r.subject==='self'), rival=all.filter(r=>r.subject!=='self');
-  el('ySelf').textContent=self.length; el('yRival').textContent=rival.length;
-  el('yLow').textContent=rival.filter(r=>Number(r.rating||0)<=2).length;
+  const st0=statsFor();
+  const sSelf=st0.find(r=>r.subject==='self');
+  const sRival=st0.filter(r=>r.subject!=='self');
+  const sum=(rows,k)=>rows.reduce((t,r)=>t+Number(r[k]||0),0);
+  el('ySelf').textContent = sSelf ? num(sSelf.n) : '–';
+  el('yRival').textContent = sRival.length ? num(sum(sRival,'n')) : '–';
+  el('yLow').textContent = sRival.length ? num(sum(sRival,'r1')+sum(sRival,'r2')) : '–';
+
+  /* Bu sayılar mağazadaki yorum sayısı DEĞİL — RSS feed'inden ÇEKEBİLDİĞİMİZ
+     satır sayısı, feed sayfa boyutuyla tavanlı. Rakiplerin hepsinin ~50'de
+     durması tesadüf değil, tavanın kendisi (ölçüldü: bir rakibin ömür boyu oy
+     sayısı 22.465 iken elimizde 50 satır var). Tavana dayanan özne varsa
+     altyazı bunu AÇIKÇA söylüyor; söylemezse "rakibin 50 yorumu var" diye
+     okunur ve şikâyet sayısı bir pazar büyüklüğü sanılır.
+     `store_rating_count` ile bu sayı AYRI kitlelerdir, birbirine bölünmez —
+     `spendy/self`'te yazılı yorum (5) tr oy sayısından (3) fazla, bölen bir
+     kart %167 yazardı. */
+  const ceilingAt = ns => { const m={}; ns.forEach(n=>m[n]=(m[n]||0)+1);
+    const top=Object.entries(m).sort((a,b)=>b[1]-a[1])[0];
+    return (top && top[1]>=3 && Number(top[0])>=20) ? Number(top[0]) : null; };
+  const span = r => r ? `${r.first_on} → ${r.last_on}` : '';
+  el('ySelfSub').textContent = sSelf ? `toplanan · ${span(sSelf)}` : 'henüz yorum toplanmadı';
+  const cap = ceilingAt(sRival.map(r=>Number(r.n)));
+  el('yRivalSub').textContent = !sRival.length ? 'izlenen rakip yok'
+    : cap ? `${sRival.length} rakip · feed tavanı ~${cap}, gerçek sayı daha yüksek`
+          : `${sRival.length} rakipten toplanan`;
   const st=stocksFor().filter(r=>(r.subject||'self')==='self');
   const rat=st.filter(r=>r.metric==='store_rating_avg').map(r=>Number(r.value));
   const vot=st.filter(r=>r.metric==='store_rating_count').map(r=>Number(r.value));
@@ -3262,17 +3298,23 @@ function renderYorum(){
 }
 function drawYDist(){
   const who=el('yDistWho').value;
-  const rows=reviewsFor().filter(r=>who==='self'?r.subject==='self':who==='rival'?r.subject!=='self':true);
+  /* Dağılım da kırpılmış diziden sayılıyordu — üstelik kırpma özne başına
+     ADİL DEĞİL (hızlı yorum toplayan bir rakip pencereyi doldurup başkasını
+     dışarı itiyor), yani yüzdeler yalnız eksik değil ÇARPIK da oluyordu.
+     Artık sunucudaki yıldız kovalarından. Ülke/arama filtreleri bu karta
+     uygulanmıyor (yalnız listede var), o yüzden agregayı kullanmak güvenli. */
+  const rows=statsFor().filter(r=>who==='self'?r.subject==='self':who==='rival'?r.subject!=='self':true);
   const c=[0,0,0,0,0];
-  rows.forEach(r=>{const v=Number(r.rating||0); if(v>=1&&v<=5) c[v-1]++});
+  rows.forEach(r=>{ for(let i=1;i<=5;i++) c[i-1]+=Number(r['r'+i]||0); });
+  const total=c.reduce((a,b)=>a+b,0);
   const max=Math.max(1,...c);
   el('yDist').innerHTML=[5,4,3,2,1].map(star=>{
     const v=c[star-1], col=star>=4?"var(--up)":star===3?"var(--amber)":"var(--down)";
     return `<div class="brk"><div class="brk-top"><span style="color:var(--amber)">${"★".repeat(star)}</span>
-      <span class="v">${v}</span><span class="p">${rows.length?Math.round(v/rows.length*100):0}%</span></div>
+      <span class="v">${num(v)}</span><span class="p">${total?Math.round(v/total*100):0}%</span></div>
       <div class="brk-track"><div class="brk-fill" style="width:${v/max*100}%;background:${col}"></div></div></div>`;
   }).join("");
-  el('yDistSub').textContent=`${rows.length} yorum`;
+  el('yDistSub').textContent = total ? `${num(total)} yorum · toplanan tüm geçmiş` : 'yorum yok';
 }
 function drawYList(){
   const all=reviewsFor();
