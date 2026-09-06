@@ -1195,7 +1195,7 @@
             <div><div class="card-title">Uygulamalar</div>
                  <div class="card-sub">her uygulama kendi ÖLÇÜLEN geçmişiyle · aralık seçicisinden bağımsız</div></div>
             <select id="pfSort" style="font:inherit;font-size:12.5px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
-              <option value="lost">Masadaki para</option>
+              <option value="wasted">İsraf edilen envanter</option>
               <option value="rev">Gelir</option>
               <option value="dau">Günlük aktif</option>
               <option value="users">Kullanıcı</option>
@@ -3329,10 +3329,28 @@ function adAgg(rows){
     missed: Math.max(0, matched-imp),
   };
 }
-/* Kaçan gösterimin para karşılığı — YALNIZCA o formatın KENDİ ölçülmüş
-   eCPM'i varsa. Hiç gösterim almamış bir formatın (native) eCPM'i
-   bilinmiyor; başka formatın eCPM'ini ödünç alıp sayı uydurmuyoruz. */
-function missedValue(a){ return a.rpm==null?null:a.missed*a.rpm/1000; }
+/* NEDEN "kaçan gösterim"in ARTIK bir dolar karşılığı yazılmıyor (2026-09-07):
+
+   Panel eskiden `missed * eCPM / 1000` diye bir "masadaki para" basıyordu.
+   Bu sayı yanlıştı ve okuyanı yanlış işe yönlendiriyordu. AdMob GÖSTERİM
+   başına öder; basılmamış bir reklamı kimse izlemedi, reklamveren de para
+   ödemedi — yani kaybedilen bir gelir YOK, israf edilen İSTEK var.
+
+   Rakamın hangi formatlarda çıktığına bakınca çürüklüğü daha net: `rpm`
+   yalnız `imp > 0` iken tanımlı, yani formül SADECE zaten gösterim almış
+   formatlarda sayı üretiyordu — rewarded, interstitial, app_open. Üçü de
+   kullanıcı/önbellek tetikli: rewarded'ı kullanıcı izlemeyi seçmezse
+   gösterilmez, interstitial/app_open önbellekte durup süresi dolar. O 312
+   rewarded reklamı "gösterilseydi" senaryosu gerçek değil — kullanıcı zaten
+   izlemeyi seçmemişti. Buna karşılık native (ekrana ÇİZİLİP SDK tarafından
+   sayılmamış, yani gerçekten karşılığı olabilecek tek vaka) `imp = 0`
+   olduğu için hiçbir zaman sayı üretmiyordu. Yani formül tam da gerçek
+   olmayan yerde konuşup gerçek olan yerde susuyordu.
+
+   Bunun yerine ADET yazılıyor. İsrafın gerçek bedeli de para değil:
+   gösterdiğinden kat kat fazla istek atmak AdMob'un eşleşme oranını
+   kısmasına ve geçersiz-trafik incelemesine yaklaştırır. Doğru aksiyon
+   "daha çok göster" değil, "daha az iste". */
 
 /* =====================================================================
    SİNYALLER
@@ -3385,16 +3403,33 @@ function signalsFor(app=APP){
     // Kapı: en az 50 eşleşmiş istek. Altında "show rate" istatistiksel
     // olarak anlamsız — tek bir kullanıcının davranışı oranı uçurur.
     if(a.matched<50 || a.showRate==null || a.showRate>=0.5) return;
-    const lost=missedValue(a);
-    // eCPM'i bilinmeyen format da PARA katmanında kalır — kaybı ölçülemiyor
-    // ama sıfır değil; bakım notlarının altına düşürmek onu görünmez yapardı.
-    // Katman içi sırası kaçan ADEDİNE göre (tek ortak ölçü).
-    add(1, a.showRate===0?SIG.RED:SIG.AMBER, lost==null?a.missed*0.002:lost,
-      `${f}: show rate %${(a.showRate*100).toFixed(0)} — dolu reklam ekrana gelmiyor`,
-      lost==null
-        ? `${num(a.matched)} dolu istek geldi, ${num(a.missed)} tanesi hiç gösterilmedi. Bu format hiç gösterim almadığı için eCPM'i bilinmiyor — kaybın parasal karşılığı ölçülemiyor, sıfır değil.`
-        : `${num(a.matched)} dolu istek geldi, ${num(a.missed)} tanesi hiç gösterilmedi. Bu formatın eCPM'i ${money2(a.rpm)} — en değerli envanter basılmıyor.`,
-      lost==null?null:`~${money2(lost)}`);
+    // İKİ AYRI ARIZA, aynı orandan çıkıyor ama aksiyonları zıt — bu yüzden
+    // ayrı sinyaller:
+    //
+    //  show rate = 0  → reklam HİÇ sayılmıyor. Envanter geliyor, kod onu
+    //    ekrana koyduğunu sanıyor, SDK bir tane bile gösterim yazmıyor. Bu
+    //    bir render/kayıt hatasıdır (native'de tam olarak bu çıktı: kart
+    //    ekranda kusursuz görünüyordu, SDK'nın kendi view'ı kullanılmadığı
+    //    için hiç saymıyordu). Gerçekten kaybedilen gelir burada.
+    //
+    //  0 < show rate < %50 → reklam gösterildiğinde sayılıyor, ama
+    //    gösterdiğimizden çok daha fazlasını istiyoruz. Bu israftır, kayıp
+    //    DEĞİL: rewarded'ı kullanıcı izlemeyi seçmedi, interstitial/app_open
+    //    önbellekte süresini doldurdu — o reklamlar gösterilseydi bile o
+    //    kullanıcılar onları izlemeyecekti. Bedeli para değil: aşırı istek
+    //    AdMob'un eşleşme oranını kısar ve geçersiz-trafik incelemesine
+    //    yaklaştırır. Doğru aksiyon "daha çok göster" değil "daha az iste".
+    if(a.showRate===0){
+      add(1, SIG.RED, a.matched,
+        `${f}: ${num(a.matched)} dolu reklam geldi, hiçbiri sayılmadı`,
+        `Show rate %0. Envanter geliyor ama SDK tek bir gösterim yazmıyor — bu fill sorunu değil, render/kayıt hatası: reklam SDK'nın kendi görünümünün içinde çizilmiyor ya da hiç gösterime sokulmuyor. Sayılmayan gösterim = ödenmeyen gösterim; gerçek gelir kaybı bu satırda.`,
+        `${num(a.matched)} sayılmadı`);
+    } else {
+      add(3, SIG.AMBER, a.missed,
+        `${f}: gösterdiğinin ${Math.round(1/a.showRate)} katı reklam isteniyor`,
+        `${num(a.matched)} dolu istek geldi, ${num(a.missed)} tanesi kullanılmadan atıldı (show rate %${(a.showRate*100).toFixed(0)}). Bu kayıp gelir DEĞİL — gösterilmeyen reklamı kimse izlemedi, kimse ödemedi. İsrafın bedeli başka: gösterdiğinden kat kat fazla istek atmak AdMob'un eşleşme oranını kısmasına ve geçersiz-trafik incelemesine yol açar. Aksiyon: isteği gerçekten gösterilecek ana yaklaştır (ekran/kart görünür olunca yükle), daha çok göstermeye çalışma.`,
+        `${num(a.missed)} boşa`);
+    }
   });
 
   /* --- 2. Ülke: mağaza gösterimi var, ürün sayfası yok --------------- */
@@ -3497,10 +3532,10 @@ function portfolioRow(a){
   const slug=a.slug;
   const fmt=(D.adByFormat||[]).filter(r=>r.slug===slug);
   const agg=adAgg(fmt);
-  // Masadaki para: format başına, harmanlanmış eCPM ile DEĞİL (bkz. Para
-  // sekmesindeki aynı gerekçe — kayıp yüksek eCPM'li formatlarda yoğunlaşıyor).
-  const lost=[...new Set(fmt.map(r=>r.format))]
-    .reduce((s,f)=>s+(missedValue(adAgg(fmt.filter(r=>r.format===f)))||0),0);
+  // İsraf: dolu gelip kullanılmadan atılan istek ADEDİ. Eskiden burada bir
+  // "masadaki para" toplamı vardı; uydurma bir sayıydı (bkz. adAgg'in
+  // üstündeki not) — gösterilmemiş reklam gelir kaybı değil, israftır.
+  const wasted=agg.missed;
   const dl=(D.series||[]).filter(r=>r.slug===slug&&r.metric===METRIC.dl)
     .reduce((s,r)=>s+Number(r.v||0),0);
   const dauPts=stockSeriesFor('rc_active_customers_1d',slug);
@@ -3508,7 +3543,7 @@ function portfolioRow(a){
   return {
     slug, name:a.name,
     pre:isPrelaunch(slug),
-    rev:agg.earn, lost,
+    rev:agg.earn, wasted,
     dl,
     dau:dauPts.length?dauPts[dauPts.length-1].v:null,
     users:stockValue('app_export_total_users',slug),
@@ -3520,18 +3555,18 @@ function portfolioRow(a){
 }
 function renderPortfoy(){
   const rows=(D.apps||[]).map(portfolioRow);
-  const key=el('pfSort')?.value||'lost';
-  const val=r=>({lost:r.lost, rev:r.rev, dau:r.dau||0, users:r.users||0, sig:r.sig.length}[key]||0);
+  const key=el('pfSort')?.value||'wasted';
+  const val=r=>({wasted:r.wasted, rev:r.rev, dau:r.dau||0, users:r.users||0, sig:r.sig.length}[key]||0);
   rows.sort((x,y)=>val(y)-val(x));
 
   el('pfTable').innerHTML=
-    `<thead><tr><th>Uygulama</th><th class="num">Gelir</th><th class="num">Masadaki</th>
+    `<thead><tr><th>Uygulama</th><th class="num">Gelir</th><th class="num">İsraf</th>
       <th class="num">İndirme</th><th class="num">Günlük aktif</th><th class="num">Kullanıcı</th>
       <th class="num">Puan</th><th class="num">Sinyal</th></tr></thead><tbody>`
     + rows.map(r=>`<tr${r.slug===APP?' style="background:var(--canvas)"':''}>
         <td><b>${esc(r.name)}</b>${r.pre?' <span class="chip flat">lansman öncesi</span>':''}</td>
         <td class="num sec" data-l="gelir">${r.rev?money2(r.rev):'–'}</td>
-        <td class="num pri ${r.lost?'down':''}" data-l="masadaki">${r.lost?'~'+money2(r.lost):'–'}</td>
+        <td class="num pri ${r.wasted?'down':''}" data-l="israf">${r.wasted?num(r.wasted):'–'}</td>
         <td class="num sec" data-l="indirme">${r.dl?num(r.dl):'–'}</td>
         <td class="num sec" data-l="günlük aktif">${r.dau!=null?num(r.dau):'–'}</td>
         <td class="num sec" data-l="kullanıcı">${r.users!=null?num(r.users):'–'}</td>
@@ -3540,15 +3575,15 @@ function renderPortfoy(){
       </tr>`).join('')
     + `</tbody>`;
 
-  const totLost=rows.reduce((s,r)=>s+r.lost,0), totRev=rows.reduce((s,r)=>s+r.rev,0);
+  const totWasted=rows.reduce((s,r)=>s+r.wasted,0), totRev=rows.reduce((s,r)=>s+r.rev,0);
   // WHY "ölçülen": sayılar uygulamanın ömrünü değil, KONEKTÖRÜN ölçmeye
   // başladığı andan bugüne kadarını kapsıyor. Spendy'nin mağaza verisi
   // 2026-08-28'de, reklam verisi 07-30'da başlıyor; öncesi panelde YOK.
   // "Tüm geçmiş" demek, eksik bir toplamı tam gibi göstermek olurdu.
-  el('pfNote').textContent=`Portföy toplamı: ${money2(totRev)} kazanç · en az ~${money2(totLost)} masada. `
+  el('pfNote').textContent=`Portföy toplamı: ${money2(totRev)} kazanç · ${num(totWasted)} israf edilen reklam isteği. `
     + `Sayılar uygulamanın ömrünü değil, ilgili konektörün ölçmeye başladığı günden bugüne kadarını kapsıyor. `
-    + `"Masadaki", dolu gelen ama ekrana basılmayan reklam envanterinin o formatın kendi eCPM'iyle karşılığı; `
-    + `eCPM'i hiç ölçülmemiş formatlar bu toplama katılMIYOR, yani gerçek rakam daha yüksek.`;
+    + `"İsraf", dolu gelip kullanılmadan atılan istek adedi — kayıp gelir DEĞİL (gösterilmeyen reklamı kimse izlemedi, kimse ödemedi). `
+    + `Bedeli parayla değil adetle yazılıyor çünkü israfın gerçek maliyeti eşleşme oranının kısılması ve geçersiz-trafik riski.`;
 
   // Tüm portföyün sinyalleri tek listede, uygulama adıyla etiketli. 15
   // uygulamada "hangisinde ne var" sorusunu sekme gezmeden cevaplar.
@@ -3687,19 +3722,16 @@ function renderPara(){
   el('paImp').textContent=num(tot.imp);
   el('paRpm').textContent=tot.rpm==null?'–':money2(tot.rpm);
   el('paMiss').textContent=num(tot.missed);
-  // WHY toplamın KENDİ eCPM'i DEĞİL, format başına toplam: kaçan gösterimler
-  // yüksek eCPM'li formatlarda yoğunlaşıyor (rewarded $31, interstitial $24 —
-  // banner $0.58). Harmanlanmış eCPM ile çarpmak kaybı KAT KAT eksik gösterir
-  // ve üstelik alttaki tablonun kendi satırlarının toplamıyla çelişirdi.
-  // eCPM'i ölçülmemiş format (hiç gösterim almamış) toplama HİÇ katılmıyor;
-  // kaybı sıfır değil, BİLİNMİYOR — bu yüzden not "en az" diyor.
+  // Buradaki alt satır eskiden bir "en az ~$X" para tahmini yazıyordu; kaldırıldı
+  // (gerekçe adAgg'in üstündeki uzun notta). Ayrımı yapan tek şey show rate'in
+  // SIFIR olup olmaması: sıfırsa reklam çiziliyor ama sayılmıyor (gerçek kayıp),
+  // sıfır değilse fazla isteniyor (israf).
   const perFmt=[...new Set(fmtRows.map(r=>r.format))]
     .map(f=>({f, a:adAgg(fmtRows.filter(r=>r.format===f))}));
-  const missSum=perFmt.reduce((s,x)=>s+(missedValue(x.a)||0),0);
-  const unpriced=perFmt.filter(x=>x.a.missed>0 && x.a.rpm==null);
-  el('paMissSub').textContent=missSum
-    ? `dolu geldi, basılmadı · en az ~${money2(missSum)}`
-    : 'dolu geldi, basılmadı';
+  const uncounted=perFmt.filter(x=>x.a.matched>=50 && x.a.showRate===0);
+  el('paMissSub').textContent=uncounted.length
+    ? `dolu geldi, kullanılmadı · ${uncounted.map(x=>x.f).join(', ')} hiç sayılmıyor`
+    : 'dolu geldi, kullanılmadı';
 
   drawRevenueTimeline(fmtRows);
 
@@ -3720,7 +3752,7 @@ function renderPara(){
         <td class="num pri" data-l="show"><b>${pct1(a.showRate)}</b></td>
         <td class="num sec" data-l="eCPM">${a.rpm==null?'–':money2(a.rpm)}</td>
         <td class="num sec" data-l="kazanç">${money2(a.earn)}</td>
-        <td class="num sec ${a.missed?'down':''}" data-l="kaçan">${num(a.missed)}${missedValue(a)==null?'':` (~${money2(missedValue(a))})`}</td>
+        <td class="num sec ${a.missed?'down':''}" data-l="kaçan">${num(a.missed)}</td>
       </tr>`).join('')
     + `<tr style="font-weight:600"><td>Toplam</td><td class="num">${num(tot.req)}</td>
         <td class="num">${num(tot.matched)}</td><td class="num">${pct1(tot.matchRate)}</td>
@@ -3729,12 +3761,14 @@ function renderPara(){
         <td class="num">${num(tot.missed)}</td></tr></tbody>`;
 
   const bad=rows.filter(r=>warn(r.a));
-  const unpricedTxt=unpriced.length
-    ? ` ${unpriced.map(x=>x.f).join(', ')} hiç gösterim almadığı için eCPM'i BİLİNMİYOR — kaybı sıfır değil, ölçülemiyor ve toplama katılmıyor; gerçek kayıp yazandan yüksek.`
+  // "Kaçan" sütununda para YOK ve olmayacak: gösterilmemiş reklamı kimse
+  // izlemedi, kimse ödemedi. Not bu yüzden iki durumu ayrı anlatıyor.
+  const uncountedTxt=uncounted.length
+    ? ` ${uncounted.map(x=>x.f).join(', ')} show rate %0 — envanter geliyor, SDK tek gösterim saymıyor: bu fill değil render/kayıt hatası ve GERÇEK gelir kaybı.`
     : '';
   el('paFmtNote').textContent = (bad.length
-    ? `Eşleşme %, AdMob'un dolu reklam döndürme oranı — bizim elimizde değil. Show %, dolu gelen reklamın ekrana basılma oranı — TAMAMEN bizim kodumuzda. Kırmızı satırlarda (${bad.map(r=>r.f).join(', ')}) envanter geliyor ama basılmıyor. Para tahmini, kaçan gösterime o formatın KENDİ ölçülmüş eCPM'i uygulanarak çıkarıldı.`
-    : `Show % dolu gelen reklamın ekrana basılma oranı; bu oran bizim kodumuzda. Şu an %50'nin altında kalan format yok.`) + unpricedTxt;
+    ? `Eşleşme %, AdMob'un dolu reklam döndürme oranı — bizim elimizde değil. Show %, dolu gelen reklamın kullanılma oranı — TAMAMEN bizim kodumuzda. Kırmızı satırlarda (${bad.map(r=>r.f).join(', ')}) gelen envanterin çoğu kullanılmıyor. "Kaçan" bir gelir kaybı DEĞİL, israftır: o reklamlar gösterilseydi bile kullanıcı rewarded'ı izlemeyi seçmemişti / önbellekteki interstitial süresini doldurmuştu. Bedeli aşırı istek yüzünden eşleşme oranının kısılması ve geçersiz-trafik riski; çözüm daha çok göstermek değil, isteği gösterim anına yaklaştırmak.`
+    : `Show % dolu gelen reklamın kullanılma oranı; bu oran bizim kodumuzda. Şu an %50'nin altında kalan format yok.`) + uncountedTxt;
 
   // Ülke — backend sabit 30 günlük pencere veriyor (aralık seçicisine bağlı
   // DEĞİL). Başlıkta böyle yazıyor; kartın kendi penceresini gizlemek panelin
