@@ -565,6 +565,7 @@
         <button data-view="para"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Para</button>
         <button data-view="pazar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Pazarlar</button>
         <button data-view="urun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/></svg>Ürün sağlığı</button>
+        <button data-view="veri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>Uygulama verisi</button>
         <button data-view="yorum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Yorumlar</button>
         <button data-view="saglik"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>Veri sağlığı</button>
       </div>
@@ -620,7 +621,7 @@
       </div>
     </div>
 
-    <nav class="tabs"><button class="on" data-view="ozet">Özet</button><button data-view="portfoy">Portföy</button><button data-view="para">Para</button><button data-view="pazar">Pazarlar</button><button data-view="aso">ASO</button><button data-view="urun">Ürün sağlığı</button><button data-view="yorum">Yorumlar</button><button data-view="saglik">Veri sağlığı</button></nav>
+    <nav class="tabs"><button class="on" data-view="ozet">Özet</button><button data-view="portfoy">Portföy</button><button data-view="para">Para</button><button data-view="pazar">Pazarlar</button><button data-view="aso">ASO</button><button data-view="urun">Ürün sağlığı</button><button data-view="veri">Uygulama verisi</button><button data-view="yorum">Yorumlar</button><button data-view="saglik">Veri sağlığı</button></nav>
 
     <!-- mobil sabit şerit: aralık seçici + bölge çıpaları. Masaüstünde gizli
          (aralık seçici orada başlıkta duruyor, sayfa da o kadar uzun değil).
@@ -1383,6 +1384,21 @@
     </div>
 
     <!-- ================= YORUMLAR ================= -->
+    <!-- VERİ: uygulamanın kendi veritabanından gelen HER toplu sayı. Panel metrikleri
+         tanımıyor — başlıkları ve tanımları backend gönderiyor (catalogDefs), o yüzden
+         backend'e yeni bir ölçüm eklendiğinde burada kod değişmeden görünür. -->
+    <div class="view" id="v-veri" style="display:none">
+      <div class="grid">
+        <div class="c12 card">
+          <div class="card-head">
+            <div><div class="card-title">Uygulama verisi</div>
+                 <div class="card-sub" id="vrNote">Senkron ile güncellenir.</div></div>
+          </div>
+        </div>
+        <div id="vrBody" class="c12"></div>
+      </div>
+    </div>
+
     <div class="view" id="v-yorum" style="display:none">
       <div class="grid">
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#22bfa3,#0c8571)">
@@ -2685,7 +2701,7 @@ function renderAll(){
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
   drawCrumb(span);
   fillSelects(); drawSyncLabel(); renderSignals(); drawPrelaunch(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
-  if(VIEW==='aso') renderAso(); else if(VIEW==='portfoy') renderPortfoy(); else if(VIEW==='para') renderPara(); else if(VIEW==='pazar') renderPazar(); else if(VIEW==='urun') renderUrun(); else if(VIEW==='yorum') renderYorum(); else if(VIEW==='saglik') renderSaglik();
+  if(VIEW==='aso') renderAso(); else if(VIEW==='portfoy') renderPortfoy(); else if(VIEW==='para') renderPara(); else if(VIEW==='pazar') renderPazar(); else if(VIEW==='urun') renderUrun(); else if(VIEW==='veri') renderVeri(); else if(VIEW==='yorum') renderYorum(); else if(VIEW==='saglik') renderSaglik();
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
   // yukarıda değişiyor ve bazı region-label'lar görünür/gizli olabiliyor —
   // sekme değişmeden çıpa şeridi bayat kalmasın diye burada da yeniden kurulur.
@@ -2813,15 +2829,15 @@ function bind(){
 let VIEW = "ozet";
 function showView(v){
   VIEW = v;
-  ["ozet","portfoy","para","pazar","aso","urun","yorum","saglik"].forEach(k=>{
+  ["ozet","portfoy","para","pazar","aso","urun","veri","yorum","saglik"].forEach(k=>{
     const n=el("v-"+k); if(n) n.style.display = (k===v?"":"none");
   });
-  const titles={ozet:"Özet",portfoy:"Portföy",para:"Para",pazar:"Pazarlar",aso:"ASO & kelimeler",urun:"Ürün sağlığı",yorum:"Yorumlar",saglik:"Veri sağlığı"};
+  const titles={ozet:"Özet",portfoy:"Portföy",para:"Para",pazar:"Pazarlar",aso:"ASO & kelimeler",urun:"Ürün sağlığı",veri:"Uygulama verisi",yorum:"Yorumlar",saglik:"Veri sağlığı"};
   el('pageTitle').textContent = titles[v]||v;
   document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on', b.dataset.view===v));
   drawCrumb();      /* portföy uygulamadan/aralıktan bağımsız — üst satır da değişmeli */
   buildAnchors();   /* çıpalar görünüme ait — sekme değişince yeniden türetilir */
-  if(v==="aso") renderAso(); else if(v==="portfoy") renderPortfoy(); else if(v==="para") renderPara(); else if(v==="pazar") renderPazar(); else if(v==="urun") renderUrun(); else if(v==="yorum") renderYorum(); else if(v==="saglik") renderSaglik();
+  if(v==="aso") renderAso(); else if(v==="portfoy") renderPortfoy(); else if(v==="para") renderPara(); else if(v==="pazar") renderPazar(); else if(v==="urun") renderUrun(); else if(v==="veri") renderVeri(); else if(v==="yorum") renderYorum(); else if(v==="saglik") renderSaglik();
 }
 
 /* ---------- ASO ---------- */
@@ -4052,6 +4068,141 @@ function renderRetention(users){
     `Son 1 / 7 / 30 günde görülen: ${num(s1)} / ${num(s7)} / ${num(s30)} · push ile ulaşılabilir: ${num(push)} · aktif abone: ${num(subs)}. `
     + `"Ertesi gün" alt sınır (son giriş tarihinin üzerine yazılıyor); "N+ gün" güvenilir. `
     + `Payda yalnız o süreyi doldurmuş kullanıcılar — "–" o hafta henüz ölçülemez demek, %0 değil.`;
+}
+
+/* ---------- UYGULAMA VERİSİ (katalog) ---------- */
+/* Backend'in raporlayabildiği HER toplu sayı buraya düşer. Panel metrik ADLARINI bilmiyor:
+   başlık, tanım ve grup `catalogDefs`ten (backend'in her koşuda yazdığı sözlük doc'u) geliyor.
+   Bu yüzden backend'e yeni bir ölçüm eklemek BURADA kod değiştirmeden görünür; sözlüğe
+   girmemiş bir ölçüm de ham adıyla "Diğer" altında çizilir, sessizce kaybolmaz.
+
+   Üç şekil: kırılımsız ölçüm = tek sayı + geçmiş çubukları; kırılımlı ölçüm = tablo;
+   günlük seri = çubuk grafik + son 7 gün / önceki 7 gün. Her satırda "önceki kesit" var,
+   çünkü tek bir anlık sayı izlenebilir değil — değişim izlenebilir. */
+const VR_GROUPS=[['users','Kullanıcılar'],['devices','Cihaz & sürüm'],['locale','Dil & bölge'],
+  ['households','Haneler'],['tx','İşlemler'],['features','Özellik kullanımı'],['notif','Bildirimler'],
+  ['prefs','Ayarlar & görünüm'],['events','Uygulama olayları'],['writes','Yazma işlemleri'],
+  ['billing','Abonelik & ödeme']];
+const vrShort=m=>m.replace(/^app_export_[xd]_/,'');
+function vrDefs(){ const r=(D.catalogDefs||[]).find(x=>x.slug===APP); return (r&&r.payload&&r.payload.definitions)||{}; }
+/* `sort` bir kırılım değil, sıralama ipucu (kova sırası değere göre sıralanırsa karışır). */
+function vrDimsKey(d){ if(!d) return '-'; return Object.keys(d).filter(k=>k!=='sort').sort().map(k=>k+'='+d[k]).join('|'); }
+function vrDelta(now, prev){
+  if(prev==null) return '–';
+  const d=now-prev;
+  return d===0 ? '0' : (d>0?'+':'−')+num(Math.abs(d));
+}
+function vrBars(pts){
+  if(pts.length<2) return '';
+  const max=Math.max.apply(null,pts.map(p=>p.v).concat([1])), w=Math.max(100,pts.length*4), h=28, bw=w/pts.length;
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">`
+    + pts.map((p,i)=>{
+        const bh=(p.v/max)*h;
+        return `<rect x="${(i*bw).toFixed(1)}" y="${(h-bh).toFixed(1)}" width="${Math.max(1,bw-0.6).toFixed(1)}" height="${Math.max(0.5,bh).toFixed(1)}" fill="currentColor" opacity="0.7"/>`;
+      }).join('') + `</svg>`;
+}
+function vrSnapCard(metric, rows, prev, hist, titleOf, noteOf){
+  if(rows.length===1 && !rows[0].dims){
+    const v=Number(rows[0].value), p=prev.get(metric+'@-');
+    return `<div class="card c3">
+      <div class="kpi-top"><span class="kpi-name">${esc(titleOf(metric))}<br><span class="card-sub">${esc(noteOf(metric))}</span></span></div>
+      <div class="kpi-val tnum">${num(v)}</div>
+      <div class="kpi-foot">önceki kesit: ${p==null?'–':num(p)} · ${vrDelta(v,p==null?null:p)}</div>
+      ${vrBars(hist.slice(-60))}</div>`;
+  }
+  const dimKeys=[...new Set(rows.reduce((a,r)=>a.concat(Object.keys(r.dims||{})),[]))].filter(k=>k!=='sort');
+  const sorted=rows.slice().sort((a,b)=>{
+    const sa=a.dims&&a.dims.sort, sb=b.dims&&b.dims.sort;
+    if(sa!=null&&sb!=null) return sa-sb;
+    return Number(b.value)-Number(a.value);
+  });
+  const body=sorted.map(r=>{
+    const v=Number(r.value), p=prev.get(metric+'@'+vrDimsKey(r.dims));
+    return `<tr>${dimKeys.map(k=>`<td data-l="${esc(k)}">${esc(String((r.dims||{})[k]!=null?(r.dims||{})[k]:'—'))}</td>`).join('')}
+      <td class="num pri" data-l="şimdi">${num(v)}</td>
+      <td class="num sec" data-l="önceki">${p==null?'–':num(p)}</td>
+      <td class="num sec" data-l="değişim">${vrDelta(v,p==null?null:p)}</td></tr>`;
+  }).join('');
+  const wide = sorted.length>6 || dimKeys.length>1;
+  return `<div class="card ${wide?'c12':'c6'}">
+    <div class="card-head"><div><div class="card-title">${esc(titleOf(metric))}</div>
+      <div class="card-sub">${esc(noteOf(metric))}</div></div></div>
+    <div class="tw tw-cards" style="max-height:340px"><table class="dt dt-cards">
+      <thead><tr>${dimKeys.map(k=>`<th>${esc(k)}</th>`).join('')}<th class="num">Şimdi</th><th class="num">Önceki</th><th class="num">Değişim</th></tr></thead>
+      <tbody>${body}</tbody></table></div></div>`;
+}
+function vrDayCard(metric, rows, titleOf, noteOf){
+  const val=r=>Number(r.v!=null?r.v:r.value);
+  const byDay=new Map();
+  rows.forEach(r=>byDay.set(r.day,(byDay.get(r.day)||0)+val(r)));
+  const days=[...byDay.keys()].sort();
+  const pts=days.map(d=>({day:d,v:byDay.get(d)}));
+  const last=days.slice(-7), before=days.slice(-14,-7);
+  const agg=new Map();
+  rows.forEach(r=>{
+    const k=vrDimsKey(r.dims);
+    if(!agg.has(k)) agg.set(k,{dims:r.dims,a:0,b:0});
+    if(last.indexOf(r.day)>=0) agg.get(k).a+=val(r); else if(before.indexOf(r.day)>=0) agg.get(k).b+=val(r);
+  });
+  const dimKeys=[...new Set(rows.reduce((a,r)=>a.concat(Object.keys(r.dims||{})),[]))].filter(k=>k!=='sort');
+  const body=[...agg.values()].sort((x,y)=>y.a-x.a).map(x=>`<tr>
+      ${dimKeys.length?dimKeys.map(k=>`<td data-l="${esc(k)}">${esc(String((x.dims||{})[k]!=null?(x.dims||{})[k]:'—'))}</td>`).join(''):'<td data-l="kırılım">toplam</td>'}
+      <td class="num pri" data-l="son 7 gün">${num(x.a)}</td>
+      <td class="num sec" data-l="önceki 7">${num(x.b)}</td>
+      <td class="num sec" data-l="değişim">${vrDelta(x.a,x.b)}</td></tr>`).join('');
+  const sum=a=>a.reduce((s,d)=>s+(byDay.get(d)||0),0);
+  return `<div class="card c12">
+    <div class="card-head"><div><div class="card-title">${esc(titleOf(metric))}</div>
+      <div class="card-sub">${esc(noteOf(metric))} · son 7 gün ${num(sum(last))} · önceki 7 gün ${num(sum(before))} · ${days.length} gün ölçüldü</div></div></div>
+    ${vrBars(pts)}
+    <div class="tw tw-cards" style="max-height:280px"><table class="dt dt-cards">
+      <thead><tr>${dimKeys.length?dimKeys.map(k=>`<th>${esc(k)}</th>`).join(''):'<th>kırılım</th>'}<th class="num">Son 7 gün</th><th class="num">Önceki 7</th><th class="num">Değişim</th></tr></thead>
+      <tbody>${body}</tbody></table></div></div>`;
+}
+function renderVeri(){
+  const host=el('vrBody'); if(!host) return;
+  const defs=vrDefs();
+  const now=(D.catalogNow||[]).filter(r=>r.slug===APP);
+  const prevRows=(D.catalogPrev||[]).filter(r=>r.slug===APP);
+  const prev=new Map(prevRows.map(r=>[r.metric+'@'+vrDimsKey(r.dims), Number(r.value)]));
+  const daily=(D.catalogDaily||[]).filter(r=>r.slug===APP);
+  if(!now.length && !daily.length){
+    host.innerHTML=`<div class="grid"><div class="card c12"><div style="color:var(--ink-3)">Veri yok — backend bu alanları henüz göndermedi ya da app_export henüz koşmadı. Senkron'a bas.</div></div></div>`;
+    el('vrNote').textContent='Senkron ile güncellenir.'; return;
+  }
+  const lastDay=now.map(r=>r.day).sort().pop();
+  const prevDay=prevRows.map(r=>r.day).sort().pop();
+  el('vrNote').textContent=`Kaynak: uygulamanın kendi veritabanı · yalnız toplu sayı, kişisel veri yok`
+    + (lastDay?` · son ölçüm ${lastDay}`:'') + (prevDay?` · karşılaştırma ${prevDay}`:' · karşılaştırma için ikinci bir ölçüm gerekiyor')
+    + `. Senkron'a bastıkça geçmiş birikir.`;
+
+  const group=(map,key,row)=>{ if(!map.has(key)) map.set(key,[]); map.get(key).push(row); };
+  const snapByMetric=new Map(), dailyByMetric=new Map(), histByMetric=new Map();
+  now.forEach(r=>group(snapByMetric,r.metric,r));
+  daily.forEach(r=>group(dailyByMetric,r.metric,r));
+  (D.catalogHistory||[]).filter(r=>r.slug===APP).forEach(r=>group(histByMetric,r.metric,{day:r.day,v:Number(r.value)}));
+
+  const defOf=m=>defs[vrShort(m)];
+  const titleOf=m=>{ const d=defOf(m); return d?d.title:vrShort(m); };
+  const noteOf=m=>{ const d=defOf(m); return d?d.definition:'Tanım gelmedi — bu ölçüm backend sözlüğünde yok.'; };
+  const groupOf=m=>{ const d=defOf(m); return d?d.group:'__other'; };
+
+  const buckets=new Map(VR_GROUPS.map(([k,t])=>[k,{title:t,snap:[],day:[]}]));
+  buckets.set('__other',{title:'Diğer',snap:[],day:[]});
+  const put=(m,kind)=>{ const b=buckets.get(groupOf(m))||buckets.get('__other'); b[kind].push(m); };
+  [...snapByMetric.keys()].forEach(m=>put(m,'snap'));
+  [...dailyByMetric.keys()].forEach(m=>put(m,'day'));
+
+  const byTitle=(a,b)=>titleOf(a).localeCompare(titleOf(b),'tr');
+  const html=[];
+  [...VR_GROUPS.map(([k])=>k),'__other'].forEach(k=>{
+    const b=buckets.get(k); if(!b || (!b.snap.length && !b.day.length)) return;
+    html.push(`<div class="grid"><div class="c12 region-label">${esc(b.title)}</div>`);
+    b.snap.sort(byTitle).forEach(m=>html.push(vrSnapCard(m, snapByMetric.get(m), prev, histByMetric.get(m)||[], titleOf, noteOf)));
+    b.day.sort(byTitle).forEach(m=>html.push(vrDayCard(m, dailyByMetric.get(m), titleOf, noteOf)));
+    html.push(`</div>`);
+  });
+  host.innerHTML=html.join('');
 }
 
 /* ---------- YORUMLAR ---------- */
