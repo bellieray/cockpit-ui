@@ -974,6 +974,28 @@
           <span class="kpi-name">Ölçülmemiş<br><span class="card-sub">talep verisi yok</span></span></div>
           <div class="kpi-val tnum" id="aUnm">–</div></div>
 
+        <!-- Anahtar kelimenin İŞE YARAYIP YARAMADIĞI burada okunur. Terim bazlı
+             atıf YOK ve olamaz: Apple hangi kelimenin gösterimi getirdiğini
+             söylemiyor. Dürüst zincir üç ayrı sinyal: sırada çıkıyor muyuz
+             (aRanks) → arama trafiği hareket ediyor mu (bu kart) → dönüyor mu
+             (aynı kartın oranları). Sürüm çizgisi, kelime alanının ne zaman
+             değiştiğini işaretler; pencerede tek sürüm varsa kart bunu KENDİSİ
+             söyler, yoksa tek sürümlük veri karşılaştırma sanılır. -->
+        <div class="card c8">
+          <div class="card-head"><div><div class="card-title">Arama hunisi — hafta hafta</div>
+            <div class="card-sub">yalnız App Store araması · çubuklar soldan sağa eskiden yeniye, tablo en yeni üstte · sürüm çizgisi = kelime alanının değiştiği an</div></div></div>
+          <div id="aWkChart"></div>
+          <div class="tw tw-cards" style="max-height:300px"><table class="dt dt-cards" id="aWkTable"></table></div>
+          <div class="funnel-note" id="aWkNote"></div>
+        </div>
+
+        <div class="card c4">
+          <div class="card-head"><div><div class="card-title">Trafik kaynağı</div>
+            <div class="card-sub">asla toplanmaz — huni kaynağa göre farklı işler</div></div></div>
+          <div class="tw" style="max-height:260px"><table class="dt" id="aSrcTable"></table></div>
+          <div class="funnel-note">Gösterimi Apple YALNIZ arama ve gezinme için sayıyor; yönlendirme satırında gösterimin boş olması eksik veri değil. Bu yüzden satırlar yan yana durur, toplanmaz: karışık toplamda "gösterim → sayfa" oranı gerçek bir farkı değil, trafik bileşimini ölçer.</div>
+        </div>
+
         <div class="card c8">
           <div class="card-head"><div><div class="card-title">Tüm terimler</div>
             <div class="card-sub" id="aKwSub">–</div></div></div>
@@ -2842,6 +2864,93 @@ function showView(v){
 
 /* ---------- ASO ---------- */
 let aKwVerdict="ALL";
+/* ---------- arama hunisi (hafta hafta) ----------
+   NEDEN haftalık ve NEDEN yalnız arama: mağaza verisi gün içinde çok gürültülü
+   (tek günlük 0'lar ölçüm yokluğu mu, trafik yokluğu mu ayırt edilemiyor) ve
+   `store_impression` yalnız arama + gezinme için sayılıyor. Kaynakları
+   toplamak huniyi sessizce bozar (bkz. panel/index.ts `countryBySource` notu).
+
+   NEDEN terim kolonu YOK: Apple gösterimi terim bazında vermiyor. "Şu kelime
+   şu kadar getirdi" cümlesi bu veriyle kurulamaz; kurulursa uydurma olur. */
+const asoWkStart=d=>{const t=new Date(d+'T00:00:00Z');t.setUTCDate(t.getUTCDate()-((t.getUTCDay()+6)%7));return t.toISOString().slice(0,10);};
+const asoPct=(a,b)=>b?'%'+(a/b*100).toFixed((a/b)<0.1?1:0):'–';
+function asoSearchWeeks(){
+  const by=new Map();
+  (D.bySourceDaily||[]).filter(r=>r.slug===APP&&r.source_type==='App Store search').forEach(r=>{
+    const w=asoWkStart(r.day); if(!by.has(w)) by.set(w,{w,imp:0,pv:0,dl:0,tap:0});
+    const o=by.get(w), v=Number(r.v||0);
+    if(r.metric==='store_impression') o.imp+=v;
+    else if(r.metric==='store_page_view') o.pv+=v;
+    else if(r.metric==='downloads_first_time') o.dl+=v;
+    else if(r.metric==='store_tap') o.tap+=v;
+  });
+  return [...by.values()].sort((a,b)=>a.w<b.w?-1:1);
+}
+/* Kendi sürümlerimizin GERÇEK yayın anı `itunes_lookup`tan geliyor
+   (`currentVersionReleaseDate`) — ASC'nin sürüm durumu değil: "onaylandı"
+   ile "mağazada göründü" aynı an değil ve kelime alanı ikincisinde etkili. */
+function asoReleases(){
+  const seen=new Map();
+  (D.docs||[]).filter(r=>r.slug===APP&&r.subject==='self'&&r.released_at).forEach(r=>{
+    const day=String(r.released_at).slice(0,10);
+    const k=(r.version||'?')+'@'+day; if(!seen.has(k)) seen.set(k,{version:r.version||'?',day});
+  });
+  return [...seen.values()].sort((a,b)=>a.day<b.day?-1:1);
+}
+function asoBars(weeks, rel){
+  if(weeks.length<2) return `<div class="spark-note">grafik için en az iki hafta gerekiyor · ${weeks.length} hafta ölçüldü</div>`;
+  const max=Math.max.apply(null, weeks.map(x=>x.imp).concat([1]));
+  const w=Math.max(180, weeks.length*46), h=88, bw=w/weeks.length;
+  const bars=weeks.map((x,i)=>{
+    const bh=(x.imp/max)*h;
+    return `<rect x="${(i*bw+bw*0.2).toFixed(1)}" y="${(h-bh).toFixed(1)}" width="${(bw*0.6).toFixed(1)}" height="${Math.max(1,bh).toFixed(1)}" rx="2" fill="currentColor" opacity="0.75"/>`;
+  }).join('');
+  const marks=rel.map(r=>{
+    const i=weeks.findIndex(x=>x.w===asoWkStart(r.day)); if(i<0) return '';
+    const px=(i*bw+bw*0.5).toFixed(1);
+    return `<line x1="${px}" y1="0" x2="${px}" y2="${h}" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:88px;color:var(--brand);display:block;margin:6px 0 2px">${bars}${marks}</svg>`;
+}
+function renderAsoSearch(){
+  const weeks=asoSearchWeeks(), rel=asoReleases();
+  const relByWeek=new Map(); rel.forEach(r=>{const k=asoWkStart(r.day); relByWeek.set(k,(relByWeek.get(k)?relByWeek.get(k)+', ':'')+r.version);});
+  el('aWkChart').innerHTML=asoBars(weeks, rel);
+  el('aWkTable').innerHTML=
+    `<thead><tr><th>Hafta</th><th class="num">Gösterim</th><th class="num">Sayfa</th><th class="num">İndirme</th><th class="num">Sayfa/Gös.</th><th class="num">İndirme/Sayfa</th><th>Sürüm</th></tr></thead><tbody>`+
+    (weeks.length?[...weeks].reverse().map(x=>
+      `<tr><td>${x.w}</td><td class="num sec" data-l="gösterim">${num(x.imp)}</td>
+        <td class="num sec" data-l="sayfa">${num(x.pv)}</td>
+        <td class="num pri" data-l="indirme">${num(x.dl)}</td>
+        <td class="num sec" data-l="sayfa/gös.">${asoPct(x.pv,x.imp)}</td>
+        <td class="num sec" data-l="indirme/sayfa">${asoPct(x.dl,x.pv)}</td>
+        <td class="num" data-l="sürüm">${relByWeek.has(x.w)?`<span class="tag cov">${esc(relByWeek.get(x.w))} yayında</span>`:'–'}</td></tr>`).join('')
+      :`<tr><td colspan="7" class="empty">App Store analitiği henüz satır yazmadı.</td></tr>`)+`</tbody>`;
+
+  const inWin=rel.filter(r=>weeks.some(x=>x.w===asoWkStart(r.day)));
+  const first=weeks.length?weeks[0].w:null;
+  el('aWkNote').innerHTML=
+    (inWin.length<2
+      ? `<b>Bu kart henüz bir karşılaştırma DEĞİL.</b> Ölçüm ${first||'–'} haftasında başlıyor ve pencerede ${inWin.length===1?`yalnız bir sürüm var (${esc(inWin[0].version)}, ${inWin[0].day})`:'hiç sürüm çıkışı yok'} — öncesi/sonrası yok. Bir sonraki sürüm yayına girdiğinde aynı kart ilk gerçek "kelime alanı işe yaradı mı" karşılaştırmasını verir.`
+      : `Pencerede ${inWin.length} sürüm var: çizgilerin öncesi ve sonrası karşılaştırılabilir.`)
+    + ` Apple hangi kelimenin gösterimi getirdiğini SÖYLEMİYOR — bu yüzden burada terim bazlı atıf yok; kelime çalışması arama trafiğinin toplamında okunur, tek tek terimlerde değil. Sırada çıkıp çıkmadığımız ayrı kartta (Arama sırası).`;
+
+  const src=new Map();
+  (D.bySourceDaily||[]).filter(r=>r.slug===APP).forEach(r=>{
+    const k=r.source_type||'bilinmiyor'; if(!src.has(k)) src.set(k,{k,imp:0,pv:0,dl:0});
+    const o=src.get(k), v=Number(r.v||0);
+    if(r.metric==='store_impression') o.imp+=v;
+    else if(r.metric==='store_page_view') o.pv+=v;
+    else if(r.metric==='downloads_first_time') o.dl+=v;
+  });
+  const rows=[...src.values()].sort((a,b)=>b.dl-a.dl||b.pv-a.pv);
+  el('aSrcTable').innerHTML=
+    `<thead><tr><th>Kaynak</th><th class="num">Gösterim</th><th class="num">Sayfa</th><th class="num">İndirme</th></tr></thead><tbody>`+
+    (rows.length?rows.map(r=>`<tr><td>${esc(r.k)}</td><td class="num">${r.imp?num(r.imp):'–'}</td>
+      <td class="num">${num(r.pv)}</td><td class="num pri">${num(r.dl)}</td></tr>`).join('')
+      :`<tr><td colspan="4" class="empty">Kaynak kırılımı gelmedi.</td></tr>`)+`</tbody>`;
+}
+
 function renderAso(){
   const all=gapsFor();
   const c={GAP:0,COVERED:0,DEAD_WEIGHT:0,NO_DEMAND:0,UNMEASURED:0};
@@ -2891,6 +3000,8 @@ function renderAso(){
       `<tr><td>${esc(r.term)}</td><td>${FLAG[r.country]||"🏳️"} ${String(r.country).toUpperCase()}</td>
         <td class="num">${r.rank}</td><td class="num">${r.day||"–"}</td></tr>`).join("")
       :`<tr><td colspan="4" class="empty">Hiçbir terimde ilk 100'e girilmemiş. Sıra satırı YOK demek, sahte bir sıra yazmaktan iyidir.</td></tr>`)+`</tbody>`;
+
+  renderAsoSearch();
 }
 function drawAKw(){
   const all=gapsFor();
