@@ -1121,6 +1121,59 @@
           <div class="kpi-val tnum" id="upStick">–</div>
         </div>
 
+        <!-- Tutma: kayıt olan geri geliyor mu? Kaynak uygulamanın KENDİ veritabanı
+             (app_export) — mağazanın retention grafiği yalnız "geliştiriciyle paylaş"ı
+             açanları sayıyor ve küçük kohortları gizliyor, burada herkes var.
+             Oranlar pay/payda olarak geliyor; payda 0 ise "ölçülmedi", %0 DEĞİL.
+             "Ertesi gün" bir ALT SINIR: son giriş tarihinin üzerine yazılıyor ve
+             oturum anahtarları dönüyor; "N+ gün sonra" güvenilir olan. -->
+        <div class="c12 region-label">Tutma</div>
+        <div class="card c3">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </span>
+            <span class="kpi-name">Aktivasyon<br><span class="card-sub" id="upActSub">en az 1 işlem ekleyen</span></span>
+          </div>
+          <div class="kpi-val tnum" id="upAct">–</div>
+          <div id="upActSpark"></div>
+        </div>
+        <div class="card c3">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/></svg>
+            </span>
+            <span class="kpi-name">Ertesi gün dönen<br><span class="card-sub" id="upRetNdSub">24–48 saat · alt sınır</span></span>
+          </div>
+          <div class="kpi-val tnum" id="upRetNd">–</div>
+        </div>
+        <div class="card c3">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            </span>
+            <span class="kpi-name">7+ gün sonra gelen<br><span class="card-sub" id="upRet7Sub">kayıttan 7 gün sonra hâlâ</span></span>
+          </div>
+          <div class="kpi-val tnum" id="upRet7">–</div>
+        </div>
+        <div class="card c3">
+          <div class="kpi-top">
+            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </span>
+            <span class="kpi-name">30+ gün sonra gelen<br><span class="card-sub" id="upRet30Sub">kayıttan 30 gün sonra hâlâ</span></span>
+          </div>
+          <div class="kpi-val tnum" id="upRet30">–</div>
+        </div>
+        <div class="card c12">
+          <div class="card-head">
+            <div><div class="card-title">Kayıt haftasına göre tutma</div>
+                 <div class="card-sub">uygulamanın kendi veritabanı · hesap açan herkes · son 26 hafta</div></div>
+          </div>
+          <div class="tw tw-cards" style="max-height:340px"><table class="dt dt-cards" id="upRetTable"></table></div>
+          <div class="funnel-note" id="upRetNote"></div>
+        </div>
+
         <div class="c12 region-label">Ürün sağlığı</div>
         <div class="card c3">
           <div class="kpi-top">
@@ -3936,6 +3989,69 @@ function renderUrun(){
   const asnE=stockValue('app_export_asn_events_7d'), asnR=stockValue('app_export_asn_refunds_7d');
   el('upAsn').textContent=num(asnE);
   el('upAsnSub').textContent=`son 7g · iade: ${num(asnR)}`;
+
+  renderRetention(users);
+}
+
+/* Tutma bandı — `app_export`'un aktivasyon/tutma satırları.
+
+   Oran burada hesaplanıyor çünkü pay ve payda AYRI satır geliyor (bkz. app_export.ts:
+   sıfır payda `ratio` kısıtını düşürür). Payda 0 → "–" + "ölçülmedi": o haftanın
+   kullanıcıları henüz o günü yaşamadı, %0 yazmak "kimse dönmedi" diye okunur.
+   Satır HİÇ yoksa bu farklı bir durum: backend bu alanları henüz göndermedi. */
+const RET_PENDING='henüz ölçülmedi — Senkron\'a bas';
+function retCell(r,e){
+  if(r==null||e==null) return null;
+  return e? {pct:'%'+Math.round(r/e*100), frac:`${num(r)}/${num(e)}`} : {pct:'–', frac:'ölçülmedi'};
+}
+function renderRetention(users){
+  const act=stockValue('app_export_activated_users');
+  el('upAct').textContent=(act!=null&&users)?'%'+Math.round(act/users*100):'–';
+  el('upActSub').textContent=act==null?RET_PENDING:`${num(act)}/${num(users)} en az 1 işlem ekledi`;
+  el('upActSpark').innerHTML=act==null?'':sparkline('app_export_activated_users');
+
+  [['next_day','upRetNd','24–48 saat · alt sınır'],
+   ['day7_plus','upRet7','kayıttan 7+ gün sonra'],
+   ['day30_plus','upRet30','kayıttan 30+ gün sonra']].forEach(([k,id,what])=>{
+    const c=retCell(stockValue(`app_export_retention_${k}_retained`), stockValue(`app_export_retention_${k}_eligible`));
+    el(id).textContent=c?c.pct:'–';
+    el(id+'Sub').textContent=c?`${c.frac} · ${what}`:RET_PENDING;
+  });
+
+  const host=el('upRetTable'); if(!host) return;
+  const rows=(D.stockSeries||[]).filter(r=>r.slug===APP && r.metric.startsWith('app_export_cohort_'));
+  if(!rows.length){
+    host.innerHTML=`<tbody><tr><td style="color:var(--ink-3)">Kohort verisi yok — backend bu alanı henüz göndermedi ya da app_export henüz koşmadı. Senkron'a bas.</td></tr></tbody>`;
+    el('upRetNote').textContent=''; return;
+  }
+  const byWeek=new Map();
+  rows.forEach(r=>{
+    const o=byWeek.get(r.day)||byWeek.set(r.day,{}).get(r.day);
+    o[r.metric.slice('app_export_cohort_'.length)]=Number(r.value);
+  });
+  const weeks=[...byWeek.keys()].sort().reverse();
+  const cell=(o,k,l)=>{
+    const c=retCell(o[k+'_retained'],o[k+'_eligible']);
+    return `<td class="num sec" data-l="${l}" title="${c?c.frac:''}">${c?`${c.pct} <span style="color:var(--ink-3)">${c.frac}</span>`:'–'}</td>`;
+  };
+  host.innerHTML=`<thead><tr><th>Kayıt haftası</th><th class="num">Kayıt</th><th class="num">Aktivasyon</th><th class="num">Ertesi gün</th><th class="num">7+ gün</th><th class="num">30+ gün</th></tr></thead><tbody>`
+    + weeks.map(w=>{
+        const o=byWeek.get(w);
+        const a=(o.signups? '%'+Math.round((o.activated||0)/o.signups*100) : '–');
+        return `<tr><td>${esc(w)}</td>
+          <td class="num pri" data-l="kayıt">${num(o.signups)}</td>
+          <td class="num sec" data-l="aktivasyon">${a} <span style="color:var(--ink-3)">${num(o.activated)}</span></td>
+          ${cell(o,'next_day','ertesi gün')}${cell(o,'day7_plus','7+ gün')}${cell(o,'day30_plus','30+ gün')}</tr>`;
+      }).join('')
+    + `</tbody>`;
+
+  const s1=stockValue('app_export_seen_users_1d'), s7=stockValue('app_export_seen_users_7d'),
+        s30=stockValue('app_export_seen_users_30d'), push=stockValue('app_export_push_reachable_users'),
+        subs=stockValue('app_export_active_subscribers');
+  el('upRetNote').textContent=
+    `Son 1 / 7 / 30 günde görülen: ${num(s1)} / ${num(s7)} / ${num(s30)} · push ile ulaşılabilir: ${num(push)} · aktif abone: ${num(subs)}. `
+    + `"Ertesi gün" alt sınır (son giriş tarihinin üzerine yazılıyor); "N+ gün" güvenilir. `
+    + `Payda yalnız o süreyi doldurmuş kullanıcılar — "–" o hafta henüz ölçülemez demek, %0 değil.`;
 }
 
 /* ---------- YORUMLAR ---------- */
