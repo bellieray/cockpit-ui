@@ -4374,14 +4374,20 @@ function renderYorum(){
     const band=ns.filter(n=>n>=max-5);
     return band.length>=3 ? Math.min(...band) : null;
   };
-  const span = r => r ? `${r.first_on} → ${r.last_on}` : '';
+  /* `first_on`/`last_on` artık YALNIZ kaldırılmamış yorumlardan hesaplanıyor,
+     yani bir öznenin tüm yorumları kaldırılmışsa satır durur ama tarihler NULL
+     gelir. Guard'sız hâli ekrana "toplanan · null → null" basardı — ölçülmemiş
+     bir şeyi ölçülmüş gibi göstermenin en kaba biçimi. */
+  const span = r => (r && r.first_on && r.last_on) ? `${r.first_on} → ${r.last_on}` : '';
   /* Kaldırılanı ayrı söylüyoruz: sayıdan düşülmüş olması onu görünmez yapmamalı
      — "iki yorum kaldırıldı" kendi başına bir sinyal (silinen spam dalgası ya da
      bir sürümden sonra kaybolan yorumlar). Yalnız tam liste veren kaynak
      (asc_reviews) bu damgayı vurabiliyor, o yüzden rakiplerde hep 0 kalır. */
   const gone = sSelf ? Number(sSelf.removed||0) : 0;
+  const sp = span(sSelf);
   el('ySelfSub').textContent = sSelf
-    ? `toplanan · ${span(sSelf)}${gone?` · ${num(gone)} kaldırıldı`:''}`
+    ? [sp ? `toplanan · ${sp}` : 'ayakta yorum kalmadı',
+       gone ? `${num(gone)} kaldırıldı` : ''].filter(Boolean).join(' · ')
     : 'henüz yorum toplanmadı';
   const cap = ceilingAt(sRival.map(r=>Number(r.n)));
   el('yRivalSub').textContent = !sRival.length ? 'izlenen rakip yok'
