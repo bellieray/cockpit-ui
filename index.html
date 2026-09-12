@@ -4319,16 +4319,19 @@ function renderVeri(){
 /* ---------- YORUMLAR ---------- */
 /* Özne başına KIRPILMAMIŞ yorum sayımı (bkz. panel/index.ts `reviewStats`).
 
-   `reviews` dizisi `limit 300` ile geliyor ve bu sınır BÖLÜMSÜZ — 300 satır
-   tüm uygulamalar ve tüm özneler arasında ortak bir havuzdan, yalnız tarihe
-   göre paylaştırılıyor. Ölçüldü: veritabanında 511 satır var, uç 300
-   döndürüyor; tek bir rakip için tuttuğumuz 50 satırın yalnız 4'ü pencereye
-   giriyor. Yani o diziden sayı türetmek elimizdeki veriyi %92'ye varan oranda
-   EKSİK gösteriyordu ve bunu hiçbir yerde itiraf etmiyordu.
+   `reviews` dizisi hâlâ kırpılıyor ama artık ÖZNE BAŞINA (son 25), ortak bir
+   300'lük havuzdan değil. Eski hâl bir örneklemdi ve adil değildi: hızlı yorum
+   toplayan bir rakip pencereyi doldurup başkalarını dışarı itiyordu — 2026-09-12'de
+   ölçüldü, Spendy'nin KENDİ 6 yorumu listede hiç yoktu (daha yeni 390 rakip
+   yorumu vardı), yani "kendi" süzgeci boş bir liste veriyordu.
 
    Liste (aşağıdaki `drawYList`) kırpılmış diziden okumaya devam ediyor ve bu
    DOĞRU: o zaten "son N yorum" göstermek istiyor. Yanlış olan, bir örneklemden
-   TOPLAM saymaktı. */
+   TOPLAM saymaktı — toplam her zaman `reviewStats`ten okunur.
+
+   `reviewStats.removed`: kaynakta artık görünmeyen (kaldırılmış/silinmiş)
+   yorumlar. `n` ve puan dağılımı onları SAYMAZ — mağazadaki bugünkü tabloyu
+   anlatırlar — ama sayıları gizlenmez, altyazıda söylenir. */
 function statsFor(app=APP){ return (D.reviewStats||[]).filter(r=>r.slug===app); }
 function renderYorum(){
   const all=reviewsFor();
@@ -4362,7 +4365,14 @@ function renderYorum(){
     return band.length>=3 ? Math.min(...band) : null;
   };
   const span = r => r ? `${r.first_on} → ${r.last_on}` : '';
-  el('ySelfSub').textContent = sSelf ? `toplanan · ${span(sSelf)}` : 'henüz yorum toplanmadı';
+  /* Kaldırılanı ayrı söylüyoruz: sayıdan düşülmüş olması onu görünmez yapmamalı
+     — "iki yorum kaldırıldı" kendi başına bir sinyal (silinen spam dalgası ya da
+     bir sürümden sonra kaybolan yorumlar). Yalnız tam liste veren kaynak
+     (asc_reviews) bu damgayı vurabiliyor, o yüzden rakiplerde hep 0 kalır. */
+  const gone = sSelf ? Number(sSelf.removed||0) : 0;
+  el('ySelfSub').textContent = sSelf
+    ? `toplanan · ${span(sSelf)}${gone?` · ${num(gone)} kaldırıldı`:''}`
+    : 'henüz yorum toplanmadı';
   const cap = ceilingAt(sRival.map(r=>Number(r.n)));
   el('yRivalSub').textContent = !sRival.length ? 'izlenen rakip yok'
     : cap ? `${sRival.length} rakip · feed tavanı ~${cap}, gerçek sayı daha yüksek`
