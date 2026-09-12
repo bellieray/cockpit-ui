@@ -1032,6 +1032,30 @@
             <div class="card-sub">ilk 100'e giren terimler</div></div></div>
           <div class="tw" style="max-height:300px"><table class="dt" id="aRanks"></table></div>
         </div>
+
+        <!-- ÖNCE / SONRA.
+             Apple'ın A/B testi yalnız ikon, ekran görüntüsü ve önizlemeyi test eder;
+             başlık/altyazı/anahtar kelime/açıklama için bir test YOK. Kalan tek yol
+             hafta hafta karşılaştırmak — ve o karşılaştırmanın okunabilmesi için
+             "o haftaya ne girdi" aynı ekranda olmak zorunda. -->
+        <div class="c12 region-label">Önce / sonra</div>
+
+        <div class="card c12">
+          <div class="card-head"><div><div class="card-title">Hafta hafta mağaza huni</div>
+            <div class="card-sub">arama ayrı sütunda — ASO metni yalnız onu oynatır</div></div></div>
+          <div class="tw" style="max-height:340px"><table class="dt" id="aWeeks"></table></div>
+          <div class="card-sub" style="margin-top:8px" id="aWeeksNote"></div>
+        </div>
+
+        <div class="card c12">
+          <div class="card-head"><div><div class="card-title">Listelemede fark edilen değişiklikler</div>
+            <div class="card-sub">ad · altyazı · anahtar kelime</div></div></div>
+          <div class="tw" style="max-height:340px"><table class="dt" id="aChanges"></table></div>
+          <div class="card-sub" style="margin-top:8px">Tarih panelin FARK ETTİĞİ gün, Apple'ın yayın günü değil.
+            Aynı gün birçok dil birden değişmiş görünüyorsa değişen şey metin değil,
+            canlı sürüm olabilir — konektör canlı sürümün dillerini okuyor. Açıklama ve
+            promo metni bu listede yok.</div>
+        </div>
       </div>
     </div>
 
@@ -3028,7 +3052,56 @@ function renderAso(){
         <td class="num">${r.rank}</td><td class="num">${r.day||"–"}</td></tr>`).join("")
       :`<tr><td colspan="4" class="empty">Hiçbir terimde ilk 100'e girilmemiş. Sıra satırı YOK demek, sahte bir sıra yazmaktan iyidir.</td></tr>`)+`</tbody>`;
 
+  renderAsoWeeks();
   renderAsoSearch();
+}
+/* ÖNCE / SONRA bandı.
+   Apple metin için A/B vermiyor (PPO yalnız ikon/ekran görüntüsü/önizleme), o yüzden
+   tek okuma yolu hafta hafta. İki tablo bilerek YAN YANA: sayılar tek başına "arttı"
+   der, neyin arttırdığını söylemez. */
+function renderAsoWeeks(){
+  const wk=(D.asoWeeks||[]).filter(r=>r.slug===APP);
+  const ch=(D.listingChanges||[]).filter(r=>r.slug===APP);
+
+  /* Hangi hafta hangi değişikliği taşıyor: ISO pazartesisine göre grupla. */
+  const weekOf=d=>{const t=new Date(d+"T00:00:00Z");t.setUTCDate(t.getUTCDate()-((t.getUTCDay()+6)%7));
+    return t.toISOString().slice(0,10)};
+  const chByWeek={};
+  ch.forEach(r=>{const k=weekOf(r.noticed_on);(chByWeek[k]=chByWeek[k]||[]).push(r)});
+
+  const pct=(a,b)=>Number(b)>0?(Number(a)/Number(b)*100).toFixed(1)+"%":"–";
+  el('aWeeks').innerHTML=
+    `<thead><tr><th>Hafta</th><th>Gün</th><th>Gösterim</th><th>Arama</th><th>/gün</th>
+      <th>Dokunma</th><th>Sayfa</th><th>İndirme</th><th>Aramadan</th><th>Dokunma %</th>
+      <th>Kurulum %</th><th>O hafta değişen</th></tr></thead><tbody>`+
+    (wk.length?wk.slice().reverse().map(r=>{
+      const c=chByWeek[r.week_start]||[];
+      /* Diller tek tek yazılmaz: 14 dilde bir alan değişince satır okunmaz hale gelir. */
+      const byField={};
+      c.forEach(x=>{(byField[x.field]=byField[x.field]||new Set()).add(x.locale)});
+      const label=Object.keys(byField).length
+        ? Object.entries(byField).map(([f,s])=>`${esc(f)} <span class="lb-sub">${s.size} dil</span>`).join(" · ")
+        : "—";
+      /* Eksik günlü hafta düşük görünür; gün sayısı sütunu bunu açıkça söylüyor. */
+      return `<tr><td>${r.week_start}</td><td class="num">${r.days}</td>
+        <td class="num">${num(r.impressions)}</td><td class="num">${num(r.search_impressions)}</td>
+        <td class="num">${r.days>0?(Number(r.impressions)/Number(r.days)).toFixed(0):"–"}</td>
+        <td class="num">${num(r.taps)}</td><td class="num">${num(r.page_views)}</td>
+        <td class="num">${num(r.downloads)}</td><td class="num">${num(r.search_downloads)}</td>
+        <td class="num">${pct(r.taps,r.impressions)}</td><td class="num">${pct(r.downloads,r.impressions)}</td>
+        <td>${label}</td></tr>`}).join("")
+      :`<tr><td colspan="12" class="empty">Haftalık mağaza verisi yok — Apple analitiği henüz hiç çekilmemiş olabilir</td></tr>`)+`</tbody>`;
+
+  el('aWeeksNote').textContent=wk.length
+    ? "Kurulum % = indirme ÷ gösterim, aynı hafta. Eksik günlü hafta düşük görünür — gün sütununa bak. Metin değişikliği 21 günden önce okunmaz: 1-3 gün indeksleme, 14 gün hareket, 7 gün durağan sinyal."
+    : "";
+
+  el('aChanges').innerHTML=
+    `<thead><tr><th>Fark edildi</th><th>Dil</th><th>Alan</th><th>Önce</th><th>Sonra</th></tr></thead><tbody>`+
+    (ch.length?ch.map(r=>
+      `<tr><td class="num">${r.noticed_on}</td><td>${esc(r.locale)}</td><td>${esc(r.field)}</td>
+        <td>${esc(r.before_value)}</td><td>${esc(r.after_value)}</td></tr>`).join("")
+      :`<tr><td colspan="5" class="empty">Henüz iki kesit yok — ilk kesitten sonraki değişiklikler burada çıkar. Bu "değişiklik olmadı" DEĞİL, "karşılaştırılacak öncesi yok" demektir.</td></tr>`)+`</tbody>`;
 }
 function drawAKw(){
   const all=gapsFor();
