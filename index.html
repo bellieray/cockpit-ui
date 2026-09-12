@@ -3069,19 +3069,40 @@ function renderAso(){
    Sürüm rozeti "1.0.3 yayında" der; hangi dilde ADIN mı, ALTYAZININ mı, ANAHTAR
    KELİMENİN mi değiştiğini söylemez. Apple metin için A/B vermediğinden (PPO yalnız
    ikon/ekran görüntüsü/önizleme) okunabilir tek atıf bu. */
+/* Anahtar kelime alanı virgülle ayrılmış bir KÜME: ham önce/sonra basmak işe yaramıyor.
+   Alan 100 karaktere kadar çıkıyor, eklenen terim de genelde SONA yazılıyor — satırı
+   kırpınca iki sütun birbirinin aynısı görünüyor ve kart hiçbir şey söylemiyor (ilk
+   turda tarayıcıda böyle görüldü: en-CA/en-AU/es-ES satırları ayırt edilemiyordu).
+   Bu yüzden fark hesaplanıp yalnız eklenen/çıkan terimler yazılıyor. Ad ve altyazı
+   serbest metin, onlarda küme farkı anlamsız — orada önce→sonra kalıyor. */
+function asoTermDiff(before, after){
+  const set=s=>String(s??"").split(",").map(x=>x.trim()).filter(Boolean);
+  const b=set(before), a=set(after);
+  const added=a.filter(x=>!b.includes(x)), removed=b.filter(x=>!a.includes(x));
+  return {added, removed};
+}
 function renderAsoChanges(){
   const ch=(D.listingChanges||[]).filter(r=>r.slug===APP);
-  /* Değer uzun (anahtar kelime alanı 100 karakter): satırı okunur tutmak için kısaltılıyor,
-     tam metin `title` özniteliğinde duruyor — kırpılan bir değer kaybolmuş sayılmaz. */
+  /* Serbest metinde tam değer `title` özniteliğinde duruyor — kırpılan bir değer
+     kaybolmuş sayılmaz. */
   const clip=(s,n)=>{const t=String(s??"");return t.length>n?t.slice(0,n)+"…":t||"–"};
+  const cell=r=>{
+    if(r.field!=='anahtar kelime') return `${esc(clip(r.before_value,40))} → ${esc(clip(r.after_value,40))}`;
+    const {added,removed}=asoTermDiff(r.before_value,r.after_value);
+    const parts=[...added.map(t=>`<span class="up">+${esc(t)}</span>`),
+                 ...removed.map(t=>`<span class="down">−${esc(t)}</span>`)];
+    /* Hiçbir terim eklenmemiş/çıkmamışsa değişen şey SIRA'dır — Apple sırayı
+       ağırlık olarak kullanmıyor ama alan yine değişmiş; "fark yok" yazmak yanlış olur. */
+    return parts.length?parts.join(" "):`<span class="lb-sub">yalnız sıra değişti</span>`;
+  };
   el('aChanges').innerHTML=
-    `<thead><tr><th>Dil</th><th class="num">Fark edildi</th><th>Alan</th><th>Önce</th><th>Sonra</th></tr></thead><tbody>`+
+    `<thead><tr><th>Dil</th><th class="num">Fark edildi</th><th>Alan</th><th>Ne değişti</th><th>Tam değer</th></tr></thead><tbody>`+
     (ch.length?ch.map(r=>
       `<tr><td>${esc(r.locale)}</td>
         <td class="num pri" data-l="fark edildi">${esc(r.noticed_on)}</td>
         <td class="sec" data-l="alan">${esc(r.field)}</td>
-        <td class="sec" data-l="önce" title="${esc(r.before_value)}">${esc(clip(r.before_value,60))}</td>
-        <td class="sec" data-l="sonra" title="${esc(r.after_value)}">${esc(clip(r.after_value,60))}</td></tr>`).join("")
+        <td class="sec" data-l="ne değişti">${cell(r)}</td>
+        <td class="sec hide-m" data-l="şimdi" title="${esc(r.after_value)}">${esc(clip(r.after_value,44))}</td></tr>`).join("")
       :`<tr><td colspan="5" class="empty">Henüz iki kesit yok — ilk kesitten SONRAKİ değişiklikler burada çıkar. Bu "değişiklik olmadı" DEĞİL, "karşılaştırılacak öncesi yok" demektir.</td></tr>`)+`</tbody>`;
 }
 /* O haftaya hangi alan değişikliği girdi: haftalık tablonun sürüm sütununu besliyor. */
