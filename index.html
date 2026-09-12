@@ -1430,12 +1430,22 @@
           <div class="kpi-foot" id="yRating30"></div></div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#7679e4,#4f53c9)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
-          <span class="kpi-name">Bizim yorum<br><span class="card-sub" id="ySelfSub">toplanan</span></span></div>
-          <div class="kpi-val tnum" id="ySelf">–</div></div>
+          <span class="kpi-name">Bizim yorum</span></div>
+          <!-- Alt satır `.kpi-foot`ta, `.kpi-name > .card-sub`ta DEĞİL: mobilde
+               (<680px) `.c3.card .kpi-name .card-sub` GİZLENİYOR ve buradaki
+               satır ölçümün kendisi (toplanma aralığı + kaldırılan yorum
+               sayısı), yalnız bir kaynak adı değil. Telefon bu panelin birincil
+               ekranı; orada görünmeyen bir uyarı yok sayılır. -->
+          <div class="kpi-val tnum" id="ySelf">–</div>
+          <div class="kpi-foot" id="ySelfSub">toplanan</div></div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#8f96a3,#5f6773)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/></svg></span>
-          <span class="kpi-name">Rakip yorum<br><span class="card-sub" id="yRivalSub">izlenen rakiplerden</span></span></div>
-          <div class="kpi-val tnum" id="yRival">–</div></div>
+          <span class="kpi-name">Rakip yorum</span></div>
+          <!-- Aynı gerekçe: bu alt satır "feed tavanı ~50, gerçek sayı daha
+               yüksek" uyarısını taşıyor. Mobilde gizlenirse 361 sayısı bir
+               pazar büyüklüğü sanılır. -->
+          <div class="kpi-val tnum" id="yRival">–</div>
+          <div class="kpi-foot" id="yRivalSub">izlenen rakiplerden</div></div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#e8705f,#c33a2b)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v5M12 16v.5"/><circle cx="12" cy="12" r="9"/></svg></span>
           <span class="kpi-name">Rakip şikâyeti<br><span class="card-sub">1–2 yıldız · yol haritan</span></span></div>
