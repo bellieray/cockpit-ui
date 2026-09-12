@@ -2985,7 +2985,7 @@ function renderAsoSearch(){
         <td class="num pri" data-l="indirme">${num(x.dl)}</td>
         <td class="num sec" data-l="sayfa/gös.">${asoPct(x.pv,x.imp)}</td>
         <td class="num sec" data-l="indirme/sayfa">${asoPct(x.dl,x.pv)}</td>
-        <td class="num" data-l="o hafta">${asoWeekMarks(x.w, relByWeek, chgByWeek)}</td></tr>`).join('')
+        <td class="sec" data-l="o hafta">${asoWeekMarks(x.w, relByWeek, chgByWeek)}</td></tr>`).join('')
       :`<tr><td colspan="8" class="empty">App Store analitiği henüz satır yazmadı.</td></tr>`)+`</tbody>`;
 
   const inWin=rel.filter(r=>weeks.some(x=>x.w===asoWkStart(r.day)));
