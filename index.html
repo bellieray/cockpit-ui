@@ -1042,7 +1042,7 @@
         <div class="card c12">
           <div class="card-head"><div><div class="card-title">Listelemede fark edilen değişiklikler</div>
             <div class="card-sub">ad · altyazı · anahtar kelime — haftalık tablodaki sürüm sütunu bunları sayıyor</div></div></div>
-          <div class="tw tw-cards" style="max-height:340px"><table class="dt dt-cards" id="aChanges"></table></div>
+          <div id="aChanges" style="max-height:420px;overflow:auto"></div>
           <div class="funnel-note">Tarih panelin FARK ETTİĞİ gün, Apple'ın yayın günü değil.
             Aynı gün birçok dil birden değişmiş görünüyorsa değişen şey metin değil,
             canlı sürüm olabilir — konektör canlı sürümün dillerini okuyor. Açıklama ve
@@ -3081,29 +3081,83 @@ function asoTermDiff(before, after){
   const added=a.filter(x=>!b.includes(x)), removed=b.filter(x=>!a.includes(x));
   return {added, removed};
 }
+/* NEDEN TABLO DEĞİL: bir metadata push'u aynı gün 10-14 dile aynı alanı yazıyor, yani
+   tablo 14 satırın hepsinde AYNI tarihi ve AYNI alan adını tekrarlıyor; okuyan kişi
+   "ne oldu" sorusunun cevabını 14 satırı gözle birleştirerek çıkarmak zorunda kalıyor
+   (ilk hâli böyleydi, tarayıcıda okunmadığı görüldü). Doğru birim SATIR değil OLAY:
+   bir tarih + bir alan = bir push. Olay başına tek cümle, terim rozetleri, ve isteyen
+   için dil dil ayrıntı. */
 function renderAsoChanges(){
   const ch=(D.listingChanges||[]).filter(r=>r.slug===APP);
-  /* Serbest metinde tam değer `title` özniteliğinde duruyor — kırpılan bir değer
-     kaybolmuş sayılmaz. */
-  const clip=(s,n)=>{const t=String(s??"");return t.length>n?t.slice(0,n)+"…":t||"–"};
-  const cell=r=>{
-    if(r.field!=='anahtar kelime') return `${esc(clip(r.before_value,40))} → ${esc(clip(r.after_value,40))}`;
-    const {added,removed}=asoTermDiff(r.before_value,r.after_value);
-    const parts=[...added.map(t=>`<span class="up">+${esc(t)}</span>`),
-                 ...removed.map(t=>`<span class="down">−${esc(t)}</span>`)];
-    /* Hiçbir terim eklenmemiş/çıkmamışsa değişen şey SIRA'dır — Apple sırayı
-       ağırlık olarak kullanmıyor ama alan yine değişmiş; "fark yok" yazmak yanlış olur. */
-    return parts.length?parts.join(" "):`<span class="lb-sub">yalnız sıra değişti</span>`;
-  };
-  el('aChanges').innerHTML=
-    `<thead><tr><th>Dil</th><th class="num">Fark edildi</th><th>Alan</th><th>Ne değişti</th><th>Tam değer</th></tr></thead><tbody>`+
-    (ch.length?ch.map(r=>
-      `<tr><td>${esc(r.locale)}</td>
-        <td class="num pri" data-l="fark edildi">${esc(r.noticed_on)}</td>
-        <td class="sec" data-l="alan">${esc(r.field)}</td>
-        <td class="sec" data-l="ne değişti">${cell(r)}</td>
-        <td class="sec hide-m" data-l="şimdi" title="${esc(r.after_value)}">${esc(clip(r.after_value,44))}</td></tr>`).join("")
-      :`<tr><td colspan="5" class="empty">Henüz iki kesit yok — ilk kesitten SONRAKİ değişiklikler burada çıkar. Bu "değişiklik olmadı" DEĞİL, "karşılaştırılacak öncesi yok" demektir.</td></tr>`)+`</tbody>`;
+  const host=el('aChanges');
+  if(!ch.length){
+    host.innerHTML=`<div class="sig-none">Henüz iki kesit yok — ilk kesitten SONRAKİ
+      değişiklikler burada çıkar. Bu "değişiklik olmadı" DEĞİL, "karşılaştırılacak
+      öncesi yok" demektir.</div>`;
+    return;
+  }
+
+  /* Olaylar: tarih + alan. Aynı push'un dilleri tek bloğa giriyor. */
+  const ev=new Map();
+  ch.forEach(r=>{
+    const k=r.noticed_on+'|'+r.field;
+    if(!ev.has(k)) ev.set(k,{day:r.noticed_on, field:r.field, rows:[]});
+    ev.get(k).rows.push(r);
+  });
+
+  /* Aynı haftada yayına geçen sürüm: "metin mi değişti, canlı sürüm mü" ayrımı
+     yapılamıyor ve bunu gizlemek yerine cümlenin içine yazıyoruz. */
+  const relByWeek=new Map();
+  asoReleases().forEach(r=>{const k=asoWkStart(r.day); relByWeek.set(k,(relByWeek.get(k)?relByWeek.get(k)+', ':'')+r.version)});
+
+  const events=[...ev.values()].sort((a,b)=>a.day<b.day?1:-1);
+  host.innerHTML=events.map(e=>{
+    /* Terim bazında kaç dilde eklendi/çıktı: en yaygın terim en önde. */
+    const addCount=new Map(), remCount=new Map(), perLocale=[];
+    let orderOnly=0;
+    e.rows.forEach(r=>{
+      if(r.field!=='anahtar kelime'){
+        perLocale.push(`<b>${esc(r.locale)}</b> ${esc(r.before_value||'–')} → ${esc(r.after_value||'–')}`);
+        return;
+      }
+      const {added,removed}=asoTermDiff(r.before_value,r.after_value);
+      added.forEach(t=>addCount.set(t,(addCount.get(t)||0)+1));
+      removed.forEach(t=>remCount.set(t,(remCount.get(t)||0)+1));
+      if(!added.length&&!removed.length) orderOnly++;
+      perLocale.push(`<b>${esc(r.locale)}</b> `+
+        (added.map(t=>`<span class="up">+${esc(t)}</span>`).concat(
+         removed.map(t=>`<span class="down">−${esc(t)}</span>`)).join(' ')
+         || `<span class="lb-sub">yalnız sıra</span>`));
+    });
+    const byCount=m=>[...m.entries()].sort((a,b)=>b[1]-a[1]||(a[0]<b[0]?-1:1));
+    const chips=byCount(addCount).map(([t,n])=>`<span class="chip up">+${esc(t)}${n>1?` <span class="lb-sub">${n}</span>`:''}</span>`)
+      .concat(byCount(remCount).map(([t,n])=>`<span class="chip down">−${esc(t)}${n>1?` <span class="lb-sub">${n}</span>`:''}</span>`));
+
+    /* Tek cümle: kaç dil, kaç terim, ve okunamayacak kadar erken mi. */
+    const rel=relByWeek.get(asoWkStart(e.day));
+    const bits=[`${e.rows.length} dil`];
+    if(addCount.size) bits.push(`${addCount.size} terim eklendi`);
+    if(remCount.size) bits.push(`${remCount.size} terim çıkarıldı`);
+    if(orderOnly) bits.push(`${orderOnly} dilde yalnız sıra değişti`);
+    const days=Math.round((Date.now()-new Date(e.day+'T00:00:00Z').getTime())/86400000);
+    const ripe=days>=21
+      ? `<span class="tag cov">${days} gün geçti · okunabilir</span>`
+      : `<span class="tag st-warn">${days} gün geçti · 21 günden önce okunmaz</span>`;
+    return `<div class="sig">
+      <span class="dot" style="background:var(--brand)"></span>
+      <span class="txt">
+        <span class="hd">${dShort(e.day)} · ${esc(e.field)} <span class="lb-sub">${bits.join(' · ')}</span></span>
+        <div class="bd">
+          <div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 2px">${chips.join('')}</div>
+          ${rel?`<div class="lb-sub">Aynı hafta <b>${esc(rel)}</b> yayına geçti — sayıdaki hareketin metinden mi sürümden mi geldiği AYRILAMAZ.</div>`:''}
+          <details style="margin-top:5px"><summary class="lb-sub" style="cursor:pointer">dil dil</summary>
+            <div style="margin-top:4px;display:grid;gap:3px">${perLocale.map(x=>`<div>${x}</div>`).join('')}</div>
+          </details>
+        </div>
+      </span>
+      <span class="amt">${ripe}</span>
+    </div>`;
+  }).join('');
 }
 /* O haftaya hangi alan değişikliği girdi: haftalık tablonun sürüm sütununu besliyor. */
 function asoChangesByWeek(){
