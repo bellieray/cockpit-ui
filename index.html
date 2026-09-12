@@ -1033,28 +1033,20 @@
           <div class="tw" style="max-height:300px"><table class="dt" id="aRanks"></table></div>
         </div>
 
-        <!-- ÖNCE / SONRA.
-             Apple'ın A/B testi yalnız ikon, ekran görüntüsü ve önizlemeyi test eder;
-             başlık/altyazı/anahtar kelime/açıklama için bir test YOK. Kalan tek yol
-             hafta hafta karşılaştırmak — ve o karşılaştırmanın okunabilmesi için
-             "o haftaya ne girdi" aynı ekranda olmak zorunda. -->
-        <div class="c12 region-label">Önce / sonra</div>
-
-        <div class="card c12">
-          <div class="card-head"><div><div class="card-title">Hafta hafta mağaza huni</div>
-            <div class="card-sub">arama ayrı sütunda — ASO metni yalnız onu oynatır</div></div></div>
-          <div class="tw" style="max-height:340px"><table class="dt" id="aWeeks"></table></div>
-          <div class="card-sub" style="margin-top:8px" id="aWeeksNote"></div>
-        </div>
-
+        <!-- ÖNCE / SONRA'nın eksik yarısı.
+             Haftalık huni yukarıdaki "Arama hunisi" kartında ZATEN var, sürüm çizgisiyle
+             birlikte — burada onu ikinci kez çizmek yok. Eksik olan şey ALAN
+             seviyesinde atıf: sürüm rozeti "1.0.3 yayında" der, hangi dilde hangi
+             alanın değiştiğini söylemez. Apple metin için A/B vermediği (PPO yalnız
+             ikon/ekran görüntüsü/önizleme) için okunabilir tek şey bu eşleşmedir. -->
         <div class="card c12">
           <div class="card-head"><div><div class="card-title">Listelemede fark edilen değişiklikler</div>
-            <div class="card-sub">ad · altyazı · anahtar kelime</div></div></div>
-          <div class="tw" style="max-height:340px"><table class="dt" id="aChanges"></table></div>
-          <div class="card-sub" style="margin-top:8px">Tarih panelin FARK ETTİĞİ gün, Apple'ın yayın günü değil.
+            <div class="card-sub">ad · altyazı · anahtar kelime — haftalık tablodaki sürüm sütunu bunları sayıyor</div></div></div>
+          <div class="tw tw-cards" style="max-height:340px"><table class="dt dt-cards" id="aChanges"></table></div>
+          <div class="funnel-note">Tarih panelin FARK ETTİĞİ gün, Apple'ın yayın günü değil.
             Aynı gün birçok dil birden değişmiş görünüyorsa değişen şey metin değil,
             canlı sürüm olabilir — konektör canlı sürümün dillerini okuyor. Açıklama ve
-            promo metni bu listede yok.</div>
+            promo metni bu listede yok (konektör onları bilerek çekmiyor).</div>
         </div>
       </div>
     </div>
@@ -2963,19 +2955,30 @@ function asoBars(weeks, rel){
   }).join('');
   return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:88px;color:var(--brand);display:block;margin:6px 0 2px">${bars}${marks}</svg>`;
 }
+/* Bir haftanın işaretleri: yayına geçen sürüm VE o hafta fark edilen alan değişiklikleri.
+   İkisi ayrı şey: sürüm rozeti "yeni sürüm yayında" der, alan etiketi "şu alan şu kadar
+   dilde değişti" der. Aynı hafta ikisi birden olduğunda, sayıdaki hareketin hangisinden
+   geldiği AYRILAMAZ — kart bunu gizlemek yerine iki işareti yan yana gösteriyor. */
+function asoWeekMarks(week, relByWeek, chgByWeek){
+  const out=[];
+  if(relByWeek.has(week)) out.push(`<span class="tag cov">${esc(relByWeek.get(week))} yayında</span>`);
+  const m=chgByWeek.get(week);
+  if(m) for(const [field,locales] of m) out.push(`<span class="lb-sub">${esc(field)} · ${locales.size} dil</span>`);
+  return out.length?out.join(' '):'–';
+}
 function renderAsoSearch(){
-  const weeks=asoSearchWeeks(), rel=asoReleases();
+  const weeks=asoSearchWeeks(), rel=asoReleases(), chgByWeek=asoChangesByWeek();
   const relByWeek=new Map(); rel.forEach(r=>{const k=asoWkStart(r.day); relByWeek.set(k,(relByWeek.get(k)?relByWeek.get(k)+', ':'')+r.version);});
   el('aWkChart').innerHTML=asoBars(weeks, rel);
   el('aWkTable').innerHTML=
-    `<thead><tr><th>Hafta</th><th class="num">Gösterim</th><th class="num">Sayfa</th><th class="num">İndirme</th><th class="num">Sayfa/Gös.</th><th class="num">İndirme/Sayfa</th><th>Sürüm</th></tr></thead><tbody>`+
+    `<thead><tr><th>Hafta</th><th class="num">Gösterim</th><th class="num">Sayfa</th><th class="num">İndirme</th><th class="num">Sayfa/Gös.</th><th class="num">İndirme/Sayfa</th><th>O hafta ne değişti</th></tr></thead><tbody>`+
     (weeks.length?[...weeks].reverse().map(x=>
       `<tr><td>${x.w}</td><td class="num sec" data-l="gösterim">${num(x.imp)}</td>
         <td class="num sec" data-l="sayfa">${num(x.pv)}</td>
         <td class="num pri" data-l="indirme">${num(x.dl)}</td>
         <td class="num sec" data-l="sayfa/gös.">${asoPct(x.pv,x.imp)}</td>
         <td class="num sec" data-l="indirme/sayfa">${asoPct(x.dl,x.pv)}</td>
-        <td class="num" data-l="sürüm">${relByWeek.has(x.w)?`<span class="tag cov">${esc(relByWeek.get(x.w))} yayında</span>`:'–'}</td></tr>`).join('')
+        <td class="num" data-l="o hafta">${asoWeekMarks(x.w, relByWeek, chgByWeek)}</td></tr>`).join('')
       :`<tr><td colspan="7" class="empty">App Store analitiği henüz satır yazmadı.</td></tr>`)+`</tbody>`;
 
   const inWin=rel.filter(r=>weeks.some(x=>x.w===asoWkStart(r.day)));
@@ -3052,56 +3055,37 @@ function renderAso(){
         <td class="num">${r.rank}</td><td class="num">${r.day||"–"}</td></tr>`).join("")
       :`<tr><td colspan="4" class="empty">Hiçbir terimde ilk 100'e girilmemiş. Sıra satırı YOK demek, sahte bir sıra yazmaktan iyidir.</td></tr>`)+`</tbody>`;
 
-  renderAsoWeeks();
+  renderAsoChanges();
   renderAsoSearch();
 }
-/* ÖNCE / SONRA bandı.
-   Apple metin için A/B vermiyor (PPO yalnız ikon/ekran görüntüsü/önizleme), o yüzden
-   tek okuma yolu hafta hafta. İki tablo bilerek YAN YANA: sayılar tek başına "arttı"
-   der, neyin arttırdığını söylemez. */
-function renderAsoWeeks(){
-  const wk=(D.asoWeeks||[]).filter(r=>r.slug===APP);
+/* Listeleme değişiklikleri — haftalık hunideki sürüm rozetinin söylemediği şey.
+   Sürüm rozeti "1.0.3 yayında" der; hangi dilde ADIN mı, ALTYAZININ mı, ANAHTAR
+   KELİMENİN mi değiştiğini söylemez. Apple metin için A/B vermediğinden (PPO yalnız
+   ikon/ekran görüntüsü/önizleme) okunabilir tek atıf bu. */
+function renderAsoChanges(){
   const ch=(D.listingChanges||[]).filter(r=>r.slug===APP);
-
-  /* Hangi hafta hangi değişikliği taşıyor: ISO pazartesisine göre grupla. */
-  const weekOf=d=>{const t=new Date(d+"T00:00:00Z");t.setUTCDate(t.getUTCDate()-((t.getUTCDay()+6)%7));
-    return t.toISOString().slice(0,10)};
-  const chByWeek={};
-  ch.forEach(r=>{const k=weekOf(r.noticed_on);(chByWeek[k]=chByWeek[k]||[]).push(r)});
-
-  const pct=(a,b)=>Number(b)>0?(Number(a)/Number(b)*100).toFixed(1)+"%":"–";
-  el('aWeeks').innerHTML=
-    `<thead><tr><th>Hafta</th><th>Gün</th><th>Gösterim</th><th>Arama</th><th>/gün</th>
-      <th>Dokunma</th><th>Sayfa</th><th>İndirme</th><th>Aramadan</th><th>Dokunma %</th>
-      <th>Kurulum %</th><th>O hafta değişen</th></tr></thead><tbody>`+
-    (wk.length?wk.slice().reverse().map(r=>{
-      const c=chByWeek[r.week_start]||[];
-      /* Diller tek tek yazılmaz: 14 dilde bir alan değişince satır okunmaz hale gelir. */
-      const byField={};
-      c.forEach(x=>{(byField[x.field]=byField[x.field]||new Set()).add(x.locale)});
-      const label=Object.keys(byField).length
-        ? Object.entries(byField).map(([f,s])=>`${esc(f)} <span class="lb-sub">${s.size} dil</span>`).join(" · ")
-        : "—";
-      /* Eksik günlü hafta düşük görünür; gün sayısı sütunu bunu açıkça söylüyor. */
-      return `<tr><td>${r.week_start}</td><td class="num">${r.days}</td>
-        <td class="num">${num(r.impressions)}</td><td class="num">${num(r.search_impressions)}</td>
-        <td class="num">${r.days>0?(Number(r.impressions)/Number(r.days)).toFixed(0):"–"}</td>
-        <td class="num">${num(r.taps)}</td><td class="num">${num(r.page_views)}</td>
-        <td class="num">${num(r.downloads)}</td><td class="num">${num(r.search_downloads)}</td>
-        <td class="num">${pct(r.taps,r.impressions)}</td><td class="num">${pct(r.downloads,r.impressions)}</td>
-        <td>${label}</td></tr>`}).join("")
-      :`<tr><td colspan="12" class="empty">Haftalık mağaza verisi yok — Apple analitiği henüz hiç çekilmemiş olabilir</td></tr>`)+`</tbody>`;
-
-  el('aWeeksNote').textContent=wk.length
-    ? "Kurulum % = indirme ÷ gösterim, aynı hafta. Eksik günlü hafta düşük görünür — gün sütununa bak. Metin değişikliği 21 günden önce okunmaz: 1-3 gün indeksleme, 14 gün hareket, 7 gün durağan sinyal."
-    : "";
-
+  /* Değer uzun (anahtar kelime alanı 100 karakter): satırı okunur tutmak için kısaltılıyor,
+     tam metin `title` özniteliğinde duruyor — kırpılan bir değer kaybolmuş sayılmaz. */
+  const clip=(s,n)=>{const t=String(s??"");return t.length>n?t.slice(0,n)+"…":t||"–"};
   el('aChanges').innerHTML=
-    `<thead><tr><th>Fark edildi</th><th>Dil</th><th>Alan</th><th>Önce</th><th>Sonra</th></tr></thead><tbody>`+
+    `<thead><tr><th>Dil</th><th class="num">Fark edildi</th><th>Alan</th><th>Önce</th><th>Sonra</th></tr></thead><tbody>`+
     (ch.length?ch.map(r=>
-      `<tr><td class="num">${r.noticed_on}</td><td>${esc(r.locale)}</td><td>${esc(r.field)}</td>
-        <td>${esc(r.before_value)}</td><td>${esc(r.after_value)}</td></tr>`).join("")
-      :`<tr><td colspan="5" class="empty">Henüz iki kesit yok — ilk kesitten sonraki değişiklikler burada çıkar. Bu "değişiklik olmadı" DEĞİL, "karşılaştırılacak öncesi yok" demektir.</td></tr>`)+`</tbody>`;
+      `<tr><td>${esc(r.locale)}</td>
+        <td class="num pri" data-l="fark edildi">${esc(r.noticed_on)}</td>
+        <td class="sec" data-l="alan">${esc(r.field)}</td>
+        <td class="sec" data-l="önce" title="${esc(r.before_value)}">${esc(clip(r.before_value,60))}</td>
+        <td class="sec" data-l="sonra" title="${esc(r.after_value)}">${esc(clip(r.after_value,60))}</td></tr>`).join("")
+      :`<tr><td colspan="5" class="empty">Henüz iki kesit yok — ilk kesitten SONRAKİ değişiklikler burada çıkar. Bu "değişiklik olmadı" DEĞİL, "karşılaştırılacak öncesi yok" demektir.</td></tr>`)+`</tbody>`;
+}
+/* O haftaya hangi alan değişikliği girdi: haftalık tablonun sürüm sütununu besliyor. */
+function asoChangesByWeek(){
+  const by=new Map();
+  (D.listingChanges||[]).filter(r=>r.slug===APP).forEach(r=>{
+    const k=asoWkStart(r.noticed_on); if(!by.has(k)) by.set(k,new Map());
+    const m=by.get(k); if(!m.has(r.field)) m.set(r.field,new Set());
+    m.get(r.field).add(r.locale);
+  });
+  return by;
 }
 function drawAKw(){
   const all=gapsFor();
