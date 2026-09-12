@@ -1437,7 +1437,8 @@
                sayısı), yalnız bir kaynak adı değil. Telefon bu panelin birincil
                ekranı; orada görünmeyen bir uyarı yok sayılır. -->
           <div class="kpi-val tnum" id="ySelf">–</div>
-          <div class="kpi-foot" id="ySelfSub">toplanan</div></div>
+          <div class="kpi-foot" id="ySelfSub">toplanan</div>
+          <div class="kpi-foot" id="ySelfAns"></div></div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#8f96a3,#5f6773)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/></svg></span>
           <span class="kpi-name">Rakip yorum</span></div>
@@ -4405,6 +4406,17 @@ function renderYorum(){
     ? [sp ? `toplanan · ${sp}` : 'ayakta yorum kalmadı',
        gone ? `${num(gone)} kaldırıldı` : ''].filter(Boolean).join(' · ')
     : 'henüz yorum toplanmadı';
+  /* Cevap durumu. YALNIZ kendi yorumlarımızda anlamlı: rakibin yorumuna cevap
+     yazamayız ve rakip satırları RSS'ten geldiği için alan zaten hep NULL —
+     oradaki "0 cevap" bir ölçüm değil, bilgi yokluğudur, o yüzden yazılmaz.
+     Aksiyon isteyen tek sınıf düşük puanlı (≤3) ve cevapsız olan; o yoksa
+     yalnız cevaplanan sayısı, o da yoksa satır hiç çıkmaz — "0 cevaplandı"
+     her gün bakılan bir panelde ne bir iş ne bir bilgi. */
+  const ans = sSelf ? Number(sSelf.answered||0) : 0;
+  const lowUn = sSelf ? Number(sSelf.low_unanswered||0) : 0;
+  el('ySelfAns').textContent = lowUn
+    ? `${num(lowUn)} düşük puanlı yorum cevapsız`
+    : (ans ? `${num(ans)} yoruma cevap yazılmış` : '');
   const cap = ceilingAt(sRival.map(r=>Number(r.n)));
   el('yRivalSub').textContent = !sRival.length ? 'izlenen rakip yok'
     : cap ? `${sRival.length} rakip · feed tavanı ~${cap}, gerçek sayı daha yüksek`
@@ -4486,7 +4498,11 @@ function drawYList(){
       <span class="rev-star">${"★".repeat(rt)}${"☆".repeat(5-rt)}</span></div>
       <div class="rev-title">${esc(r.title||"")}</div>
       <div class="rev-body">${esc(r.body||"")}</div>
-      <div class="rev-date">${String(r.submitted_at||"").slice(0,10)}</div></div>`;
+      <!-- "cevaplandı" YALNIZ kendi yorumumuzda basılır: rakip satırları
+           RSS'ten geliyor ve cevap alanını hiç taşımıyor, yani orada işaretin
+           yokluğu "cevapsız" değil "bilinmiyor" demek. -->
+      <div class="rev-date">${String(r.submitted_at||"").slice(0,10)}${
+        self&&r.responded_at?' · <span class="tag cov">cevaplandı</span>':''}</div></div>`;
   }).join(""):emptyFiltered("ylist","yorum");
   el('yCount').textContent=`${rows.length} / ${all.length}`;
   el('yMeta').textContent=reviewMetaText(all);   /* bkz. reviewMetaText: sayı stats'ten, dizi kırpılı */
