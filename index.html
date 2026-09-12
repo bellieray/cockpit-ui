@@ -2920,14 +2920,19 @@ const asoPct=(a,b)=>b?'%'+(a/b*100).toFixed((a/b)<0.1?1:0):'–';
 function asoSearchWeeks(){
   const by=new Map();
   (D.bySourceDaily||[]).filter(r=>r.slug===APP&&r.source_type==='App Store search').forEach(r=>{
-    const w=asoWkStart(r.day); if(!by.has(w)) by.set(w,{w,imp:0,pv:0,dl:0,tap:0});
+    const w=asoWkStart(r.day); if(!by.has(w)) by.set(w,{w,imp:0,pv:0,dl:0,tap:0,days:new Set()});
     const o=by.get(w), v=Number(r.v||0);
+    /* Veri gelen GÜN sayısı: eksik günlü bir hafta düşük görünür ve bu, önce/sonra
+       karşılaştırmasında sahte bir düşüş olarak okunur. Ölçülen vaka: analitik
+       08-27'de başladığı için 08-24 haftası yalnız 4 gün taşıyor — tam haftalarla
+       yan yana konunca "hafta zayıftı" sanılıyordu. Gün sütunu bunu söylüyor. */
+    o.days.add(r.day);
     if(r.metric==='store_impression') o.imp+=v;
     else if(r.metric==='store_page_view') o.pv+=v;
     else if(r.metric==='downloads_first_time') o.dl+=v;
     else if(r.metric==='store_tap') o.tap+=v;
   });
-  return [...by.values()].sort((a,b)=>a.w<b.w?-1:1);
+  return [...by.values()].map(o=>({...o,days:o.days.size})).sort((a,b)=>a.w<b.w?-1:1);
 }
 /* Kendi sürümlerimizin GERÇEK yayın anı `itunes_lookup`tan geliyor
    (`currentVersionReleaseDate`) — ASC'nin sürüm durumu değil: "onaylandı"
@@ -2971,15 +2976,17 @@ function renderAsoSearch(){
   const relByWeek=new Map(); rel.forEach(r=>{const k=asoWkStart(r.day); relByWeek.set(k,(relByWeek.get(k)?relByWeek.get(k)+', ':'')+r.version);});
   el('aWkChart').innerHTML=asoBars(weeks, rel);
   el('aWkTable').innerHTML=
-    `<thead><tr><th>Hafta</th><th class="num">Gösterim</th><th class="num">Sayfa</th><th class="num">İndirme</th><th class="num">Sayfa/Gös.</th><th class="num">İndirme/Sayfa</th><th>O hafta ne değişti</th></tr></thead><tbody>`+
+    `<thead><tr><th>Hafta</th><th class="num">Gün</th><th class="num">Gösterim</th><th class="num">Sayfa</th><th class="num">İndirme</th><th class="num">Sayfa/Gös.</th><th class="num">İndirme/Sayfa</th><th>O hafta ne değişti</th></tr></thead><tbody>`+
     (weeks.length?[...weeks].reverse().map(x=>
-      `<tr><td>${x.w}</td><td class="num sec" data-l="gösterim">${num(x.imp)}</td>
+      `<tr><td>${x.w}${x.days<7?' <span class="tag st-warn">eksik</span>':''}</td>
+        <td class="num sec" data-l="gün">${x.days}/7</td>
+        <td class="num sec" data-l="gösterim">${num(x.imp)}</td>
         <td class="num sec" data-l="sayfa">${num(x.pv)}</td>
         <td class="num pri" data-l="indirme">${num(x.dl)}</td>
         <td class="num sec" data-l="sayfa/gös.">${asoPct(x.pv,x.imp)}</td>
         <td class="num sec" data-l="indirme/sayfa">${asoPct(x.dl,x.pv)}</td>
         <td class="num" data-l="o hafta">${asoWeekMarks(x.w, relByWeek, chgByWeek)}</td></tr>`).join('')
-      :`<tr><td colspan="7" class="empty">App Store analitiği henüz satır yazmadı.</td></tr>`)+`</tbody>`;
+      :`<tr><td colspan="8" class="empty">App Store analitiği henüz satır yazmadı.</td></tr>`)+`</tbody>`;
 
   const inWin=rel.filter(r=>weeks.some(x=>x.w===asoWkStart(r.day)));
   const first=weeks.length?weeks[0].w:null;
