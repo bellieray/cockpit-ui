@@ -3143,19 +3143,23 @@ function renderAsoChanges(){
     const ripe=days>=21
       ? `<span class="tag cov">${days} gün geçti · okunabilir</span>`
       : `<span class="tag st-warn">${days} gün geçti · 21 günden önce okunmaz</span>`;
+    /* Olgunluk rozeti AKIŞIN İÇİNDE, `.sig .amt` yuvasında DEĞİL: o yuva
+       `white-space:nowrap` ve 390px'te metin sütununu 39px'e eziyordu (tarayıcıda
+       görüldü — her kelime kendi satırına düşüyordu). Buradaki `.tag` satır sonunda
+       kendiliğinden alt satıra kayıyor. */
     return `<div class="sig">
       <span class="dot" style="background:var(--brand)"></span>
       <span class="txt">
-        <span class="hd">${dShort(e.day)} · ${esc(e.field)} <span class="lb-sub">${bits.join(' · ')}</span></span>
+        <span class="hd">${dShort(e.day)} · ${esc(e.field)}</span>
         <div class="bd">
-          <div style="display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 2px">${chips.join('')}</div>
+          <div class="lb-sub" style="margin-top:2px">${bits.join(' · ')} ${ripe}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 2px">${chips.join('')}</div>
           ${rel?`<div class="lb-sub">Aynı hafta <b>${esc(rel)}</b> yayına geçti — sayıdaki hareketin metinden mi sürümden mi geldiği AYRILAMAZ.</div>`:''}
           <details style="margin-top:5px"><summary class="lb-sub" style="cursor:pointer">dil dil</summary>
             <div style="margin-top:4px;display:grid;gap:3px">${perLocale.map(x=>`<div>${x}</div>`).join('')}</div>
           </details>
         </div>
       </span>
-      <span class="amt">${ripe}</span>
     </div>`;
   }).join('');
 }
