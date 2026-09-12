@@ -2558,6 +2558,22 @@ function drawLb(){
 }
 
 /* ---------- yorumlar ---------- */
+/* "N bizim · M rakip yorumu" satırı.
+   Sayılar `reviewStats`ten (penceresiz sunucu agregası) gelir, ELDEKİ DİZİDEN
+   DEĞİL: o dizi özne başına son 25 ile kırpılı. Ölçüldü — kırpılmış diziden
+   sayınca "125 rakip yorumu" yazıyordu, gerçek 361'di; yani ekrandaki sayı
+   pencerenin boyutunu anlatıyordu, veriyi değil.
+   Kırpma varsa AÇIKÇA söylenir; pencere boyutu istemcide sabit olarak
+   TEKRARLANMAZ (sunucudaki değer değişirse burası sessizce yalan söylerdi) —
+   listedeki satır sayısıyla toplam karşılaştırılıp türetilir. */
+function reviewMetaText(all){
+  const st=statsFor();
+  const sum=(f)=>st.filter(f).reduce((t,r)=>t+Number(r.n||0),0);
+  const self=sum(r=>r.subject==='self'), rival=sum(r=>r.subject!=='self');
+  const shown=all.length, total=self+rival;
+  return `${num(self)} bizim · ${num(rival)} rakip yorumu`
+    + (total>shown ? ` · listede en yeni ${num(shown)}'i` : '');
+}
 function drawRev(){
   const all=reviewsFor();
   const who=el('revWho').value, st=el('revStar').value, q=el('revSearch').value.trim().toLowerCase();
@@ -2582,7 +2598,7 @@ function drawRev(){
       <div class="rev-date">${String(r.submitted_at||"").slice(0,10)}</div></div>`;
   }).join("") : emptyFiltered("rev","yorum");
   el('revCount').textContent=`${rows.length} / ${all.length}`;
-  el('revMeta').textContent=`${all.filter(r=>r.subject==='self').length} bizim · ${all.filter(r=>r.subject!=='self').length} rakip yorumu`;
+  el('revMeta').textContent=reviewMetaText(all);
 }
 
 /* ---------- filtre yüzünden boş kalan tablolar ----------
@@ -4473,7 +4489,7 @@ function drawYList(){
       <div class="rev-date">${String(r.submitted_at||"").slice(0,10)}</div></div>`;
   }).join(""):emptyFiltered("ylist","yorum");
   el('yCount').textContent=`${rows.length} / ${all.length}`;
-  el('yMeta').textContent=`${all.filter(r=>r.subject==='self').length} bizim · ${all.filter(r=>r.subject!=='self').length} rakip yorumu`;
+  el('yMeta').textContent=reviewMetaText(all);   /* bkz. reviewMetaText: sayı stats'ten, dizi kırpılı */
 }
 
 /* ---------- VERİ SAĞLIĞI ---------- */
