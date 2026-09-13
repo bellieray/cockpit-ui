@@ -1177,7 +1177,7 @@
              söyler, yoksa tek sürümlük veri karşılaştırma sanılır. -->
         <div class="card c8">
           <div class="card-head"><div><div class="card-title">Arama hunisi — hafta hafta</div>
-            <div class="card-sub">yalnız App Store araması · çubuklar soldan sağa eskiden yeniye, tablo en yeni üstte · sürüm çizgisi = kelime alanının değiştiği an</div></div></div>
+            <div class="card-sub">yalnız App Store araması · hafta başına bir satır, en yeni üstte (tabloyla aynı sıra) · sürüm rozeti o hafta kelime alanının değiştiğini söyler</div></div></div>
           <div id="aWkChart"></div>
           <div class="tw tw-cards" style="max-height:300px"><table class="dt dt-cards" id="aWkTable"></table></div>
           <div class="funnel-note" id="aWkNote"></div>
@@ -3336,20 +3336,59 @@ function asoReleases(){
   });
   return [...seen.values()].sort((a,b)=>a.day<b.day?-1:1);
 }
+/* HAFTALIK ARAMA ÖZETİ — eski hâli okunamaz bir SVG'ydi ve kullanıcı
+   "bakınca hiçbir şey anlamıyorum" dedi. Kök nedenler koddaydı:
+     · `preserveAspectRatio="none"` çubukları YATAY GERİYORDU — 3 hafta ×
+       46px'lik bir viewBox tam genişliğe yayılınca her çubuk dev bir bloğa
+       dönüşüyordu (grafikte görülen üç turuncu dikdörtgen buydu),
+     · yalnız `imp` çiziliyordu: tek metrik, tek renk, etiket yok — hangi
+       bloğun hangi hafta olduğu ve yüksekliğin ne demek olduğu belirsizdi,
+     · eksen ve değer etiketi yoktu, çubuklar tabana oturmuyordu,
+     · sürüm çizgisi çubuğun TAM ORTASINDAN geçiyordu, yani "o hafta çıktı"
+       ile "o günden sonrası" ayırt edilemiyordu,
+     · çubuklar soldan sağa eskiden yeniye, altındaki tablo en yeni üstte —
+       aynı kartta iki ters sıra.
+
+   Yerine hafta başına BİR SATIR: hacim (arama gösterimi) ve kalite
+   (gösterim→indirme) ayrı çubuklarda, ikisi de kendi sayısını yazıyor;
+   sürüm o satırın kendi rozeti. Sıra tabloyla AYNI (en yeni üstte).
+   Bu panelin başka yerlerinde çalışan `.db-row` grameri — yeni bileşen yok.
+
+   3 hafta bir EĞİLİM değildir ve kart bunu kendisi söylüyor: iki ölçüm
+   arasında yön iddia etmek, gürültüyü sinyal saymak olur. */
 function asoBars(weeks, rel){
-  if(weeks.length<2) return `<div class="spark-note">grafik için en az iki hafta gerekiyor · ${weeks.length} hafta ölçüldü</div>`;
-  const max=Math.max.apply(null, weeks.map(x=>x.imp).concat([1]));
-  const w=Math.max(180, weeks.length*46), h=88, bw=w/weeks.length;
-  const bars=weeks.map((x,i)=>{
-    const bh=(x.imp/max)*h;
-    return `<rect x="${(i*bw+bw*0.2).toFixed(1)}" y="${(h-bh).toFixed(1)}" width="${(bw*0.6).toFixed(1)}" height="${Math.max(1,bh).toFixed(1)}" rx="2" fill="currentColor" opacity="0.75"/>`;
+  if(!weeks.length) return `<div class="unmeasured">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8.5v.5M12 11.5v4"/></svg>
+    <span>Haftalık arama ölçümü <b>yok</b> — bu pencerede App Store araması hiç gösterim getirmemiş ya da ölçüm henüz başlamamış.</span></div>`;
+  const rows=[...weeks].reverse();                      /* tabloyla aynı sıra: en yeni üstte */
+  const maxImp=Math.max(1,...rows.map(x=>x.imp||0));
+  const cvr=x=>(x.imp>0 && x.dl!=null) ? x.dl/x.imp*100 : null;
+  const maxCvr=Math.max(1,...rows.map(x=>cvr(x)||0));
+  const relByWeek={};
+  rel.forEach(r=>{ const k=asoWkStart(r.day); (relByWeek[k]=relByWeek[k]||[]).push(r); });
+  const body=rows.map(x=>{
+    const c=cvr(x), tag=(relByWeek[x.w]||[]);
+    return `<div class="db-row" style="grid-template-columns:104px 1fr 96px">
+      <span class="db-name">${esc(dShort(x.w))}${tag.length?` <span class="chip up" style="margin-left:4px">sürüm</span>`:''}</span>
+      <div class="db-track">
+        <div class="db-base" style="width:${((x.imp||0)/maxImp*100).toFixed(1)}%;background:var(--s1)"></div>
+        <div class="db-base" style="width:${c==null?0:(c/maxCvr*100).toFixed(1)}%;background:var(--s3);margin-top:3px"></div>
+      </div>
+      <span class="db-val tnum">${num(x.imp||0)}<br>
+        <span style="font-size:11px;color:var(--ink-3)">${c==null?'oran yok':'%'+c.toFixed(c<10?1:0)}</span></span>
+    </div>`;
   }).join('');
-  const marks=rel.map(r=>{
-    const i=weeks.findIndex(x=>x.w===asoWkStart(r.day)); if(i<0) return '';
-    const px=(i*bw+bw*0.5).toFixed(1);
-    return `<line x1="${px}" y1="0" x2="${px}" y2="${h}" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="3 3"/>`;
-  }).join('');
-  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:88px;color:var(--brand);display:block;margin:6px 0 2px">${bars}${marks}</svg>`;
+  return `<div class="db" style="margin:2px 0 4px">${body}
+    <div class="legend" style="margin-top:9px">
+      <span><i style="background:var(--s1)"></i>arama gösterimi (hacim)</span>
+      <span><i style="background:var(--s3)"></i>gösterim→indirme (kalite)</span>
+    </div>
+    ${rows.length<3?`<div class="fb" style="margin-top:10px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8.5v.5M12 11.5v4"/></svg>
+      <div class="fb-body"><b>${rows.length} hafta bir eğilim değil.</b> İki ölçüm arasında yön
+        iddia etmek gürültüyü sinyal saymaktır; kelime değişikliğinin sonucu 21 günlük
+        döngüde okunur. Ölçülen en derin hâl: hafta hafta hacim ve oran, altta gün sayısıyla.</div></div>`:''}
+  </div>`;
 }
 /* Bir haftanın işaretleri: yayına geçen sürüm VE o hafta fark edilen alan değişiklikleri.
    İkisi ayrı şey: sürüm rozeti "yeni sürüm yayında" der, alan etiketi "şu alan şu kadar
