@@ -3352,7 +3352,11 @@ function asoReleases(){
    Yerine hafta başına BİR SATIR: hacim (arama gösterimi) ve kalite
    (gösterim→indirme) ayrı çubuklarda, ikisi de kendi sayısını yazıyor;
    sürüm o satırın kendi rozeti. Sıra tabloyla AYNI (en yeni üstte).
-   Bu panelin başka yerlerinde çalışan `.db-row` grameri — yeni bileşen yok.
+   Bu panelin KENDİ `.brk` grameriyle yazıldı (kırılım satırı: üstte etiket
+   ve değer, altta dolgu çubuğu). İlk denemem `.db-row` kullanıyordu ve yorumu
+   "bu panelin başka yerlerinde çalışan gramer" diye yazmıştım — DOĞRULAMADAN
+   iddia etmişim: `.db-*` yalnız mockup'ta var, gerçek panelde tanımlı değil,
+   o yüzden çubuklar hiç çizilmedi ve satırlar çıplak sayıya döndü.
 
    3 hafta bir EĞİLİM değildir ve kart bunu kendisi söylüyor: iki ölçüm
    arasında yön iddia etmek, gürültüyü sinyal saymak olur. */
@@ -3368,17 +3372,25 @@ function asoBars(weeks, rel){
   rel.forEach(r=>{ const k=asoWkStart(r.day); (relByWeek[k]=relByWeek[k]||[]).push(r); });
   const body=rows.map(x=>{
     const c=cvr(x), tag=(relByWeek[x.w]||[]);
-    return `<div class="db-row" style="grid-template-columns:104px 1fr 96px">
-      <span class="db-name">${esc(dShort(x.w))}${tag.length?` <span class="chip up" style="margin-left:4px">sürüm</span>`:''}</span>
-      <div class="db-track">
-        <div class="db-base" style="width:${((x.imp||0)/maxImp*100).toFixed(1)}%;background:var(--s1)"></div>
-        <div class="db-base" style="width:${c==null?0:(c/maxCvr*100).toFixed(1)}%;background:var(--s3);margin-top:3px"></div>
+    return `<div class="brk">
+      <div class="brk-top">
+        <span class="dot" style="background:var(--s1)"></span>
+        <b>${esc(dShort(x.w))}</b>
+        ${tag.length?`<span class="chip up">sürüm</span>`:''}
+        <span class="v tnum">${num(x.imp||0)}</span>
+        <span class="p">gösterim</span>
       </div>
-      <span class="db-val tnum">${num(x.imp||0)}<br>
-        <span style="font-size:11px;color:var(--ink-3)">${c==null?'oran yok':'%'+c.toFixed(c<10?1:0)}</span></span>
+      <div class="brk-track"><div class="brk-fill" style="width:${((x.imp||0)/maxImp*100).toFixed(1)}%;background:var(--s1)"></div></div>
+      <div class="brk-top" style="margin:7px 0 7px">
+        <span class="dot" style="background:var(--s3)"></span>
+        <span style="color:var(--ink-2)">gösterim→indirme</span>
+        <span class="v tnum">${c==null?'<span style="color:var(--ink-3);font-weight:500">oran yok</span>':'%'+c.toFixed(c<10?1:0)}</span>
+        <span class="p">${x.dl!=null?num(x.dl)+' ind.':''}</span>
+      </div>
+      <div class="brk-track"><div class="brk-fill" style="width:${c==null?0:(c/maxCvr*100).toFixed(1)}%;background:var(--s3)"></div></div>
     </div>`;
   }).join('');
-  return `<div class="db" style="margin:2px 0 4px">${body}
+  return `<div style="margin:2px 0 4px">${body}
     <div class="legend" style="margin-top:9px">
       <span><i style="background:var(--s1)"></i>arama gösterimi (hacim)</span>
       <span><i style="background:var(--s3)"></i>gösterim→indirme (kalite)</span>
