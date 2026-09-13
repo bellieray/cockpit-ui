@@ -1177,7 +1177,7 @@
              söyler, yoksa tek sürümlük veri karşılaştırma sanılır. -->
         <div class="card c8">
           <div class="card-head"><div><div class="card-title">Arama hunisi — hafta hafta</div>
-            <div class="card-sub">yalnız App Store araması · hafta başına bir satır, en yeni üstte (tabloyla aynı sıra) · sürüm rozeti o hafta kelime alanının değiştiğini söyler</div></div></div>
+            <div class="card-sub">yalnız App Store araması · hafta başına bir satır, en yeni üstte (tabloyla aynı sıra) · sürüm rozeti o hafta kelime alanının değiştiğini söyler · <b>mavi çubuk</b> haftalar arası göreli hacim, <b>yeşil çubuk</b> mutlak oran (%20 = tam)</div></div></div>
           <div id="aWkChart"></div>
           <div class="tw tw-cards" style="max-height:300px"><table class="dt dt-cards" id="aWkTable"></table></div>
           <div class="funnel-note" id="aWkNote"></div>
@@ -3387,7 +3387,7 @@ function asoBars(weeks, rel){
       <div class="brk-track"><div class="brk-fill" style="width:${((x.imp||0)/maxImp*100).toFixed(1)}%;background:var(--s1)"></div></div>
       <div class="brk-top" style="margin:7px 0 7px">
         <span class="dot" style="background:var(--s3)"></span>
-        <span style="color:var(--ink-2)">gösterim→indirme</span><span style="color:var(--ink-3);font-size:11.5px">çubuk ölçeği %20 = tam</span>
+        <span style="color:var(--ink-2)">gösterim→indirme</span>
         <span class="v tnum">${c==null?'<span style="color:var(--ink-3);font-weight:500">oran yok</span>':'%'+c.toFixed(c<10?1:0)}</span>
         <span class="p">${x.dl!=null?num(x.dl)+' ind.':''}</span>
       </div>
