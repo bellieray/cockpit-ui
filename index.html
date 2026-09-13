@@ -1044,7 +1044,7 @@
         <div class="card-head">
           <div><div class="card-title">Kaynak kırılımı</div><div class="card-sub">Gösterim ve indirme nereden</div></div>
           <select id="srcSort" style="font:inherit;font-size:12.5px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
-            <option value="imp">Gösterim</option><option value="pv">Sayfa</option><option value="dl">İndirme</option><option value="cr">Dönüşüm</option>
+            <option value="imp">Gösterim</option><option value="pv">Sayfa</option><option value="dl">İndirme</option><option value="crImp">Gösterim→indirme</option><option value="crPv">Sayfa→indirme</option>
           </select>
         </div>
         <div class="segbar" id="srcBar"></div>
@@ -2612,22 +2612,43 @@ function drawChart(){
 /* ---------- kaynak ---------- */
 function drawSrc(){
   const rows=sourceRows(rangeDays()), s=el('srcSort').value;
-  const cr=r=>r.imp?r.dl/r.imp:(r.pv?r.dl/r.pv:-1);
-  rows.sort((a,b)=>s==='cr'?cr(b)-cr(a):(b[s]||0)-(a[s]||0));
-  const key=s==='cr'?'dl':s, tot=rows.reduce((t,r)=>t+(r[key]||0),0)||1;
+  /* İKİ AYRI ORAN, iki ayrı kolon. Eskiden tek "Dön.%" kolonu vardı ve
+     gösterim ölçülmeyen kaynaklarda SESSİZCE sayfa→indirmeye düşüyordu:
+     arama satırı %5,4 (gösterim→indirme), yönlendirme satırı %71,4
+     (sayfa→indirme) yazıyordu ve ikisi aynı ölçü sanılıyordu. Apple gösterimi
+     YALNIZ arama ve gezinme için sayıyor, o yüzden yönlendirmede gösterim
+     yokluğu eksik veri değil — ama iki oranı aynı kolona koymak kapsam
+     karıştırmaktı. */
+  const crImp=r=>r.imp?r.dl/r.imp:null;   /* gösterim→indirme */
+  const crPv =r=>r.pv ?r.dl/r.pv :null;   /* sayfa→indirme */
+  const srt = s==='crImp'?crImp : s==='crPv'?crPv : null;
+  rows.sort((a,b)=> srt ? ((srt(b)??-1)-(srt(a)??-1)) : ((b[s]||0)-(a[s]||0)));
+  const key=(s==='crImp'||s==='crPv')?'dl':s, tot=rows.reduce((t,r)=>t+(r[key]||0),0)||1;
   el('srcBar').innerHTML=rows.map((r,i)=>{const w=(r[key]||0)/tot*100;
     return w>0?`<span style="width:${w.toFixed(1)}%;background:${SRCCOL[i%6]}"></span>`:""}).join("");
   el('srcGrid').innerHTML=rows.map((r,i)=>
     `<div class="it"><span class="dot" style="background:${SRCCOL[i%6]}"></span>${esc(r.name)}<b>${num(r[key])}</b></div>`).join("")
     || `<div class="empty">Bu aralıkta kaynak verisi yok</div>`;
   const T=rows.reduce((t,r)=>({imp:t.imp+r.imp,pv:t.pv+r.pv,dl:t.dl+r.dl}),{imp:0,pv:0,dl:0});
+  const p1=v=>v==null?'<span style="color:var(--ink-3)">ölçülmüyor</span>':(v*100).toFixed(1);
   el('srcTable').innerHTML=
-    `<thead><tr><th>Kaynak</th><th>Göst.</th><th>Sayfa</th><th>İnd.</th><th>Dön.%</th></tr></thead><tbody>`+
-    rows.map(r=>{const c=cr(r);return `<tr><td>${esc(r.name)}</td><td class="num">${r.imp?num(r.imp):"–"}</td>
-      <td class="num">${r.pv?num(r.pv):"–"}</td><td class="num">${r.dl?num(r.dl):"–"}</td>
-      <td class="num">${c<0?"–":(c*100).toFixed(1)}</td></tr>`}).join("")+
+    `<thead><tr><th>Kaynak</th><th>Göst.</th><th>Sayfa</th><th>İnd.</th>
+      <th title="gösterim → indirme; gösterim yalnız arama ve gezinmede sayılıyor">Gst→İnd %</th>
+      <th title="sayfa görüntüleme → indirme; her kaynakta ölçülüyor">Sayfa→İnd %</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td>${esc(r.name)}</td>
+      <td class="num">${r.imp?num(r.imp):"–"}</td>
+      <td class="num">${r.pv?num(r.pv):"–"}</td>
+      <td class="num">${r.dl?num(r.dl):"–"}</td>
+      <td class="num">${p1(crImp(r))}</td>
+      <td class="num">${p1(crPv(r))}</td></tr>`).join("")+
     `</tbody><tfoot><tr><td>Toplam</td><td class="num">${num(T.imp)}</td><td class="num">${num(T.pv)}</td>
-      <td class="num">${num(T.dl)}</td><td class="num">${T.imp?(T.dl/T.imp*100).toFixed(1):"–"}</td></tr></tfoot>`;
+      <td class="num">${num(T.dl)}</td>
+      <td class="num">${T.imp?(T.dl/T.imp*100).toFixed(1):"–"}</td>
+      <td class="num">${T.pv?(T.dl/T.pv*100).toFixed(1):"–"}</td></tr></tfoot>`;
+  /* Toplam satırı iki oranı da KARIŞIK kümeden hesaplıyor: Gst→İnd'in payı
+     tüm indirmeler ama paydası yalnız arama+gezinme gösterimi. Bu kartın
+     dipnotu bunu zaten söylüyor ("satırlar yan yana durur, toplanmaz");
+     toplam satırı bir büyüklük fikri için duruyor, kaynak kıyası için değil. */
 }
 
 /* ---------- ülkeler ---------- */
