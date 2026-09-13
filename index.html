@@ -1899,7 +1899,42 @@ function countryName(cc){
 }
 const FLAG={tr:"🇹🇷",us:"🇺🇸",es:"🇪🇸",de:"🇩🇪",gb:"🇬🇧",fr:"🇫🇷",it:"🇮🇹",nl:"🇳🇱",jp:"🇯🇵",kr:"🇰🇷",br:"🇧🇷",mx:"🇲🇽",ca:"🇨🇦",au:"🇦🇺",ar:"🇦🇷",in:"🇮🇳",ru:"🇷🇺",do:"🇩🇴",pa:"🇵🇦",pe:"🇵🇪",kz:"🇰🇿",se:"🇸🇪",ch:"🇨🇭",at:"🇦🇹",be:"🇧🇪",pl:"🇵🇱",pt:"🇵🇹",ie:"🇮🇪",dk:"🇩🇰",no:"🇳🇴",fi:"🇫🇮",cz:"🇨🇿",gr:"🇬🇷",hu:"🇭🇺",ro:"🇷🇴",ua:"🇺🇦",il:"🇮🇱",ae:"🇦🇪",sa:"🇸🇦",eg:"🇪🇬",za:"🇿🇦",ng:"🇳🇬",id:"🇮🇩",th:"🇹🇭",vn:"🇻🇳",ph:"🇵🇭",my:"🇲🇾",sg:"🇸🇬",hk:"🇭🇰",tw:"🇹🇼",cn:"🇨🇳",cl:"🇨🇱",co:"🇨🇴",py:"🇵🇾",uy:"🇺🇾",ec:"🇪🇨",bo:"🇧🇴",cr:"🇨🇷",gt:"🇬🇹",nz:"🇳🇿"};
 const VTAG={GAP:["gap","Fırsat"],COVERED:["cov","Kapsanan"],DEAD_WEIGHT:["dead","Ölü ağırlık"],NO_DEMAND:["nod","Talep yok"],UNMEASURED:["unm","Ölçülmemiş"]};
-const SRCCOL=["var(--violet)","var(--brand)","var(--amber)","var(--ink-3)","var(--pink)","var(--up)"];
+/* ══ GRAFİK SERİ RENKLERİ — tek kaynak ══
+   Sıra `dataviz` doğrulanmış kategorik sırası ve İKİ temada da tüm kapıları
+   geçiyor (ölçüldü, göz kararı değil):
+     açık #2A78D6 #EB6834 #1BAF7A #EDA100 #E87BA4 → ALL CHECKS PASS
+     koyu #3987E5 #D95926 #199E70 #C98500 #D55181 → ALL CHECKS PASS
+   (koyu adımlar ayrı SEÇİLDİ, açığın otomatik çevirisi değil.)
+
+   Eski hâli mürekkep adımlarını seri rengi olarak kullanıyordu
+   (--violet/--brand/--amber/--pink → #1B5CA8/#B84A1E/#8A5C00/#A2431F):
+   Faz 1'de o adlar METİN rolüne bağlanmıştı, yani kaynak çubuğunun serileri
+   koyulaşmış ve ikisi (brand/pink) aynı turuncu-kırmızı tona düşmüştü —
+   kırmızı-yeşil körlüğünde ayrılmayan bir çift. Renk metin taşımadığı için
+   hiçbir kontrast kapısı bunu göremiyordu.
+
+   6. slot BİLEREK yok: doğrulanmış sıra 5 renk veriyor ve 6. bir hue
+   üretmek paletin kapılarını bozar. "bilinmiyor" kovası da zaten bir seri
+   DEĞİL — Apple'ın "kaynağı saptayamadım" kutusu, yani üçüncü durum; nötr
+   `--unmeasured` tonunu alıyor ve lejantta öyle etiketleniyor. */
+const SERIES=["var(--s1)","var(--s2)","var(--s3)","var(--s4)","var(--s5)"];
+const UNMEASURED_FILL='var(--unmeasured-soft)';
+/* Kaynak adı → sabit renk. Renk ENTİTEYE bağlı, sıraya DEĞİL: filtre kaynak
+   sayısını değiştirdiğinde kalanların rengi değişmemeli (dataviz: "color
+   follows the entity, never its rank"). Bilinmeyen bir kaynak adı gelirse
+   sıradaki seri slotunu alıyor ve o eşleme oturumda sabit kalıyor. */
+const SRC_ORDER=["App Store search","App Store browse","App referrer","Web referrer","Institutional purchase"];
+const _srcColCache=new Map();
+function srcColor(name){
+  if(/bilinmiyor|unavailable/i.test(String(name))) return UNMEASURED_FILL;
+  if(_srcColCache.has(name)) return _srcColCache.get(name);
+  const i = SRC_ORDER.indexOf(name);
+  const c = SERIES[(i>=0 ? i : _srcColCache.size) % SERIES.length];
+  _srcColCache.set(name,c);
+  return c;
+}
+/* Geriye uyumluluk: eski çağrı yerleri indeksle okuyordu. */
+const SRCCOL=SERIES;
 /* Tırnaklar da kaçırılıyor: bu değerlerin bir kısmı ÖZNİTELİK içine giriyor
    (`title=`, `data-app=`, `<option value=>`) ve içerik dışarıdan geliyor —
    rakip uygulama adları App Store'dan. Adında tırnak olan tek bir rakip,
@@ -2639,10 +2674,12 @@ function drawSrc(){
   const srt = s==='crImp'?crImp : s==='crPv'?crPv : null;
   rows.sort((a,b)=> srt ? ((srt(b)??-1)-(srt(a)??-1)) : ((b[s]||0)-(a[s]||0)));
   const key=(s==='crImp'||s==='crPv')?'dl':s, tot=rows.reduce((t,r)=>t+(r[key]||0),0)||1;
-  el('srcBar').innerHTML=rows.map((r,i)=>{const w=(r[key]||0)/tot*100;
-    return w>0?`<span style="width:${w.toFixed(1)}%;background:${SRCCOL[i%6]}"></span>`:""}).join("");
-  el('srcGrid').innerHTML=rows.map((r,i)=>
-    `<div class="it"><span class="dot" style="background:${SRCCOL[i%6]}"></span>${esc(r.name)}<b>${num(r[key])}</b></div>`).join("")
+  el('srcBar').innerHTML=rows.map(r=>{const w=(r[key]||0)/tot*100;
+    return w>0?`<span style="width:${w.toFixed(1)}%;background:${srcColor(r.name)}"></span>`:""}).join("");
+  el('srcGrid').innerHTML=rows.map(r=>
+    `<div class="it"><span class="dot" style="background:${srcColor(r.name)}"></span>${esc(r.name)}`
+    + (srcColor(r.name)===UNMEASURED_FILL?' <span style="color:var(--ink-3)">· kaynak saptanamadı</span>':'')
+    + `<b>${num(r[key])}</b></div>`).join("")
     || `<div class="empty">Bu aralıkta kaynak verisi yok</div>`;
   const T=rows.reduce((t,r)=>({imp:t.imp+r.imp,pv:t.pv+r.pv,dl:t.dl+r.dl}),{imp:0,pv:0,dl:0});
   const p1=v=>v==null?'<span style="color:var(--ink-3)">ölçülmüyor</span>':(v*100).toFixed(1);
@@ -3178,6 +3215,31 @@ function bind(){
       if(b.dataset.range!=null){ RANGE=+b.dataset.range; syncRange(); renderAll(); }
     })));
   bindViews(); bindAnchors(); buildAnchors(); bindSync(); bindSyncErr();
+
+  /* YENİDEN BOYUTLANDIRMADA YENİDEN ÇİZİM — grafikler SVG ve genişliklerini
+     çizim ANINDA ölçüyor (`W`). Pencere/yön değiştiğinde yeniden çizilmezse
+     eski genişlikte kalıp ya kırpılıyor ya kabın içinde yüzüyor; telefonu
+     yatıra çevirmek tam bu duruma sokuyordu.
+
+     WHY debounce: sürükleyerek yeniden boyutlandırma saniyede onlarca olay
+     üretiyor ve her biri tüm grafikleri yeniden kuruyor — 160ms'lik bekleme
+     sürüklemeyi tek çizime indiriyor.
+     WHY yalnız GENİŞLİK değişince: mobil tarayıcılarda adres çubuğunun
+     kayması `resize`'ı YÜKSEKLİK değişimiyle tetikliyor ve sayfa yalnız
+     kaydırıldığı için her kaydırmada yeniden çizim olurdu.
+     WHY tema için gerekmiyor: renkler `var(--…)` ile SVG özniteliğinde
+     duruyor ve tarayıcı tema değişince kendisi yeniden çözüyor (ölçüldü:
+     `fill="var(--s1)"` computed `rgb(42,120,214)`). JS'te `getPropertyValue`
+     ile okunup gömülen tek bir renk YOK — olsaydı tema değişiminde donardı. */
+  {
+    let t=null, lastW=window.innerWidth;
+    window.addEventListener('resize', ()=>{
+      if(window.innerWidth===lastW) return;
+      lastW=window.innerWidth;
+      clearTimeout(t);
+      t=setTimeout(()=>{ if(D && D.apps) renderAll(); }, 160);
+    });
+  }
   /* WHY yalnız dokunmatikte: fareli cihazda tarayıcının kendi tooltip'i
      zaten çalışıyor, ikinci bir katman gürültü olur. `pointer:coarse` kaba
      işaretçiyi (parmak) ayırt ediyor.
