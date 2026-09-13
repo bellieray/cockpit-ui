@@ -1264,6 +1264,7 @@
             <span class="kpi-name">Toplam kullanıcı<br><span class="card-sub">tüm zamanlar, kayıtlı</span></span>
           </div>
           <div class="kpi-val tnum" id="upUsers">–</div>
+          <div class="kpi-why" id="upUsersWhy"></div>
           <div id="upUsersSpark"></div>
         </div>
         <div class="card c3">
@@ -1274,6 +1275,7 @@
             <span class="kpi-name">Aktif hane<br><span class="card-sub" id="upHhSub">toplam hanenin %</span></span>
           </div>
           <div class="kpi-val tnum" id="upActiveHh">–</div>
+          <div class="kpi-why" id="upActiveHhWhy"></div>
           <div id="upActiveHhSpark"></div>
         </div>
         <div class="card c3">
@@ -1284,6 +1286,7 @@
             <span class="kpi-name">Yeni kullanıcı (bugün)<br><span class="card-sub" id="upNewSub">son 7g · son 30g</span></span>
           </div>
           <div class="kpi-val tnum" id="upNewToday">–</div>
+          <div class="kpi-why" id="upNewTodayWhy"></div>
           <div id="upNewSpark"></div>
         </div>
         <div class="card c3">
@@ -1294,6 +1297,7 @@
             <span class="kpi-name">Toplam işlem<br><span class="card-sub">tüm zamanlar, kayıtlı</span></span>
           </div>
           <div class="kpi-val tnum" id="upTx">–</div>
+          <div class="kpi-why" id="upTxWhy"></div>
           <div id="upTxSpark"></div>
         </div>
 
@@ -1707,19 +1711,23 @@
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
           <span class="kpi-name" id="pzK1">Ölçülen ülke<br><span class="card-sub" id="pzWin">–</span></span></div>
-          <div class="kpi-val tnum" id="pzCountries">–</div></div>
+          <div class="kpi-val tnum" id="pzCountries">–</div>
+          <div class="kpi-why" id="pzCountriesWhy"></div></div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s3) 15%,transparent);color:var(--s3)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v13M7 12l5 5 5-5M5 21h14"/></svg></span>
           <span class="kpi-name" id="pzK2">İndirme gelen<br><span class="card-sub" id="pzDlSub">–</span></span></div>
-          <div class="kpi-val tnum" id="pzDlCountries">–</div></div>
+          <div class="kpi-val tnum" id="pzDlCountries">–</div>
+          <div class="kpi-why" id="pzDlCountriesWhy"></div></div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h10M9 3v2M11 5c0 5-3 9-7 11M7 9c1 3 4 6 7 7M14 21l4-10 4 10M15.5 18h5"/></svg></span>
           <span class="kpi-name" id="pzK3">Listeleme dili<br><span class="card-sub" id="pzLocSub">–</span></span></div>
-          <div class="kpi-val tnum" id="pzLocales">–</div></div>
+          <div class="kpi-val tnum" id="pzLocales">–</div>
+          <div class="kpi-why" id="pzLocalesWhy"></div></div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s4) 15%,transparent);color:var(--s4)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 7v6M12 17v.5"/><circle cx="12" cy="12" r="9"/></svg></span>
           <span class="kpi-name" id="pzK4">Dilsiz trafik<br><span class="card-sub" id="pzNoLocSub">dili olmayan ülkelerden</span></span></div>
-          <div class="kpi-val tnum" id="pzNoLoc">–</div></div>
+          <div class="kpi-val tnum" id="pzNoLoc">–</div>
+          <div class="kpi-why" id="pzNoLocWhy"></div></div>
 
         <!-- ---- ÖN-LANSMAN BÖLGESİ ----
              Yayında olmayan bir uygulamanın kendi trafiği YOKTUR; aşağıdaki
@@ -3937,6 +3945,45 @@ function renderPazar(){
   const noLocPv=langRows.reduce((t,r)=>t+r.pv,0);
   el('pzNoLoc').textContent=num(noLocPv);
   const totalDl=rows.reduce((t,r)=>t+r.dl,0);
+
+  /* HER METRİK ÜÇ ŞEY SÖYLER (kural 2) — panelin KENDİ ölçülmüş oranından. */
+  (function pazarWhy(){
+    const why=(id,gain,loss)=>{ const h=el(id); if(!h) return;
+      h.innerHTML=`<div class="gain"><b>SAĞLAR</b><span>${gain}</span></div>`
+                +`<div class="loss"><b>KAYBETTİRİR</b><span>${loss}</span></div>`; };
+    const p1=v=>v==null?null:v.toFixed(1).replace('.',',');
+    const totImp=rows.reduce((t,r)=>t+r.imp,0);
+    const totPv=rows.reduce((t,r)=>t+r.pv,0);
+    const dlShare = totalDl>0 ? dlRows.slice().sort((a,b)=>b.dl-a.dl)[0] : null;
+    const dead = rows.filter(r=>r.imp>=20 && !r.dl);
+    const deadImp = dead.reduce((t,r)=>t+r.imp,0);
+
+    why('pzCountriesWhy',
+      `Talebin gerçekte <em>nereden</em> geldiğini söylüyor; pazar seçimi tahminle değil bu listeyle yapılır. Ölçülen toplam <em>${num(totImp)} gösterim</em>.`,
+      `Uygulama 175 ülkede satışta, ölçüm <em>${num(rows.length)}</em> ülkede var. Kalanında talep <em>sıfır değil, bilinmiyor</em> — Apple o ülkeler için satır döndürmüyor.`);
+
+    why('pzDlCountriesWhy',
+      dlShare
+        ? `Dönüşen pazarlar: en çok indirme <em>${esc(String(dlShare.cc).toUpperCase())}</em>'den (${num(dlShare.dl)} / ${num(totalDl)}).`
+        : 'Dönüşen pazarların listesi — bu pencerede indirme ölçülmedi.',
+      dlShare && totalDl
+        ? `Yoğunlaşma riski: tek pazar indirmelerin <em>%${p1(dlShare.dl/totalDl*100)}</em>'ini taşıyor. O pazarda bir sıralama kaybı toplamı birden düşürür.`
+        : 'Gösterim alan ülke sayısı ile indirme alan ülke sayısı arasındaki fark, sayfanın <em>hangi pazarlarda ikna etmediğini</em> gösterir.');
+
+    why('pzLocalesWhy',
+      langs.size
+        ? `Listelemesi olan her dil, o dili konuşan pazarda <em>ana dilinde</em> bir mağaza sayfası demek: dönüşümü en çok etkileyen tek yapısal değişken.`
+        : 'Dil listesi bu uygulama için <em>hiç çekilmedi</em> — kaç dilde listelendiğimiz bilinmiyor.',
+      `Her dil bakım borcu: ad, altyazı ve 100 karakterlik anahtar kelime alanı <em>dil başına ayrı</em> yazılıyor ve sürüm başına yeniden gözden geçirilmesi gerekiyor.`);
+
+    why('pzNoLocWhy',
+      dead.length
+        ? `En net iş listesi: <em>${num(dead.length)} ülke</em> 20+ gösterim aldı ve <em>hiç</em> indirme vermedi (${dead.slice(0,5).map(r=>esc(String(r.cc).toUpperCase())).join(', ')}${dead.length>5?'…':''}). Her biri tek tek test edilebilir bir hipotez.`
+        : 'Dili olmayan pazarlarda sayfa İngilizce\'ye düşüyor; bu sayı o pazarlardaki kayıp ilgiyi ölçüyor.',
+      deadImp
+        ? `Bu ülkelerdeki <em>${num(deadImp)} gösterim</em> rakibe reklam oluyor: kullanıcı arıyor, sayfayı görüyor, kurmuyor.`
+        : `Dili olmayan pazarlarda sayfa görüntüleme <em>${num(noLocPv)}</em>; dönüşüm düşükse ilk test edilecek şey dil.`);
+  })();
   /* Dil listesi HİÇ yoksa "eksik yok" YAZILAMAZ: karşılaştıracak bir şey
      olmadığı için tablo boş kalıyor, ama bu "her dil tamam" demek değil —
      "henüz bakmadık" demek. İkisini aynı cümleyle geçmek, panelin
@@ -4541,7 +4588,7 @@ function renderPara(){
         ? `Bugün çalışan tek gelir ayağı. Aynı pencerede ölçülen <em>kullanıcı başına ${moneyCents(perUser)}</em>; kurulum arttıkça doğrusal büyüyor.`
         : 'Bugün çalışan tek gelir ayağı. Kullanıcı sayısı bu pencerede <em>ölçülmedi</em>, o yüzden kullanıcı başına gelir <em>hesaplanmıyor</em>.',
       subs>0
-        ? `Tek ayak olması riskin kendisi: abonelik tarafında <em>${num(subs)} aktif abone</em> var, yani reklam doldurmazsa yerine geçecek bir şey yok.`
+        ? `Tek ayak olması riskin kendisi: ikinci ayak <em>${num(subs)} aktif abone</em>, yani ${users>0?'kayıtlı kullanıcının %'+ (subs/users*100).toFixed(1).replace('.',',') :'kitlenin çok küçük bir bölümü'}. Reklam doldurmazsa bu ölçek yerini alamaz.`
         : 'Tek ayak olması riskin kendisi: abonelik geliri <em>yok</em>, reklam doldurmazsa gelir sıfıra iner.');
 
     why('paImpWhy',
@@ -4720,6 +4767,45 @@ function renderUrun(){
   el('upNewSub').textContent=`son 7g: ${num(nu7)} · son 30g: ${num(nu30)}`;
   el('upTx').textContent=num(tx);
   el('upTxSpark').innerHTML=sparkline('app_export_total_transactions');
+
+  /* HER METRİK ÜÇ ŞEY SÖYLER (kural 2) — ölçülmüş oranlardan; bir uç yoksa
+     satır "ölçülmedi" diyor ve oran basılmıyor. */
+  (function urunWhy(){
+    const why=(id,gain,loss)=>{ const h=el(id); if(!h) return;
+      h.innerHTML=`<div class="gain"><b>SAĞLAR</b><span>${gain}</span></div>`
+                +`<div class="loss"><b>KAYBETTİRİR</b><span>${loss}</span></div>`; };
+    const p1=v=>v==null?null:v.toFixed(1).replace('.',',');
+    const activated=stockValue('app_export_activated_users');
+    const writers=stockValue('app_export_x_writes_writers');
+    const reach=stockValue('app_export_push_reachable_users');
+    const pc=(a,b)=>(b>0&&a!=null)?a/b*100:null;
+
+    why('upUsersWhy',
+      'Mağaza kurulumundan <em>bağımsız ikinci tanık</em>: kurulan ile gerçekten hesap açan arasındaki fark buradan görünür.',
+      pc(activated,users)!=null
+        ? `Kayıtlı olmak kullanmak değil: <em>${num(users-activated)} kullanıcı</em> hesap açtı, hiç işlem yazmadı (%${p1(100-pc(activated,users))}). Onlar için ürün hiç çalışmadı ve sunucu maliyeti yine çıktı.`
+        : 'Aktivasyon <em>ölçülmedi</em>, o yüzden kaç kullanıcının ürünü hiç kullanmadığı bilinmiyor.');
+
+    why('upActiveHhWhy',
+      pc(activeHh,totalHh)!=null
+        ? `Ürünün çekirdeği hane: <em>${num(activeHh)}/${num(totalHh)}</em> hanede son dönemde hareket var (%${p1(pc(activeHh,totalHh))}).`
+        : 'Aktif hane sayısı ürünün gerçek kullanım tabanı.',
+      pc(activeHh,totalHh)!=null
+        ? `Kalan <em>${num(totalHh-activeHh)} hane</em> sessiz. Hane başına yazılmış her özellik (paylaşım, rol, davet) bu sessiz çoğunluğa da bakım borcu yazıyor.`
+        : 'Toplam hane sayısı <em>ölçülmedi</em>, oran hesaplanmıyor.');
+
+    why('upNewTodayWhy',
+      `Büyümenin günlük nabzı; 7 ve 30 günlük pencereler hemen altında, yani tek günün gürültüsü <em>bağlamıyla</em> okunuyor.`,
+      'Tek gün bir eğilim değil: hafta sonu ve mağaza öne çıkarmaları günlük sayıyı katlar. Yön iddiası için <em>7 günlük</em> pencereye bakılır.');
+
+    why('upTxWhy',
+      pc(writers,users)!=null
+        ? `Ürünün değeri yazılan veriden geliyor: <em>${num(writers)}</em> kullanıcı en az bir yazma yaptı (kayıtlının %${p1(pc(writers,users))}'i).`
+        : 'İşlem sayısı ürünün ürettiği gerçek değer.',
+      reach!=null && users>0
+        ? `Bu veriyi büyütmenin yolu hatırlatma ve ancak <em>${num(reach)}</em> kullanıcıya bildirim gidebiliyor (%${p1(pc(reach,users))}). Tutma için yazılan her hatırlatıcı bu duvara çarpıyor.`
+        : 'İşlem yazmayan kullanıcı için uygulama boş bir kabuk; ona gösterilen her ekran boş durum.');
+  })();
 
   // Aktiflik. `stockSeriesFor` son günün değerini verir; 28 günlükler
   // `stockValue` ile (overview konektöründen, tek anlık görüntü).
