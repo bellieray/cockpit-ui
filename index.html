@@ -510,7 +510,7 @@
   .fstage{flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%}
   .fbars{display:flex;align-items:flex-end;gap:2px;height:100%}
   .fbars i{flex:1;border-radius:3px;background:var(--line);display:block}
-  .fbars i.on{background:var(--brand)}
+  .fbars i.on{background:var(--s3)}
   .fpct{font-family:Manrope,sans-serif;font-weight:700;font-size:15px;margin-bottom:6px}
   .fname{font-size:11.5px;color:var(--ink-3);margin-top:9px}
   .fval{font-size:13px;font-weight:600}
@@ -521,7 +521,7 @@
   /* CAPS kaldırıldı (Türkçe i→I) ve 9px → 11px: 11px altı işlevsel metin yasak */
   .fdiv span{position:absolute;top:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;
     font-size:11px;font-weight:700;color:var(--ink-2)}
-  .fbars.product i.on{background:var(--amber)}
+  .fbars.product i.on{background:var(--s4)}
   .funnel-note{font-size:11px;color:var(--ink-3);margin-top:10px}
 
   /* === segmentli çubuk === */
@@ -554,7 +554,7 @@
   .lb-track{height:7px;border-radius:var(--r-pill);background:var(--canvas);overflow:hidden}
   .lb-fill{height:100%;border-radius:var(--r-pill);background:var(--ink-3);opacity:.35}
   .lb.self .lb-av{background:var(--accent-btn-bg);color:var(--accent-btn-ink)}
-  .lb.self .lb-fill{background:var(--brand);opacity:1}
+  .lb.self .lb-fill{background:var(--s3);opacity:1}
   .lb.self .lb-name,.lb.self .lb-star{color:var(--brand)}
   /* son 14 günde sürüm çıkaran özne — "rakip hareketi" sinyali ayrı bir
      karta değil, zaten baktığın satıra gömülü (bkz. round 6, A2). */
@@ -994,9 +994,9 @@
         <div class="card-head">
           <div><div class="card-title">Trafik ve indirme</div><div class="card-sub" id="chartSub">–</div></div>
           <div class="legend" id="chartLegend">
-            <span class="li" data-s="imp"><span class="dot" style="background:var(--violet)"></span>Gösterim</span>
-            <span class="li" data-s="pv"><span class="dot" style="background:var(--amber)"></span>Sayfa</span>
-            <span class="li" data-s="dl"><span class="dot" style="background:var(--brand)"></span>İndirme</span>
+            <span class="li" data-s="imp"><span class="dot" style="background:var(--s1)"></span>Gösterim</span>
+            <span class="li" data-s="pv"><span class="dot" style="background:var(--s4)"></span>Sayfa</span>
+            <span class="li" data-s="dl"><span class="dot" style="background:var(--s3)"></span>İndirme</span>
             <span class="li off" data-s="tap"><span class="dot" style="background:var(--ink-3)"></span>Dokunma</span>
           </div>
         </div>
@@ -1063,7 +1063,7 @@
           <span class="fcount" id="hCount"></span>
         </div>
         <div class="brk"><div class="brk-top"><span class="dot" style="background:var(--up)"></span>Sağlıklı<span class="v" id="brkOkV">–</span><span class="p" id="brkOkP"></span></div><div class="brk-track"><div class="brk-fill" id="brkOk" style="width:0;background:var(--up)"></div></div></div>
-        <div class="brk"><div class="brk-top"><span class="dot" style="background:var(--amber)"></span>Veri yok<span class="v" id="brkNdV">–</span><span class="p" id="brkNdP"></span></div><div class="brk-track"><div class="brk-fill" id="brkNd" style="width:0;background:var(--amber)"></div></div></div>
+        <div class="brk"><div class="brk-top"><span class="dot" style="background:var(--s4)"></span>Veri yok<span class="v" id="brkNdV">–</span><span class="p" id="brkNdP"></span></div><div class="brk-track"><div class="brk-fill" id="brkNd" style="width:0;background:var(--s4)"></div></div></div>
         <div class="brk"><div class="brk-top"><span class="dot" style="background:var(--down)"></span>Bayat<span class="v" id="brkStV">–</span><span class="p" id="brkStP"></span></div><div class="brk-track"><div class="brk-fill" id="brkSt" style="width:0;background:var(--down)"></div></div></div>
         <div class="tw" style="max-height:210px;margin-top:12px"><table class="dt" id="hTable"></table></div>
       </div>
@@ -2503,12 +2503,13 @@ function drawChart(){
   let max=1; on.forEach(k=>data[k].forEach(v=>{if(v>max)max=v}));
   const y=v=>{const t=scale==='log'?Math.log10((v||0)+1)/Math.log10(max+1):(v||0)/max;return H-bot-t*(H-top-bot)};
   const x=i=>days.length<2?W/2:i*(W/(days.length-1));
-  const col={imp:"var(--violet)",pv:"var(--amber)",dl:"var(--brand)",tap:"var(--ink-3)"};
+  /* mark = canlı seri adımı (metin değil) — bkz. token bloğundaki rol notu */
+  const col={imp:"var(--s1)",pv:"var(--s4)",dl:"var(--s3)",tap:"var(--ink-3)"};
   let svg="";
   for(let g=0;g<=4;g++){
     const gy=top+g*((H-top-bot)/4);
     svg+=`<line x1="0" y1="${gy.toFixed(1)}" x2="${W}" y2="${gy.toFixed(1)}" stroke="var(--line)" stroke-dasharray="4 6"/>`
-       +`<text x="-6" y="${(gy+4).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--ink-3)">${Math.round(max-(max/4)*g)}</text>`;
+       +`<text x="-6" y="${(gy+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--ink-3)">${Math.round(max-(max/4)*g)}</text>`;
   }
   on.forEach(k=>{
     const pts=data[k].map((v,i)=>[x(i),y(v)]); const d=smooth(pts);
@@ -3349,7 +3350,7 @@ function renderAsoChanges(){
        görüldü — her kelime kendi satırına düşüyordu). Buradaki `.tag` satır sonunda
        kendiliğinden alt satıra kayıyor. */
     return `<div class="sig">
-      <span class="dot" style="background:var(--brand)"></span>
+      <span class="dot" style="background:var(--s3)"></span>
       <span class="txt">
         <span class="hd">${dShort(e.day)} · ${esc(e.field)}</span>
         <div class="bd">
@@ -4188,7 +4189,7 @@ function drawRevenueTimeline(fmtRows){
   const bars=vals.map((v,i)=>{
     const bh=maxBar? (v/maxBar)*(h-pad*2) : 0;
     return `<rect x="${(i*bw+bw*0.18).toFixed(1)}" y="${(h-pad-bh).toFixed(1)}"
-      width="${(bw*0.64).toFixed(1)}" height="${bh.toFixed(1)}" rx="1.5" fill="var(--brand)" opacity=".55"/>`;
+      width="${(bw*0.64).toFixed(1)}" height="${bh.toFixed(1)}" rx="1.5" fill="var(--s3)" opacity=".55"/>`;
   }).join('');
   const line=cum.map((v,i)=>{
     const x=i*bw+bw/2, y=h-pad-(v/maxCum)*(h-pad*2);
