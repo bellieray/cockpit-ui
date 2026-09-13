@@ -1736,7 +1736,7 @@
              Bu yüzden ön-lansmanda canlı bölgeler tamamen gizleniyor ve
              yerine ELDE OLAN kanıt geçiyor: mağaza başına ölçülmüş terim
              talebi ve ölçülmüş rakip gücü. -->
-        <div class="region-label c12" id="pzPreLabel" style="display:none">LANSMAN PAZARI SEÇİMİ · UYGULAMA HENÜZ YAYINDA DEĞİL</div>
+        <div class="region-label c12" id="pzPreLabel" style="display:none">Lansman pazarı seçimi · uygulama henüz yayında değil</div>
         <div class="card c12" id="pzPreCoverCard" style="display:none">
           <div class="card-head"><div><div class="card-title">Hiç ölçülmemiş mağazalar</div>
             <div class="card-sub" id="pzPreCoverSub">–</div></div></div>
@@ -1753,11 +1753,12 @@
           <div class="tw tw-cards"><table class="dt dt-cards" id="pzPreTermTable"></table></div>
         </div>
 
-        <div class="region-label c12" id="pzStructLabel">YAPISAL EKSİKLER · ÖRNEKLEME BAĞLI DEĞİL</div>
+        <div class="region-label c12" id="pzStructLabel">Yapısal eksikler · örneklemeye bağlı değil</div>
         <div class="card c12" id="pzLangCard">
           <div class="card-head"><div><div class="card-title">Listelemesi olmayan diller</div>
             <div class="card-sub" id="pzLangSub">–</div></div></div>
           <div class="tw tw-cards"><table class="dt dt-cards" id="pzLangTable"></table></div>
+          <div id="pzLangFb"></div>
         </div>
         <div class="card c6" id="pzUnmeasuredCard">
           <div class="card-head"><div><div class="card-title">Talebi hiç ölçülmemiş pazarlar</div>
@@ -1770,7 +1771,7 @@
           <div class="tw" style="max-height:340px"><table class="dt" id="pzGapTable"></table></div>
         </div>
 
-        <div class="region-label c12" id="pzGateLabel">ÖLÇÜLEBİLİR BULGULAR · HACİM KAPISI VAR</div>
+        <div class="region-label c12" id="pzGateLabel">Ölçülebilir bulgular · hacim kapısı var</div>
         <div class="card c12" id="pzTapCard">
           <div class="card-head"><div><div class="card-title">Aramada görünüp tıklanmama</div>
             <div class="card-sub" id="pzTapSub">–</div></div></div>
@@ -3228,6 +3229,15 @@ function bind(){
     })));
   bindViews(); bindAnchors(); buildAnchors(); bindSync(); bindSyncErr();
 
+  /* YÖNLENDİREN FALLBACK — hiçbir kart çıkmaz sokakta bitmez (kural 4).
+     Eksik bir kırılım DÜZ BİR UYARI değil, o konunun ölçülen en derin hâline
+     ya da o boşluğu kapatacak yere giden bir BUTONdur. Primitif (.fb-act)
+     Faz 1'de inmişti ama çağıran yoktu; tek delege dinleyici hepsini bağlıyor. */
+  document.addEventListener('click', e=>{
+    const b=e.target.closest && e.target.closest('[data-jump]');
+    if(b){ showView(b.dataset.jump); }
+  });
+
   /* DÜZEN SINIFI DEĞİŞİMİNDE YENİDEN KURULUM.
      İlk yazdığım hâli her genişlik değişiminde `renderAll()` çağırıyordu,
      gerekçe "grafikler genişliğini çizim anında ölçüyor" idi. ÖLÇTÜM VE
@@ -3988,6 +3998,16 @@ function renderPazar(){
      olmadığı için tablo boş kalıyor, ama bu "her dil tamam" demek değil —
      "henüz bakmadık" demek. İkisini aynı cümleyle geçmek, panelin
      yapmaması gereken sessiz onay olurdu. */
+  /* Bu satır bir çıkmaz sokaktı: "hiç çekilmedi" diyor ama nereye
+     bakılacağını söylemiyordu. Konektör durumu Veri sağlığı'nda. */
+  el('pzLangFb').innerHTML = !langs.size
+    ? `<div class="fb" style="margin-top:10px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8.5v.5M12 11.5v4"/></svg>
+        <div class="fb-body"><b>Dil listesi hiç çekilmedi, yani eksik dil olup olmadığı bilinmiyor.</b>
+          Bu "her dil tamam" DEĞİL. Listeyi getiren konektörün durumu Veri sağlığı'nda;
+          ölçülen en derin hâl şu an <b>ülke × gösterim</b>, dil eşleşmesi olmadan.</div>
+        <button class="fb-act" data-jump="saglik">Konektör durumunu aç</button></div>`
+    : '';
   el('pzLangSub').textContent = !langs.size
     ? 'ASC dil listesi bu uygulama için hiç çekilmedi — eksik olup olmadığı bilinmiyor'
     : !rows.length ? 'henüz ülke bazında ölçüm yok'
@@ -4975,20 +4995,42 @@ function vrSnapCard(metric, rows, prev, hist, titleOf, noteOf){
     if(sa!=null&&sb!=null) return sa-sb;
     return Number(b.value)-Number(a.value);
   });
+  /* ÜÇÜNCÜ DURUM GÖRSEL OLARAK AYRI (panelin değiştirilemez kuralı).
+     "bilinmiyor" kovası diğer kovalarla aynı görünüyordu: aynı mürekkep, aynı
+     ağırlık, sıralamada sayısı büyük olduğu için genelde en üstte. Oysa o bir
+     KOVA DEĞİL, ölçülemeyen satırların artığı — dil/para birimi gibi
+     kırılımlarda kullanıcıların çoğu orada duruyor ve "en büyük grup" gibi
+     okunuyordu. Artık nötr tonda ve adıyla işaretli; kart notu da ölçülen
+     kapsamı yazıyor, çünkü yüzde okunacaksa payda ölçülen kısımdır. */
+  const isUnknown=r=>dimKeys.some(k=>/^(bilinmiyor|unknown|—|-)$/i.test(String((r.dims||{})[k]??'')));
   const body=sorted.map(r=>{
-    const v=Number(r.value), p=prev.get(metric+'@'+vrDimsKey(r.dims));
-    return `<tr>${dimKeys.map(k=>`<td data-l="${esc(k)}">${esc(String((r.dims||{})[k]!=null?(r.dims||{})[k]:'—'))}</td>`).join('')}
-      <td class="num pri" data-l="şimdi">${num(v)}</td>
+    const v=Number(r.value), p=prev.get(metric+'@'+vrDimsKey(r.dims)), unk=isUnknown(r);
+    return `<tr${unk?' style="background:var(--unmeasured-soft)"':''}>${dimKeys.map(k=>{
+      const raw=(r.dims||{})[k];
+      const txt=String(raw!=null?raw:'—');
+      return `<td data-l="${esc(k)}"${unk?' style="color:var(--ink-3)"':''}>${esc(txt)}${unk?' <span style="font-size:11px">· ölçülmedi</span>':''}</td>`;
+    }).join('')}
+      <td class="num pri" data-l="şimdi"${unk?' style="color:var(--ink-3)"':''}>${num(v)}</td>
       <td class="num sec" data-l="önceki">${p==null?'–':num(p)}</td>
       <td class="num sec" data-l="değişim">${vrDelta(v,p==null?null:p)}</td></tr>`;
   }).join('');
+  /* Kapsama: ölçülen / toplam. Yüzde okunacaksa payda ÖLÇÜLEN kısım —
+     "bilinmiyor"u paydaya katmak var olmayan bir çoğunluk uydurur. */
+  const unkSum=sorted.filter(isUnknown).reduce((t,r)=>t+Number(r.value),0);
+  const allSum=sorted.reduce((t,r)=>t+Number(r.value),0);
+  const coverage = (unkSum>0 && allSum>0)
+    ? `<div class="fn-sub" style="margin-top:9px">Bu kırılımda <b>${num(unkSum)}</b> satırda alan
+       <b>ölçülmedi</b>, <b>${num(allSum-unkSum)}</b> satırda ölçüldü — kapsama
+       <b>%${((allSum-unkSum)/allSum*100).toFixed(1).replace('.',',')}</b>.
+       Yüzde okunacaksa payda <b>${num(allSum-unkSum)}</b>, ${num(allSum)} değil.</div>`
+    : '';
   const wide = sorted.length>6 || dimKeys.length>1;
   return `<div class="card ${wide?'c12':'c6'}">
     <div class="card-head"><div><div class="card-title">${esc(titleOf(metric))}</div>
       <div class="card-sub">${esc(noteOf(metric))}</div></div></div>
     <div class="tw tw-cards" style="max-height:340px"><table class="dt dt-cards">
       <thead><tr>${dimKeys.map(k=>`<th>${esc(k)}</th>`).join('')}<th class="num">Şimdi</th><th class="num">Önceki</th><th class="num">Değişim</th></tr></thead>
-      <tbody>${body}</tbody></table></div></div>`;
+      <tbody>${body}</tbody></table></div>${coverage}</div>`;
 }
 function vrDayCard(metric, rows, titleOf, noteOf){
   const val=r=>Number(r.v!=null?r.v:r.value);
@@ -5026,7 +5068,18 @@ function renderVeri(){
   const prev=new Map(prevRows.map(r=>[r.metric+'@'+vrDimsKey(r.dims), Number(r.value)]));
   const daily=(D.catalogDaily||[]).filter(r=>r.slug===APP);
   if(!now.length && !daily.length){
-    host.innerHTML=`<div class="grid"><div class="card c12"><div style="color:var(--ink-3)">Veri yok — backend bu alanları henüz göndermedi ya da app_export henüz koşmadı. Senkron'a bas.</div></div></div>`;
+    host.innerHTML=`<div class="grid"><div class="card c12">
+      <div class="unmeasured">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8.5v.5M12 11.5v4"/></svg>
+        <span><b>Bu katalog boş değil, hiç ölçülmedi.</b> Backend bu alanları henüz göndermedi
+          ya da <code>app_export</code> konektörü hiç koşmadı — ikisi ayrı sebep ve hangisi
+          olduğu konektör durumundan okunur.</span></div>
+      <div class="fb" style="margin-top:10px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8.5v.5M12 11.5v4"/></svg>
+        <div class="fb-body">Konektör son ne zaman koştu, hata verdi mi — Veri sağlığı söylüyor.
+          Elle tetiklemek için başlıktaki <b>Senkron</b>.</div>
+        <button class="fb-act" data-jump="saglik">Konektör durumunu aç</button></div>
+      </div></div>`;
     el('vrNote').textContent='Senkron ile güncellenir.'; return;
   }
   const lastDay=now.map(r=>r.day).sort().pop();
