@@ -3216,28 +3216,29 @@ function bind(){
     })));
   bindViews(); bindAnchors(); buildAnchors(); bindSync(); bindSyncErr();
 
-  /* YENİDEN BOYUTLANDIRMADA YENİDEN ÇİZİM — grafikler SVG ve genişliklerini
-     çizim ANINDA ölçüyor (`W`). Pencere/yön değiştiğinde yeniden çizilmezse
-     eski genişlikte kalıp ya kırpılıyor ya kabın içinde yüzüyor; telefonu
-     yatıra çevirmek tam bu duruma sokuyordu.
+  /* DÜZEN SINIFI DEĞİŞİMİNDE YENİDEN KURULUM.
+     İlk yazdığım hâli her genişlik değişiminde `renderAll()` çağırıyordu,
+     gerekçe "grafikler genişliğini çizim anında ölçüyor" idi. ÖLÇTÜM VE
+     GEREKÇE YANLIŞTI: grafikler sabit `viewBox="0 0 600 230"` ile çiziliyor
+     ve CSS ölçekliyor (kap 624→782 px arasında değişirken viewBox sabit
+     kalıyor), yani yeniden çizime ihtiyaçları YOK. Tema için de gerekmiyor:
+     renkler `var(--…)` olarak SVG özniteliğinde duruyor ve tarayıcı tema
+     değişince kendisi çözüyor (ölçüldü: `stroke="var(--s1)"` computed
+     `rgb(42,120,214)`); JS'te `getPropertyValue` ile okunup gömülen tek bir
+     renk yok — olsaydı tema değişiminde donardı.
 
-     WHY debounce: sürükleyerek yeniden boyutlandırma saniyede onlarca olay
-     üretiyor ve her biri tüm grafikleri yeniden kuruyor — 160ms'lik bekleme
-     sürüklemeyi tek çizime indiriyor.
-     WHY yalnız GENİŞLİK değişince: mobil tarayıcılarda adres çubuğunun
-     kayması `resize`'ı YÜKSEKLİK değişimiyle tetikliyor ve sayfa yalnız
-     kaydırıldığı için her kaydırmada yeniden çizim olurdu.
-     WHY tema için gerekmiyor: renkler `var(--…)` ile SVG özniteliğinde
-     duruyor ve tarayıcı tema değişince kendisi yeniden çözüyor (ölçüldü:
-     `fill="var(--s1)"` computed `rgb(42,120,214)`). JS'te `getPropertyValue`
-     ile okunup gömülen tek bir renk YOK — olsaydı tema değişiminde donardı. */
+     Kalan GERÇEK sebep: 1080px eşiği düzeni komple değiştiriyor (dikey panel
+     ↔ üst sekme şeridi + çıpa şeridi). O eşiği geçerken hangi gezinme
+     yüzeyinin görünür olduğu değişiyor, yani çıpalar yeniden kurulmalı.
+     Yalnız o geçişte, tam yeniden render olmadan. */
   {
-    let t=null, lastW=window.innerWidth;
+    const wide=()=>window.innerWidth>=1080;
+    let lastWide=wide(), t=null;
     window.addEventListener('resize', ()=>{
-      if(window.innerWidth===lastW) return;
-      lastW=window.innerWidth;
+      if(wide()===lastWide) return;
+      lastWide=wide();
       clearTimeout(t);
-      t=setTimeout(()=>{ if(D && D.apps) renderAll(); }, 160);
+      t=setTimeout(buildAnchors, 160);
     });
   }
   /* WHY yalnız dokunmatikte: fareli cihazda tarayıcının kendi tooltip'i
