@@ -984,6 +984,7 @@
           <span class="kpi-name">Dönüşüm<br><span class="card-sub">gösterim → indirme</span></span>
         </div>
         <div class="kpi-val tnum" id="kConv">–</div>
+        <div class="kpi-foot"><span id="kConvD"></span></div>
         <div class="kpi-why" id="kConvWhy"></div>
       </div>
 
@@ -2409,6 +2410,20 @@ function drawKpis(){
   el('kPv').textContent=num(cur.pv);   el('kPvD').innerHTML=dchip(cur.pv,old.pv)+reg('pv');
   el('kDl').textContent=num(cur.dl);   el('kDlD').innerHTML=dchip(cur.dl,old.dl)+reg('dl');
   el('kConv').textContent=(conv||0).toFixed(1)+"%";
+  /* Oran farkı PUAN olarak yazılıyor, yüzde olarak değil: %8'den %11'e çıkış
+     "+%37" değil "+3,0 puan". Yüzdenin yüzdesi burada yanlış okunur.
+     Önceki pencere eksikse diğer kartlarla AYNI sebeple susuyor. */
+  (function(){
+    const oldConv = (old.imp>0) ? old.dl/old.imp*100 : null;
+    const h=el('kConvD'); if(!h) return;
+    if(shortPrev){ h.innerHTML=`<span class="chip flat" title="önceki dönemde yalnız ${prev.length} gün ölçüm var">önceki dönem eksik</span>`; return; }
+    if(oldConv==null || conv==null){ h.innerHTML=`<span class="chip flat">karşılaştırılacak önceki pencere yok</span>`; return; }
+    const d = conv - oldConv;
+    const cls = Math.abs(d)<0.05 ? 'flat' : (d>0 ? 'up' : 'down');
+    const sign = d>0?'+':'';
+    h.innerHTML=`<span class="chip ${cls}">${sign}${d.toFixed(1).replace('.',',')} puan</span>`
+      +`<span class="dsuf">önceki döneme göre (%${oldConv.toFixed(1)})</span>`;
+  })();
 
   /* HER METRİK ÜÇ ŞEY SÖYLER: sayı · ne sağlar · ne kaybettirir (kural 2).
      "Ne sağlar" satırı panelin KENDİ ölçülmüş oranından hesaplanıyor — sabit
