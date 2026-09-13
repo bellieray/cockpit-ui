@@ -3367,7 +3367,11 @@ function asoBars(weeks, rel){
   const rows=[...weeks].reverse();                      /* tabloyla aynı sıra: en yeni üstte */
   const maxImp=Math.max(1,...rows.map(x=>x.imp||0));
   const cvr=x=>(x.imp>0 && x.dl!=null) ? x.dl/x.imp*100 : null;
-  const maxCvr=Math.max(1,...rows.map(x=>cvr(x)||0));
+  /* Hacim çubuğu GÖRELİ (haftalar birbiriyle kıyaslanıyor), oran çubuğu
+     MUTLAK: sabit %20 tavanı — paneldeki dönüşüm göstergesiyle aynı ölçek.
+     Göreli olsaydı en iyi hafta tam dolu görünür ve %6,5 "iyi" diye
+     okunurdu; mutlak ölçekte kısa çubuk gerçekten kısa. */
+  const CVR_FULL=20;
   const relByWeek={};
   rel.forEach(r=>{ const k=asoWkStart(r.day); (relByWeek[k]=relByWeek[k]||[]).push(r); });
   const body=rows.map(x=>{
@@ -3383,18 +3387,14 @@ function asoBars(weeks, rel){
       <div class="brk-track"><div class="brk-fill" style="width:${((x.imp||0)/maxImp*100).toFixed(1)}%;background:var(--s1)"></div></div>
       <div class="brk-top" style="margin:7px 0 7px">
         <span class="dot" style="background:var(--s3)"></span>
-        <span style="color:var(--ink-2)">gösterim→indirme</span>
+        <span style="color:var(--ink-2)">gösterim→indirme</span><span style="color:var(--ink-3);font-size:11.5px">çubuk ölçeği %20 = tam</span>
         <span class="v tnum">${c==null?'<span style="color:var(--ink-3);font-weight:500">oran yok</span>':'%'+c.toFixed(c<10?1:0)}</span>
         <span class="p">${x.dl!=null?num(x.dl)+' ind.':''}</span>
       </div>
-      <div class="brk-track"><div class="brk-fill" style="width:${c==null?0:(c/maxCvr*100).toFixed(1)}%;background:var(--s3)"></div></div>
+      <div class="brk-track"><div class="brk-fill" style="width:${c==null?0:Math.min(c/CVR_FULL*100,100).toFixed(1)}%;background:var(--s3)"></div></div>
     </div>`;
   }).join('');
   return `<div style="margin:2px 0 4px">${body}
-    <div class="legend" style="margin-top:9px">
-      <span><i style="background:var(--s1)"></i>arama gösterimi (hacim)</span>
-      <span><i style="background:var(--s3)"></i>gösterim→indirme (kalite)</span>
-    </div>
     ${rows.length<3?`<div class="fb" style="margin-top:10px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8.5v.5M12 11.5v4"/></svg>
       <div class="fb-body"><b>${rows.length} hafta bir eğilim değil.</b> İki ölçüm arasında yön
