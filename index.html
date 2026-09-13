@@ -506,22 +506,16 @@
   .gauge-foot b{color:var(--ink);font-family:Manrope,sans-serif}
 
   /* === huni === */
-  .funnel{display:flex;align-items:flex-end;gap:12px;height:150px;margin-top:6px}
-  .fstage{flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%}
-  .fbars{display:flex;align-items:flex-end;gap:2px;height:100%}
-  .fbars i{flex:1;border-radius:3px;background:var(--line);display:block}
-  .fbars i.on{background:var(--s3)}
-  .fpct{font-family:Manrope,sans-serif;font-weight:700;font-size:15px;margin-bottom:6px}
-  .fname{font-size:11.5px;color:var(--ink-3);margin-top:9px}
-  .fval{font-size:13px;font-weight:600}
+  /* Zincir DİKEY ve içeriği kadar uzun: eski hâli yatay flex + sabit 150px'ti
+     (12 mini çubuk grubu). Sabit yükseklik, kayıp satırları eklenince içeriği
+     kırpardı. */
+  .funnel{display:block;margin-top:2px}
+  /* .fstage/.fbars/.fpct/.fname/.fval kaldırıldı: huni yatay çubuk grubundan
+     dikey zincire geçti ve artık .fn-* primitiflerini kullanıyor (bkz.
+     stageHtml ve DURUM PRİMİTİFLERİ bloğu). */
   /* === mağaza/ürün ayracı === huniye eklenen 4-5. adımlar (App Export'tan,
      ülkesiz/farklı pencere) mağaza adımlarından (ASC, ülke bazlı) ayrı bir
      kaynak — bkz. docs/backlog.md round 5/6, B2 "dikiş" notu. */
-  .fdiv{flex:none;width:1px;align-self:stretch;background:var(--hair);position:relative;margin:0 2px}
-  /* CAPS kaldırıldı (Türkçe i→I) ve 9px → 11px: 11px altı işlevsel metin yasak */
-  .fdiv span{position:absolute;top:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;
-    font-size:11px;font-weight:700;color:var(--ink-2)}
-  .fbars.product i.on{background:var(--s4)}
   .funnel-note{font-size:11px;color:var(--ink-3);margin-top:10px}
 
   /* === segmentli çubuk === */
@@ -955,6 +949,7 @@
         </div>
         <div class="kpi-val tnum" id="kImp">–</div>
         <div class="kpi-foot"><span id="kImpD"></span></div>
+        <div class="kpi-why" id="kImpWhy"></div>
       </div>
 
       <div class="card c3" data-store-only>
@@ -966,6 +961,7 @@
         </div>
         <div class="kpi-val tnum" id="kPv">–</div>
         <div class="kpi-foot"><span id="kPvD"></span></div>
+        <div class="kpi-why" id="kPvWhy"></div>
       </div>
 
       <div class="card c3" data-store-only>
@@ -977,6 +973,7 @@
         </div>
         <div class="kpi-val tnum" id="kDl">–</div>
         <div class="kpi-foot"><span id="kDlD"></span></div>
+        <div class="kpi-why" id="kDlWhy"></div>
       </div>
 
       <div class="card c3" data-store-only>
@@ -987,6 +984,7 @@
           <span class="kpi-name">Dönüşüm<br><span class="card-sub">gösterim → indirme</span></span>
         </div>
         <div class="kpi-val tnum" id="kConv">–</div>
+        <div class="kpi-why" id="kConvWhy"></div>
       </div>
 
       <!-- büyük grafik -->
@@ -1036,7 +1034,9 @@
         </div>
         <div class="funnel" id="funnel"></div>
         <div class="gauge-foot"><span>En büyük kayıp: <b id="funnelWorst">gösterim → sayfa</b></span></div>
-        <div class="funnel-note">Son iki adım (Yeni kullanıcı, Aktif hane) farklı kaynaktan (kendi backend'imiz, ülkesiz) — mağaza adımlarıyla birebir kohort eşleşmesi değildir.</div>
+        <!-- Kaynak dikişi artık zincirin İÇİNDE, tam kırıldığı yerde yazıyor
+             (bkz. stageHtml çağrısı). Buradaki tekrar kaldırıldı: aynı uyarıyı
+             iki yerde yazmak, biri güncellenmediğinde çelişki üretir. -->
       </div>
 
       <!-- kaynak segment -->
@@ -2409,6 +2409,53 @@ function drawKpis(){
   el('kPv').textContent=num(cur.pv);   el('kPvD').innerHTML=dchip(cur.pv,old.pv)+reg('pv');
   el('kDl').textContent=num(cur.dl);   el('kDlD').innerHTML=dchip(cur.dl,old.dl)+reg('dl');
   el('kConv').textContent=(conv||0).toFixed(1)+"%";
+
+  /* HER METRİK ÜÇ ŞEY SÖYLER: sayı · ne sağlar · ne kaybettirir (kural 2).
+     "Ne sağlar" satırı panelin KENDİ ölçülmüş oranından hesaplanıyor — sabit
+     bir cümle yazmak, oran değiştiğinde sessizce yanlış bir iddiaya dönerdi.
+     Sayı yoksa satır da "ölçülmedi" diyor; 0 varsaymıyor. */
+  (function renderWhy(){
+    const pc=(a,b)=> (b>0 && a!=null) ? (a/b*100) : null;
+    const p1=v=> v==null ? null : v.toFixed(1).replace('.',',');
+    const per100 = pc(cur.dl, cur.imp);          /* 100 gösterim ≈ kaç indirme */
+    const tapRate = pc(cur.pv, cur.imp);
+    const pvToDl  = pc(cur.dl, cur.pv);
+    /* Kurulum başına reklam geliri: iki ucu da ÖLÇÜLEN aynı pencereden.
+       Biri yoksa oran basılmıyor — uydurma bir birim maliyet üretmemek için. */
+    /* Reklam geliri AYNI pencereden, AYNI toplayıcıyla: farklı pencereden
+       iki sayıyı bölmek uydurma bir birim maliyet üretirdi (kural 7). */
+    const adRevWin = sumMetric(days,'rev');
+    const perDl = (adRevWin!=null && adRevWin>0 && cur.dl>0) ? adRevWin/cur.dl : null;
+    const why=(id,gain,loss)=>{
+      const h=el(id); if(!h) return;
+      h.innerHTML = `<div class="gain"><b>SAĞLAR</b><span>${gain}</span></div>`
+                  + `<div class="loss"><b>KAYBETTİRİR</b><span>${loss}</span></div>`;
+    };
+    why('kImpWhy',
+      per100==null
+        ? 'Huninin girişi. Dönüşüm bu pencerede <em>ölçülmedi</em>, yani 100 gösterimin kaç indirmeye döndüğü <em>bilinmiyor</em> — sıfır değil.'
+        : `Huninin girişi. Bu pencerede ölçülen dönüşümle <em>100 gösterim ≈ ${Math.round(per100)} indirme</em>.`,
+      cur.imp
+        ? `Yanlış niyetten gelen gösterim dönüşmez ve ASO kararını yanıltır: gösterim artarken oran düşüyorsa yeni trafik <em>alakasız</em>.`
+        : 'Gösterim bu kaynakta <em>ölçülmüyor</em> — sıfır değil, sayı yok.');
+    why('kPvWhy',
+      tapRate==null
+        ? 'Sayfayı açanlar. Bu pencerede <em>ölçülmedi</em>.'
+        : `İkon, başlık ve ilk ekran görüntüsünün tek ölçülebilir sonucu: gösterimin <em>${p1(tapRate)}%</em>'i sayfayı açıyor.`,
+      pvToDl==null
+        ? 'Sayfa görüntüleme HER kaynaktan sayılıyor, dokunma yalnız mağaza aramasından — <em>ikisi aynı huniye dizilemez</em>.'
+        : `Sayfayı açan ${p1(pvToDl)}%'i indiriyor. Bu oran düşerse sayfa <em>söz veriyor ürün tutmuyor</em> — düzeltme ekran görüntülerinde, trafikte değil.`);
+    why('kDlWhy',
+      perDl!=null
+        ? `Tek gerçek büyüme sayısı ve tek gelir kaldıracı: aynı pencerede ölçülen <em>indirme başına ${money2(perDl)}</em> reklam geliri.`
+        : 'Tek gerçek büyüme sayısı. Aynı pencerede reklam geliri <em>ölçülmedi</em>, o yüzden indirme başına gelir <em>hesaplanmıyor</em> — tahmin basmak yerine boş bırakılıyor.',
+      'İndirme duruyorsa gelir de duruyor. Abonelik tarafı bugün tek haneli, yani reklam dışında <em>ikinci bir ayak yok</em>.');
+    why('kConvWhy',
+      conv
+        ? 'Metadata değişikliğinin <em>izole okunabilir</em> tek sonucu: Apple metin için A/B testi vermediği için bu oran testin yerine geçiyor.'
+        : 'Dönüşüm bu pencerede <em>ölçülmedi</em> — iki ucundan biri (gösterim ya da indirme) yok.',
+      'Gösterim artarken oran düşüyorsa büyüme gibi görünen bir <em>kayıp</em> var: daha çok kişi görüyor, aynı kişi indiriyor.');
+  })();
   el('gaugeVal').textContent=(conv||0).toFixed(1)+"%";
   el('gaugeLb').textContent=`${num(cur.imp)} gösterim → ${num(cur.dl)} indirme`;
   const arc=258, filled=Math.max(0,Math.min(1,conv/20));   /* %20 = tam yay */
@@ -2427,22 +2474,35 @@ function drawKpis(){
                ["İndirme",cur.dl,cur.imp?cur.dl/cur.imp*100:0]];
   const productSteps=[["Yeni kullanıcı",newUsers,cur.imp&&newUsers!=null?newUsers/cur.imp*100:0,nuLabel],
                ["Aktif hane",activeHh,cur.imp&&activeHh!=null?activeHh/cur.imp*100:0,'güncel toplam']];
-  const stageHtml=(nm,v,p,sub,cls)=>{
-    // İKİ KORUMA, tek sebep: ürün adımlarının paydası (cur.imp) SEÇİLİ ARALIK
-    // gösterimi, payı (aktif hane) ise KÜMÜLATİF toplam. RANGE=1'de oran
-    // rahatlıkla %100'ü aşıyor. Kırpılmamış hâlinde çubuk sayısı 12'yi geçip
-    // hepsi doluyor ve ekranda "%450" gibi bir huni adımı çıkıyordu.
-    //   · çubuk: 12'de kırp (görsel taşma).
-    //   · yüzde: 100'ü aşınca yüzdeyi HİÇ yazma — o sayı bir dönüşüm oranı
-    //     değil, iki farklı pencerenin bölümü. Adet zaten altta duruyor.
+  /* HUNİ ZİNCİR OLARAK ÇİZİLİYOR (kural 10): aşama aşama, mutlak sayı ·
+     girişin yüzdesi · bir önceki adımın yüzdesi · ve KAÇ KİŞİNİN GEÇMEDİĞİ
+     kendi satırında, kırmızı. Eski hâli 12 mini çubuktan oluşan yatay bir
+     gruptu: oranı gösteriyordu ama KAYBI hiç söylemiyordu, oysa aksiyon
+     kaybın nerede olduğundan çıkıyor.
+
+     İKİ KORUMA KORUNDU, tek sebep: ürün adımlarının paydası (cur.imp) SEÇİLİ
+     ARALIK gösterimi, payı (aktif hane) ise KÜMÜLATİF toplam. RANGE=1'de oran
+     rahatlıkla %100'ü aşıyor.
+       · çubuk genişliği %100'de kırpılıyor (görsel taşma),
+       · yüzde 100'ü aşınca HİÇ yazılmıyor — o sayı bir dönüşüm oranı değil,
+         iki farklı pencerenin bölümü. Adet zaten satırda duruyor. */
+  const stageHtml=(nm,v,p,sub,cls,drop)=>{
     const pct=(p==null||!isFinite(p))?null:p;
-    const on=Math.min(12, Math.max(1, Math.round((pct||0)/100*12)));
-    const bars=Array.from({length:12},(_,i)=>`<i class="${i<on?'on':''}" style="height:${20+i*6}%"></i>`).join("");
-    const head = v==null ? '–'
-      : (pct==null||pct>100) ? '<span style="font-size:11px;color:var(--ink-3)">oran yok</span>'
-      : pct.toFixed(pct<10?1:0)+'%';
-    return `<div class="fstage"><div class="fpct">${head}</div><div class="fbars ${cls||''}">${bars}</div>
-      <div class="fname">${nm}${sub?` <span style="opacity:.6">· ${sub}</span>`:''}</div><div class="fval tnum">${num(v)}</div></div>`;
+    const w = pct==null ? 0 : Math.max(Math.min(pct,100), 1.5);
+    const col = cls==='product' ? 'var(--s4)' : 'var(--s1)';
+    const head = (pct==null||pct>100)
+      ? `<span class="fn-pct">oran yok</span>`
+      : `<span class="fn-pct">${pct.toFixed(pct<10?1:0)}% girişin</span>`;
+    return `<div class="fn-stage">
+      <div class="fn-top"><span class="fn-name">${nm}</span>
+        <span class="fn-val">${v==null?'<span style="font-size:14px;color:var(--ink-3)">ölçülmüyor</span>':num(v)}</span>
+        ${head}</div>
+      <div class="fn-bar"><i style="width:${w}%;background:${col}"></i></div>
+      ${sub?`<div class="fn-sub">${sub}</div>`:''}
+      ${drop?`<div class="fn-drop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+        <span>${drop}</span></div>`:''}
+    </div>`;
   };
   // ARDIŞIK kayıp: her adım şu an GÖSTERİME oranlanıyor ("indirme = gösterimin
   // %6.4'ü"). Asıl aksiyon sorusu ise bir önceki adımdan ne kadarının düştüğü
@@ -2450,15 +2510,39 @@ function drawKpis(){
   // yönlendiriyor. İki oran birlikte durunca hangi adımın kanadığı görünüyor.
   // YALNIZ mağaza zincirinde: ürün adımları farklı kaynak/pencere, aralarındaki
   // fark gerçek bir kayıp değil (aynı gerekçe "en büyük kayıp"ta da geçerli).
+  /* Her adım İKİ oranı birlikte taşıyor: girişin yüzdesi (yukarıda, pill) ve
+     bir önceki adımın yüzdesi (altta). İkisi birlikte durunca hangi adımın
+     kanadığı görünüyor — "indirme gösterimin %6'sı" ile "sayfaya gelenin
+     %80'i indirmiyor" farklı cümleler ve farklı işe yönlendiriyor.
+     KAYIP kendi satırında: kaç kişinin o adımı geçmediği ve girişin yüzde
+     kaçının orada kaybolduğu. YALNIZ mağaza zincirinde — ürün adımları farklı
+     kaynak/pencere, aralarındaki fark gerçek bir kayıp değil. */
+  const firstV = storeSteps[0] && storeSteps[0][1];
   const withDrop=storeSteps.map(([nm,v,p],i)=>{
-    if(i===0) return [nm,v,p,null];
-    const prevV=storeSteps[i-1][1];
-    const keep=(prevV&&v!=null)?v/prevV*100:null;
-    return [nm,v,p, keep==null?null:`önceki adımdan %${keep.toFixed(keep<10?1:0)}`];
+    const prevV = i>0 ? storeSteps[i-1][1] : null;
+    const keep  = (prevV && v!=null) ? v/prevV*100 : null;
+    const sub   = keep==null ? null : `bir önceki adımın <b>%${keep.toFixed(keep<10?1:0)}</b>'u`;
+    const nx    = storeSteps[i+1];
+    let drop=null;
+    if(nx && v!=null && nx[1]!=null && v>nx[1]){
+      const lost=v-nx[1];
+      const ofFirst = firstV ? ` — girişin <b>%${(lost/firstV*100).toFixed(lost/firstV*100<10?1:0)}</b>'u burada kayboluyor` : '';
+      drop=`<b>${num(lost)}</b> kişi bu adımı geçmedi${ofFirst}.`;
+    }
+    return [nm,v,p,sub,drop];
   });
   el('funnel').innerHTML =
-    withDrop.map(([nm,v,p,sub])=>stageHtml(nm,v,p,sub)).join("") +
-    `<div class="fdiv"><span>mağaza · ürün</span></div>` +
+    withDrop.map(([nm,v,p,sub,drop])=>stageHtml(nm,v,p,sub,null,drop)).join("") +
+    /* Kaynak dikişi: zinciri BÖLEN bir ayraç, çünkü buradan sonrası aynı
+       huninin devamı DEĞİL — farklı kaynak, farklı pencere, ülkesiz. Eskiden
+       ince bir dikey çizgiydi ve dikey zincirde hiçbir şey söylemiyordu. */
+    `<div class="fb" style="margin:6px 0">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8.5v.5M12 11.5v4"/></svg>
+      <div class="fb-body"><b>Buradan sonrası aynı huninin devamı değil.</b>
+        Üstteki adımlar mağazadan (ASC, ülke bazlı, seçili aralık), alttakiler
+        <b>kendi backend'imizden</b> (ülkesiz, kendi anlık penceresi). Aradaki
+        fark bir kayıp olarak okunamaz; o yüzden kayıp satırı yalnız mağaza
+        zincirinde var.</div></div>` +
     productSteps.map(([nm,v,p,sub])=>stageHtml(nm,v,p,sub,'product')).join("");
   // En büyük kayıp — YALNIZ mağaza zinciri.
   //
