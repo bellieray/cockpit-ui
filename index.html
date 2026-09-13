@@ -2620,7 +2620,7 @@ function drawSrc(){
      yokluğu eksik veri değil — ama iki oranı aynı kolona koymak kapsam
      karıştırmaktı. */
   const crImp=r=>r.imp?r.dl/r.imp:null;   /* gösterim→indirme */
-  const crPv =r=>r.pv ?r.dl/r.pv :null;   /* sayfa→indirme */
+  const crPv =r=>r.pv ?r.dl/r.pv :null;   /* sayfa→indirme; payda 0 ise oran YOK */
   const srt = s==='crImp'?crImp : s==='crPv'?crPv : null;
   rows.sort((a,b)=> srt ? ((srt(b)??-1)-(srt(a)??-1)) : ((b[s]||0)-(a[s]||0)));
   const key=(s==='crImp'||s==='crPv')?'dl':s, tot=rows.reduce((t,r)=>t+(r[key]||0),0)||1;
@@ -2635,10 +2635,16 @@ function drawSrc(){
     `<thead><tr><th>Kaynak</th><th>Göst.</th><th>Sayfa</th><th>İnd.</th>
       <th title="gösterim → indirme; gösterim yalnız arama ve gezinmede sayılıyor">Gst→İnd %</th>
       <th title="sayfa görüntüleme → indirme; her kaynakta ölçülüyor">Sayfa→İnd %</th></tr></thead><tbody>`+
+    /* SIFIR ÖLÇÜLMÜŞ BİR DEĞERDİR: sayfa ve indirme sütunlarında 0 artık "0"
+       yazıyor. Eskiden "–" basılıyordu ve aynı satırın oran sütunu "0.0"
+       diyordu — iki sütun birbiriyle çelişiyordu ("indirme yok" ama "oran 0").
+       "28 gösterim, 14 sayfa, 0 indirme" bir BULGU; tire onu gizliyordu.
+       Gösterim sütunu ayrı: Apple yönlendirme kaynaklarında gösterimi HİÇ
+       saymıyor, o yüzden orada 0 gerçekten "ölçülmüyor" demek. */
     rows.map(r=>`<tr><td>${esc(r.name)}</td>
-      <td class="num">${r.imp?num(r.imp):"–"}</td>
-      <td class="num">${r.pv?num(r.pv):"–"}</td>
-      <td class="num">${r.dl?num(r.dl):"–"}</td>
+      <td class="num">${r.imp?num(r.imp):'<span style="color:var(--ink-3)">ölçülmüyor</span>'}</td>
+      <td class="num">${num(r.pv||0)}</td>
+      <td class="num">${num(r.dl||0)}</td>
       <td class="num">${p1(crImp(r))}</td>
       <td class="num">${p1(crPv(r))}</td></tr>`).join("")+
     `</tbody><tfoot><tr><td>Toplam</td><td class="num">${num(T.imp)}</td><td class="num">${num(T.pv)}</td>
