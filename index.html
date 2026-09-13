@@ -1666,7 +1666,7 @@
           <div class="card-head"><div><div class="card-title">Yıldız dağılımı</div>
             <div class="card-sub" id="yDistSub">–</div></div>
             <select id="yDistWho" style="font:inherit;font-size:12.5px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
-              <option value="">Biz + rakip</option><option value="self">Yalnız biz</option><option value="rival">Yalnız rakip</option></select>
+              <option value="self" selected>Yalnız biz</option><option value="rival">Yalnız rakip</option><option value="">Biz + rakip</option></select>
           </div>
           <div id="yDist"></div>
         </div>
@@ -1675,7 +1675,7 @@
           <div class="card-head"><div><div class="card-title">Tüm yorumlar</div>
             <div class="card-sub" id="yMeta">–</div></div></div>
           <div class="filters">
-            <select id="yWho"><option value="">Biz + rakip</option><option value="self">Yalnız biz</option><option value="rival">Yalnız rakip</option></select>
+            <select id="yWho"><option value="self" selected>Yalnız biz</option><option value="rival">Yalnız rakip</option><option value="">Biz + rakip</option></select>
             <select id="ySrc"><option value="">Tüm uygulamalar</option></select>
             <select id="yStar"><option value="">Tüm puanlar</option><option value="5">5 yıldız</option><option value="4">4</option>
               <option value="3">3</option><option value="2">2</option><option value="1">1</option><option value="low">1–2 (şikâyet)</option></select>
@@ -5010,7 +5010,16 @@ function drawYDist(){
       <span class="v">${num(v)}</span><span class="p">${total?Math.round(v/total*100):0}%</span></div>
       <div class="brk-track"><div class="brk-fill" style="width:${v/max*100}%;background:${col}"></div></div></div>`;
   }).join("");
-  el('yDistSub').textContent = total ? `${num(total)} yorum · toplanan tüm geçmiş` : 'yorum yok';
+  /* Alt satır KİMİN dağılımı olduğunu ADIYLA söylüyor. Eskiden yalnız
+     "368 yorum · toplanan tüm geçmiş" yazıyordu; o 368, 6 bizim + 362 rakip
+     yorumunun KARIŞIMIydı ve hemen üstündeki "Bizim puanımız 5,00 · 6 oy"
+     kartının yanında bizim dağılımımız sanılıyordu (%26'sı 1 yıldız).
+     Varsayılan da "Yalnız biz"e çekildi; karışım hâlâ seçilebilir ama
+     seçildiğinde ne olduğu yazıyor. */
+  const scope = who==='self' ? 'yalnız bizim yorumlarımız'
+              : who==='rival' ? 'yalnız rakip yorumları — okunacak malzeme, bizim puanımız değil'
+              : 'BİZ + RAKİP karışık: bu dağılım bizim mağaza puanımız DEĞİL';
+  el('yDistSub').textContent = total ? `${num(total)} yorum · ${scope} · toplanan tüm geçmiş` : 'yorum yok';
 }
 function drawYList(){
   const all=reviewsFor();
