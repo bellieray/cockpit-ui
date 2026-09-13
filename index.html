@@ -1517,6 +1517,7 @@
             <span class="kpi-name">Reklam geliri<br><span class="card-sub" id="paRevSub">seçili aralık</span></span>
           </div>
           <div class="kpi-val tnum" id="paRev">–</div>
+          <div class="kpi-why" id="paRevWhy"></div>
         </div>
         <div class="card c3">
           <div class="kpi-top">
@@ -1526,6 +1527,7 @@
             <span class="kpi-name">Gösterim<br><span class="card-sub">gerçekten ekrana gelen</span></span>
           </div>
           <div class="kpi-val tnum" id="paImp">–</div>
+          <div class="kpi-why" id="paImpWhy"></div>
         </div>
         <div class="card c3">
           <div class="kpi-top">
@@ -1535,6 +1537,7 @@
             <span class="kpi-name">eCPM<br><span class="card-sub">bin gösterim başına</span></span>
           </div>
           <div class="kpi-val tnum" id="paRpm">–</div>
+          <div class="kpi-why" id="paRpmWhy"></div>
         </div>
         <!-- WHY bu kart: eşleşmiş ama gösterilmemiş istek = AdMob'un DOLU
              gönderdiği, bizim ekrana basmadığımız envanter. Para bırakılan tek
@@ -1549,6 +1552,7 @@
             <span class="kpi-name">Kaçan gösterim<br><span class="card-sub" id="paMissSub">dolu geldi, basılmadı</span></span>
           </div>
           <div class="kpi-val tnum" id="paMiss">–</div>
+          <div class="kpi-why" id="paMissWhy"></div>
         </div>
 
         <!-- Gelir zaman çizgisi. NEDEN kümülatif de var: günlük çubuklar
@@ -4516,6 +4520,50 @@ function renderPara(){
   el('paImp').textContent=num(tot.imp);
   el('paRpm').textContent=tot.rpm==null?'–':money2(tot.rpm);
   el('paMiss').textContent=num(tot.missed);
+
+  /* HER METRİK ÜÇ ŞEY SÖYLER (kural 2) — satırlar panelin KENDİ ölçülmüş
+     oranından hesaplanıyor, sabit metinden değil. Bir uç ölçülmemişse o satır
+     "ölçülmedi" diyor ve oran hiç basılmıyor. */
+  (function paraWhy(){
+    const pc=(a,b)=> (b>0 && a!=null) ? (a/b*100) : null;
+    const p1=v=> v==null?null:v.toFixed(1).replace('.',',');
+    const users = stockValue('app_export_total_users');
+    const subs  = stockValue('app_export_active_subscribers');
+    const perUser = (tot.earn!=null && users>0) ? tot.earn/users : null;
+    const wasteRate = pc(tot.missed, tot.matched);
+    const ctr = pc(tot.clicks, tot.imp);
+    const why=(id,gain,loss)=>{ const h=el(id); if(!h) return;
+      h.innerHTML = `<div class="gain"><b>SAĞLAR</b><span>${gain}</span></div>`
+                  + `<div class="loss"><b>KAYBETTİRİR</b><span>${loss}</span></div>`; };
+
+    why('paRevWhy',
+      perUser!=null
+        ? `Bugün çalışan tek gelir ayağı. Aynı pencerede ölçülen <em>kullanıcı başına ${moneyCents(perUser)}</em>; kurulum arttıkça doğrusal büyüyor.`
+        : 'Bugün çalışan tek gelir ayağı. Kullanıcı sayısı bu pencerede <em>ölçülmedi</em>, o yüzden kullanıcı başına gelir <em>hesaplanmıyor</em>.',
+      subs>0
+        ? `Tek ayak olması riskin kendisi: abonelik tarafında <em>${num(subs)} aktif abone</em> var, yani reklam doldurmazsa yerine geçecek bir şey yok.`
+        : 'Tek ayak olması riskin kendisi: abonelik geliri <em>yok</em>, reklam doldurmazsa gelir sıfıra iner.');
+
+    why('paImpWhy',
+      ctr!=null
+        ? `Kazancın paydası. Ölçülen tıklama oranı <em>%${p1(ctr)}</em>; gösterim arttıkça kazanç aynı oranla artıyor.`
+        : 'Kazancın paydası: reklam ekranda sayıldıysa para kazanıyor.',
+      wasteRate!=null
+        ? `Gösterim, isteğin yalnız <em>%${p1(100-wasteRate)}</em>'i. Kalanı ağ ve pil yakıyor, karşılığında gösterim gelmiyor.`
+        : 'Gösterilmeyen reklam gelir getirmez; istekle gösterim arasındaki fark <em>ölçülmedi</em>.');
+
+    why('paRpmWhy',
+      tot.rpm!=null
+        ? 'Formatları <em>aynı ölçekte</em> kıyaslatan tek sayı: bir formatın değeri isteğinden değil, bin gösterimde kazandırdığından belli olur.'
+        : 'Bin gösterim başına kazanç bu pencerede <em>ölçülmedi</em> — gösterim ya da kazanç uçlarından biri yok.',
+      'Bu sayı düşerse toplam kazanç sabit görünse bile <em>her gösterim ucuzluyor</em> demektir; hacimle maskelenir.');
+
+    why('paMissWhy',
+      'Nerede para bırakıldığını <em>format format</em> gösteriyor ve düzeltme kodda tek yerde. Native reklamın iki ay boyunca 0 gösterim vermesi tam olarak bu sayı görünmediği için fark edilmedi.',
+      wasteRate!=null
+        ? `Dolu gelen isteğin <em>%${p1(wasteRate)}</em>'i basılmadan atılıyor. Bedeli parayla değil ADETLE yazılıyor: gösterdiğinden kat kat fazla istemek AdMob'un eşleşme oranını kısar ve geçersiz-trafik incelemesine yol açar.`
+        : 'Kaçan gösterim <em>ölçülmedi</em> — eşleşme ya da gösterim ucundan biri yok.');
+  })();
   // Buradaki alt satır eskiden bir "en az ~$X" para tahmini yazıyordu; kaldırıldı
   // (gerekçe adAgg'in üstündeki uzun notta). Ayrımı yapan tek şey show rate'in
   // SIFIR olup olmaması: sıfırsa reklam çiziliyor ama sayılmıyor (gerçek kayıp),
