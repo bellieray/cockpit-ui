@@ -346,7 +346,7 @@
   .chip{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill);white-space:nowrap}
   /* Δ açıklaması: masaüstünde çipin yanında, mobilde gizli — dar kartta
      "önceki döneme göre" çipin kendisinden çok yer kaplıyordu. */
-  .dsuf{color:var(--ink-3)}
+  .dsuf{color:var(--ink-3);margin-left:6px}
   @media (max-width:679.98px){.dsuf{display:none}}
   .chip.up{background:var(--up-soft);color:var(--up)}
   .chip.down{background:var(--down-soft);color:var(--down)}
@@ -2422,7 +2422,7 @@ function drawKpis(){
     const cls = Math.abs(d)<0.05 ? 'flat' : (d>0 ? 'up' : 'down');
     const sign = d>0?'+':'';
     h.innerHTML=`<span class="chip ${cls}">${sign}${d.toFixed(1).replace('.',',')} puan</span>`
-      +`<span class="dsuf">önceki döneme göre (%${oldConv.toFixed(1)})</span>`;
+      +`<span class="dsuf">önceki döneme göre (%${oldConv.toFixed(1).replace('.',',')})</span>`;
   })();
 
   /* HER METRİK ÜÇ ŞEY SÖYLER: sayı · ne sağlar · ne kaybettirir (kural 2).
