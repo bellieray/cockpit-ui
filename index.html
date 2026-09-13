@@ -13,8 +13,8 @@
      script-src 'self' dış bir kaynaktan kod yüklenmesini engelliyor.
      Fontlar için googleapis (stil) + gstatic (dosya) ayrı ayrı gerekiyor. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://hcjhvrhgbziyemhnfejy.supabase.co; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
-<meta name="theme-color" content="#e8eaed" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#101416" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#EDEBE4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1210" media="(prefers-color-scheme: dark)">
 <title>App Cockpit</title>
 <!-- Fontlar `<style>` içindeki `@import` ile geliyordu: tarayıcı önce CSS'i
      indirip AYRIŞTIRMAK zorunda, ancak sonra font isteğini başlatıyor —
@@ -23,48 +23,111 @@
      oradan geliyor) ve crossorigin şart, yoksa bağlantı yeniden kurulur. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
 <style>
 
+  /* ══ GÖRSEL DİL — onaylı mockup: docs/design-refs/mockup-01-yeni-dil.html ══
+     Kararlar ve gerekçeleri: docs/redesign-plan.md.
+     Token ADLARI korundu (137 kullanım yeniden yazılmadı), DEĞERLER geçti.
+     Rol ayrımı kritik: bir renk ya METİN taşır ya MARK boyar, ikisi birden
+     değil. Grafik serileri (--s1..--s5) canlı adımda kalıyor ve asla metin
+     taşımıyor; metin taşıyan her kararın ayrı bir mürekkep adımı var
+     (--up/--down/--amber/--pink/--brand ve --s1-ink). Bu ayrım ölçülerek
+     öğrenildi: #1BAF7A beyaz üstünde 2,36:1 veriyor. */
   :root{
-    --page:#e8eaed; --app:#ffffff; --canvas:#f6f7f9; --card:#ffffff;
-    /* --ink-3 #98a1a9 idi: beyaz kart üstünde 2.62:1 — WCAG AA küçük metin
-       için 4.5 istiyor ve bu renk TÜM 11-12px card-sub metinlerinde, yani
-       panelin bağlam taşıyan yazılarının tamamında. #6f787f tam 4.50:1
-       veriyor ve görsel dili (soğuk gri) bozmuyor. Koyu temada da aynı
-       düzeltme: #6d767c koyu kart üstünde 3.7:1 idi. */
-    --ink:#101418; --ink-2:#5b636b; --ink-3:#6f787f; --line:#eceef1;
-    --brand:#0f9e86; --brand-soft:#e2f4f0;
-    --violet:#6165d7; --violet-soft:#ecedfb;
-    --amber:#e0a02a; --amber-soft:#fdf1dc;
-    --pink:#e0568c; --pink-soft:#fce7ef;
-    --up:#17a05e; --up-soft:#e3f6ec; --down:#d6483b; --down-soft:#fdeae8;
-    --sh-card:0 1px 2px rgba(16,20,24,.04), 0 8px 20px -14px rgba(16,20,24,.35);
-    --sh-app:0 30px 80px -30px rgba(16,20,24,.30);
-    --r-app:30px; --r-card:20px; --r-pill:999px; --gap:18px;
+    /* zemin/yüzey */
+    --page:#EDEBE4; --app:#F4F3EF; --canvas:#F4F3EF; --card:#FFFFFF;
+    --card-2:#FAF9F5; --ground:#F4F3EF; --hair:#E7E4DC; --line:#E7E4DC;
+    /* koyu marka paneli — navigasyon ve vurgu kartı */
+    --panel:#0F3D2E; --panel-2:#17543D; --panel-ink:#E6EFE9; --panel-ink-2:#A9C8B8;
+    --dark-card:#0F3D2E; --dark-ink:#EAF2EC; --dark-ink-2:#9CBCAC;
+    /* mürekkep — üçü de beyaz üstünde ≥4,5:1 */
+    --ink:#14120E; --ink-2:#57544C; --ink-3:#706C5C;
+    /* VURGU İKİ ROL: dolu buton zemini ile zemin üstü metin koyu temada ZIT
+       yöne gidiyor; tek token'a binerse biri kırılıyor (beyaz metin parlak
+       coral üstünde 3,2:1 ölçüldü). --brand metin+zemin güvenli orta adım. */
+    --accent:#EB6834; --accent-soft:#FDEDE6;
+    --accent-btn-bg:#B84A1E; --accent-btn-ink:#FFFFFF; --accent-text:#B84A1E;
+    --brand:#B84A1E; --brand-soft:#FDEDE6;
+    /* grafik serileri — dataviz doğrulanmış sırası (CVD ΔE ≥8), YALNIZ mark */
+    --s1:#2A78D6; --s2:#EB6834; --s3:#1BAF7A; --s4:#EDA100; --s5:#E87BA4;
+    --s1-ink:#1B5CA8;
+    /* seri hue'larının metin karşılıkları — eski adlar bu role bağlandı */
+    --violet:#1B5CA8; --violet-soft:#E4EEFA;
+    --amber:#8A5C00;  --amber-soft:#FDF1D8;
+    --pink:#A2431F;   --pink-soft:#FBE9E2;
+    /* yön/durum — seri renklerinden AYRI, asla "6. seri" değil */
+    --up:#076B07; --up-soft:#E3F5E3; --down:#A02020; --down-soft:#FAE4E4;
+    --ok:#0CA30C; --ok-soft:#E3F5E3; --ok-ink:#076B07;
+    --warn:#FAB219; --warn-soft:#FDF1D8; --warn-ink:#8A5C00;
+    --serious:#EC835A; --serious-soft:#FBE9E2; --serious-ink:#A2431F;
+    --crit:#D03B3B; --crit-soft:#FAE4E4; --crit-ink:#A02020;
+    /* üçüncü durum: ölçülmedi — ne yeşil ne kırmızı */
+    --unmeasured-soft:#EDEBE4;
+    /* gölge: kıl payı kenarlık yerine yükseklik */
+    --sh-card:0 1px 2px rgba(20,18,14,.04), 0 10px 24px -16px rgba(20,18,14,.30);
+    --sh-app:0 30px 80px -30px rgba(20,18,14,.22);
+    --shadow-sm:0 1px 2px rgba(20,18,14,.05);
+    --shadow:var(--sh-card);
+    --shadow-lift:0 2px 6px rgba(20,18,14,.07), 0 18px 40px -20px rgba(20,18,14,.38);
+    --r-app:22px; --r-card:16px; --r-inner:12px; --r-pill:999px; --gap:18px;
   }
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-    --page:#0a0c0d; --app:#14181a; --canvas:#101416; --card:#181d1f;
-    --ink:#eef1f2; --ink-2:#a3acb1; --ink-3:#8b949a; --line:#232a2d;
-    --brand:#38cdb0; --brand-soft:#12332d; --violet:#8c8ff0; --violet-soft:#1e2040;
-    --amber:#e6b455; --amber-soft:#332714; --pink:#ef7ba9; --pink-soft:#361a25;
-    --up:#3fc47f; --up-soft:#12321f; --down:#ff7a68; --down-soft:#361a17;
+    --page:#0F1210; --app:#151915; --canvas:#151915; --card:#1C201B;
+    --card-2:#21261F; --ground:#151915; --hair:#2B2A26; --line:#2B2A26;
+    --panel:#0B2B21; --panel-2:#103B2C; --panel-ink:#DCE9E2; --panel-ink-2:#8FAEA0;
+    --dark-card:#123E2E; --dark-ink:#F1F7F3; --dark-ink-2:#9CBCAC;
+    --ink:#F5F3EE; --ink-2:#B8B4AA; --ink-3:#97938A;
+    --accent:#F2794A; --accent-soft:#35231B;
+    --accent-btn-bg:#F2794A; --accent-btn-ink:#2A1408; --accent-text:#F9A683;
+    --brand:#F9A683; --brand-soft:#35231B;
+    --s1:#3987E5; --s2:#D95926; --s3:#199E70; --s4:#C98500; --s5:#D55181;
+    --s1-ink:#8CBBF2;
+    --violet:#8CBBF2; --violet-soft:#152438;
+    --amber:#F2C25A;  --amber-soft:#2E2410;
+    --pink:#F0A183;   --pink-soft:#33201A;
+    --up:#5FD05F; --up-soft:#122A12; --down:#EE7A7A; --down-soft:#331515;
+    --ok:#0CA30C; --ok-soft:#122A12; --ok-ink:#5FD05F;
+    --warn:#FAB219; --warn-soft:#2E2410; --warn-ink:#F2C25A;
+    --serious:#EC835A; --serious-soft:#33201A; --serious-ink:#F0A183;
+    --crit:#D03B3B; --crit-soft:#331515; --crit-ink:#EE7A7A;
+    --unmeasured-soft:#26251F;
     --sh-card:0 1px 2px rgba(0,0,0,.4); --sh-app:0 30px 80px -30px rgba(0,0,0,.7);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.35); --shadow:var(--sh-card);
+    --shadow-lift:0 2px 6px rgba(0,0,0,.45), 0 18px 40px -20px rgba(0,0,0,.7);
   }}
   :root[data-theme="dark"]{
-    --page:#0a0c0d; --app:#14181a; --canvas:#101416; --card:#181d1f;
-    --ink:#eef1f2; --ink-2:#a3acb1; --ink-3:#8b949a; --line:#232a2d;
-    --brand:#38cdb0; --brand-soft:#12332d; --violet:#8c8ff0; --violet-soft:#1e2040;
-    --amber:#e6b455; --amber-soft:#332714; --pink:#ef7ba9; --pink-soft:#361a25;
-    --up:#3fc47f; --up-soft:#12321f; --down:#ff7a68; --down-soft:#361a17;
+    --page:#0F1210; --app:#151915; --canvas:#151915; --card:#1C201B;
+    --card-2:#21261F; --ground:#151915; --hair:#2B2A26; --line:#2B2A26;
+    --panel:#0B2B21; --panel-2:#103B2C; --panel-ink:#DCE9E2; --panel-ink-2:#8FAEA0;
+    --dark-card:#123E2E; --dark-ink:#F1F7F3; --dark-ink-2:#9CBCAC;
+    --ink:#F5F3EE; --ink-2:#B8B4AA; --ink-3:#97938A;
+    --accent:#F2794A; --accent-soft:#35231B;
+    --accent-btn-bg:#F2794A; --accent-btn-ink:#2A1408; --accent-text:#F9A683;
+    --brand:#F9A683; --brand-soft:#35231B;
+    --s1:#3987E5; --s2:#D95926; --s3:#199E70; --s4:#C98500; --s5:#D55181;
+    --s1-ink:#8CBBF2;
+    --violet:#8CBBF2; --violet-soft:#152438;
+    --amber:#F2C25A;  --amber-soft:#2E2410;
+    --pink:#F0A183;   --pink-soft:#33201A;
+    --up:#5FD05F; --up-soft:#122A12; --down:#EE7A7A; --down-soft:#331515;
+    --ok:#0CA30C; --ok-soft:#122A12; --ok-ink:#5FD05F;
+    --warn:#FAB219; --warn-soft:#2E2410; --warn-ink:#F2C25A;
+    --serious:#EC835A; --serious-soft:#33201A; --serious-ink:#F0A183;
+    --crit:#D03B3B; --crit-soft:#331515; --crit-ink:#EE7A7A;
+    --unmeasured-soft:#26251F;
     --sh-card:0 1px 2px rgba(0,0,0,.4); --sh-app:0 30px 80px -30px rgba(0,0,0,.7);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.35); --shadow:var(--sh-card);
+    --shadow-lift:0 2px 6px rgba(0,0,0,.45), 0 18px 40px -20px rgba(0,0,0,.7);
   }
 
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;background:var(--page)}
-  body{font-family:"IBM Plex Sans",-apple-system,sans-serif;color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  body{font-family:Manrope,-apple-system,sans-serif;color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
   .tnum{font-variant-numeric:tabular-nums}
-  h1,h2,h3{font-family:Sora,sans-serif;margin:0;letter-spacing:-.02em}
+  /* Tek aile: display/mono ayrımı bırakıldı (referansların hiçbirinde mono yok).
+     Tabular hizalama gereken GERÇEK sayı kolonlarında .tnum kalıyor. */
+  h1,h2,h3{font-family:Manrope,sans-serif;margin:0;letter-spacing:-.025em;font-weight:700}
 
   /* === yüzen uygulama kabuğu === */
   .app{background:var(--app);border-radius:var(--r-app);box-shadow:var(--sh-app);overflow:hidden;
@@ -79,31 +142,41 @@
      altında zaten tam genişlik + margin:0, kırpılacak bir şey yok. */
   @media (max-width:1079.98px){.app{overflow:visible}}
 
-  /* === sidebar: kabuğun içinde, AÇIK renk === */
+  /* === sidebar: kabuğun içinde, KOYU marka paneli ===
+     Referansların dördü koyu dikey panel kullanıyor ve 9 sekme yatay nav'a
+     sığmıyor. Panel kendi mürekkep setini taşıyor (--panel-ink*), çünkü
+     zemini ana tuvalden bağımsız: sayfa mürekkebini burada kullanmak
+     koyu üstünde koyu verirdi. */
   .side{display:none}
   @media (min-width:1080px){
-    .side{display:flex;flex-direction:column;gap:26px;width:252px;flex:none;padding:26px 18px;background:var(--app)}
+    .side{display:flex;flex-direction:column;gap:22px;width:252px;flex:none;padding:22px 16px;
+      background:var(--panel);color:var(--panel-ink)}
   }
   .brand{display:flex;align-items:center;gap:11px;padding:0 8px}
-  .brand-mark{width:34px;height:34px;border-radius:11px;flex:none;display:grid;place-items:center;color:#fff;
-    background:linear-gradient(145deg,#18b89c,#0b7b68);box-shadow:0 6px 16px -6px rgba(15,158,134,.8)}
-  .brand-name{font-family:Sora,sans-serif;font-weight:700;font-size:17px}
-  .brand-sub{font-size:11px;color:var(--ink-3)}
-  .search{display:flex;align-items:center;gap:8px;background:var(--canvas);border-radius:12px;padding:9px 12px;color:var(--ink-3);font-size:13px}
+  .brand-mark{width:34px;height:34px;border-radius:11px;flex:none;display:grid;place-items:center;
+    color:var(--panel);background:var(--panel-ink);box-shadow:none}
+  .brand-name{font-weight:700;font-size:17px;letter-spacing:-.02em;color:var(--panel-ink)}
+  .brand-sub{font-size:11px;color:var(--panel-ink-2)}
+  .search{display:flex;align-items:center;gap:8px;background:var(--panel-2);border-radius:var(--r-inner);
+    padding:9px 12px;color:var(--panel-ink-2);font-size:13px}
   .search svg{width:15px;height:15px;flex:none}
-  .nav-label{font-size:10px;font-weight:700;color:var(--ink-3);letter-spacing:.12em;margin:0 0 8px 10px}
+  /* CAPS harf aralıklı etiket burada da bırakıldı (aynı iki sebep) */
+  .nav-label{font-size:11px;font-weight:600;color:var(--panel-ink-2);margin:0 0 8px 10px}
   .nav{display:flex;flex-direction:column;gap:2px}
-  .nav button{display:flex;align-items:center;gap:11px;border:0;background:0;text-align:left;color:var(--ink-2);
-    font:inherit;font-weight:500;font-size:14px;padding:10px 12px;border-radius:12px;cursor:pointer;transition:.15s}
-  .nav button svg{width:17px;height:17px;flex:none;opacity:.7}
-  .nav button:hover{background:var(--canvas);color:var(--ink)}
-  .nav button.on{background:var(--canvas);color:var(--ink);font-weight:600}
-  .nav button.on svg{opacity:1;color:var(--brand)}
-  .side-foot{margin-top:auto;background:var(--canvas);border-radius:16px;padding:14px;font-size:12px;color:var(--ink-2)}
-  .side-foot .live{display:inline-flex;align-items:center;gap:7px;font-weight:600;color:var(--ink)}
-  .side-foot .live i{width:7px;height:7px;border-radius:50%;background:var(--up);box-shadow:0 0 0 0 rgba(23,160,94,.6);animation:pulse 2.6s infinite}
-  @keyframes pulse{70%{box-shadow:0 0 0 8px rgba(23,160,94,0)}100%{box-shadow:0 0 0 0 rgba(23,160,94,0)}}
-  @media (prefers-reduced-motion:reduce){.side-foot .live i{animation:none}}
+  .nav button{display:flex;align-items:center;gap:11px;border:0;background:0;text-align:left;color:var(--panel-ink-2);
+    font:inherit;font-weight:600;font-size:14px;padding:10px 12px;border-radius:var(--r-inner);cursor:pointer;transition:.15s}
+  .nav button svg{width:17px;height:17px;flex:none;opacity:.85}
+  .nav button:hover{background:var(--panel-2);color:var(--panel-ink)}
+  /* Aktif sekme: koyu panelde BEYAZ pill — en yüksek karşıtlık, tereddütsüz */
+  .nav button.on{background:var(--card);color:var(--ink);font-weight:700;box-shadow:var(--shadow-sm)}
+  .nav button.on svg{opacity:1;color:var(--accent-text)}
+  .side-foot{margin-top:auto;background:var(--panel-2);border-radius:var(--r-card);padding:14px;
+    font-size:12px;color:var(--panel-ink-2)}
+  .side-foot .live{display:inline-flex;align-items:center;gap:7px;font-weight:600;color:var(--panel-ink)}
+  /* Sonsuz pulse kaldırıldı: craft-floor'da dekor sayılıyor ve bir nokta
+     "canlı" demek için yanıp sönmek zorunda değil — yanındaki metin zaten
+     kaç kaynağın ayakta olduğunu YAZIYOR. Renk tek taşıyıcı da değil. */
+  .side-foot .live i{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
 
   /* === ana tuval === */
   .main{flex:1;min-width:0;background:var(--canvas);padding:22px 16px 40px}
@@ -113,21 +186,31 @@
   .page-head h1{font-size:30px;font-weight:700}
   .page-head .crumb{color:var(--ink-3);font-size:13px;margin-top:3px}
   .head-actions{margin-left:auto;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .pillbtn{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
+  .pillbtn{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:0;
     border-radius:var(--r-pill);padding:9px 15px;font:inherit;font-size:13px;font-weight:600;color:var(--ink);
     cursor:pointer;box-shadow:var(--sh-card)}
   .pillbtn svg{width:15px;height:15px;opacity:.6}
-  .circbtn{width:38px;height:38px;border-radius:50%;background:var(--card);border:1px solid var(--line);
+  .circbtn{width:38px;height:38px;border-radius:50%;background:var(--card);border:0;
     display:grid;place-items:center;cursor:pointer;color:var(--ink-2);box-shadow:var(--sh-card)}
 
-  .seg{display:inline-flex;gap:3px;background:var(--card);border:1px solid var(--line);padding:4px;border-radius:var(--r-pill);box-shadow:var(--sh-card)}
+  .seg{display:inline-flex;gap:3px;background:var(--card);border:0;padding:4px;border-radius:var(--r-pill);box-shadow:var(--sh-card)}
   .seg button{border:0;background:0;color:var(--ink-2);font:inherit;font-weight:600;font-size:12.5px;padding:6px 13px;border-radius:var(--r-pill);cursor:pointer}
-  .seg button.on{background:var(--ink);color:var(--app)}
+  .seg button.on{background:var(--accent-btn-bg);color:var(--accent-btn-ink)}
 
-  nav.tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow-x:auto}
+  /* Yatay kaydığı belli olmuyordu: 9 sekmenin ~5'i görünüyor ve kesilen sekme
+     kenarda bıçak gibi duruyor. Kenar gradyanı "devamı var"ı söylüyor.
+     `mask` yerine üstüne boyanan bir gradyan: mask eski Safari'de kaydırmayı
+     bozuyor. Gradyan pointer-events almıyor, yani son sekme tıklanabilir. */
+  .tabs-wrap{position:relative;min-width:0}
+  .tabs-wrap::after{content:"";position:absolute;top:0;right:0;bottom:2px;width:34px;
+    pointer-events:none;background:linear-gradient(90deg,transparent,var(--canvas))}
+  @media (min-width:1080px){.tabs-wrap::after{display:none}}
+  nav.tabs{display:flex;gap:20px;border-bottom:1px solid var(--hair);margin-bottom:18px;overflow-x:auto;
+    scrollbar-width:none}
+  nav.tabs::-webkit-scrollbar{display:none}
   nav.tabs button{background:0;border:0;padding:0 0 11px;font:inherit;font-weight:600;font-size:14px;color:var(--ink-3);
     border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;cursor:pointer}
-  nav.tabs button.on{color:var(--ink);border-color:var(--brand)}
+  nav.tabs button.on{color:var(--ink);border-color:var(--accent)}
   @media (min-width:1080px){nav.tabs{display:none}}
 
   /* === mobil sabit şerit === bkz. docs/backlog.md round 4, B10.
@@ -170,8 +253,14 @@
 
   /* === bölge başlığı === bkz. docs/backlog.md round 5/6 B1 — ekranı sekmeye
      bölmeden gruplamak; yeni içerik her zaman bir bölgenin altına girer. */
-  .region-label{font:600 11px/1 Sora,sans-serif;letter-spacing:.08em;text-transform:uppercase;
-    color:var(--ink-3);padding:2px 2px 0;margin-top:6px}
+  /* `text-transform:uppercase` KALDIRILDI, iki sebepten:
+     (1) RN/CSS büyütmesi dil-duyarsızdır ve Türkçe'de i→I yapar: "BİLDİRİM"
+         yerine "BILDIRIM" çizilir, noktasız I Türkçe'de başka bir harftir.
+         Bu etiketlerin hepsi Türkçe ("ÖZET", "GELİR", "İŞLEM"...).
+     (2) CAPS eyebrow craft-floor'un mutlak yasağı — başlık kendi ağırlığını
+         taşır. Boyut ve ağırlık arttı, harf aralığı normale döndü. */
+  .region-label{font:700 13px/1.3 Manrope,sans-serif;letter-spacing:-.01em;
+    color:var(--ink-2);padding:2px 2px 0;margin-top:14px}
   .region-label:first-child{margin-top:0}
   /* Kaynak sağlığı dar bir kartta (c4) 4 sütun taşıyor. Durum rozeti üç
      sınıfa ayrılınca metin uzadı ("Lansman bekliyor") ve sağdan kırpılıyordu —
@@ -187,13 +276,13 @@
   #hTable td:last-child,#hTable th:last-child{white-space:nowrap;width:1%}
   /* sinyal listesi — bkz. renderSignals() */
   .siglist{display:flex;flex-direction:column;gap:2px}
-  .sig{display:flex;gap:11px;align-items:flex-start;padding:11px 2px;border-top:1px solid var(--line)}
+  .sig{display:flex;gap:11px;align-items:flex-start;padding:11px 2px;border-top:1px solid var(--hair)}
   .sig:first-child{border-top:0}
   .sig .dot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:5px}
   .sig .txt{flex:1;min-width:0}
-  .sig .hd{font:600 13.5px/1.35 Sora,sans-serif}
+  .sig .hd{font:600 13.5px/1.35 Manrope,sans-serif}
   .sig .bd{font-size:12px;color:var(--ink-2);margin-top:3px;line-height:1.45}
-  .sig .amt{font:600 13px/1 Sora,sans-serif;white-space:nowrap;margin-left:auto;padding-left:10px}
+  .sig .amt{font:600 13px/1 Manrope,sans-serif;white-space:nowrap;margin-left:auto;padding-left:10px}
   .sig-none{font-size:12.5px;color:var(--ink-3);padding:6px 2px}
   /* Dokunmayla açılan açıklama. Panelde bağlamın çoğu `title=` içinde:
      çipin neden gri olduğu, bölgesel rozetin hangi sayılardan geldiği,
@@ -205,24 +294,28 @@
     background:var(--ink);color:var(--card);border-radius:12px;padding:11px 14px;
     font-size:12.5px;line-height:1.45;box-shadow:0 8px 28px rgba(0,0,0,.28)}
   #tipBar.on{display:block}
-  #tipBar b{display:block;font-size:10.5px;opacity:.65;font-weight:600;margin-bottom:3px;
-    letter-spacing:.06em;text-transform:uppercase}
+  /* CAPS kaldırıldı — dil-duyarsız büyütme Türkçe'de i→I yapıyor */
+  #tipBar b{display:block;font-size:11px;opacity:.72;font-weight:700;margin-bottom:3px}
 
-  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:20px 22px;
+  /* Kıl payı kenarlık kaldırıldı: yeni dilde kartı ayıran şey YÜKSEKLİK.
+     Referansların beşinde de kenarlık yok, gölge var. */
+  .card{background:var(--card);border:0;border-radius:var(--r-card);padding:20px 22px;
     box-shadow:var(--sh-card);min-width:0;transition:box-shadow .18s ease,transform .18s ease}
-  .card:hover{box-shadow:0 2px 4px rgba(16,20,24,.05),0 20px 40px -24px rgba(16,20,24,.45)}
+  .card:hover{box-shadow:var(--shadow-lift)}
   .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
-  .card-title{font-family:Sora,sans-serif;font-weight:600;font-size:16px;letter-spacing:-.01em}
+  .card-title{font-weight:700;font-size:15.5px;letter-spacing:-.02em}
   .card-sub{color:var(--ink-3);font-size:12.5px;margin-top:2px}
   .viewall{background:0;border:0;color:var(--ink-3);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
   .viewall:hover{color:var(--brand)}
 
   /* === KPI === */
-  .kpi-ic{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;flex:none;color:#fff}
+  /* Rozet 3D gradyan + beyaz ikon değil: yumuşak seri tonu + canlı ikon.
+     Gradyan/3D craft-floor'da dekor sayılıyor ve ham hex yasak. */
+  .kpi-ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none}
   .kpi-ic svg{width:19px;height:19px}
   .kpi-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
   .kpi-name{font-weight:600;font-size:14px;line-height:1.25}
-  .kpi-val{font-family:Sora,sans-serif;font-weight:700;font-size:34px;letter-spacing:-.025em;line-height:1}
+  .kpi-val{font-family:Manrope,sans-serif;font-weight:700;font-size:34px;letter-spacing:-.025em;line-height:1}
   /* flex-wrap: dar (mobil 2 kolonlu) kartta çipin yanındaki açıklama tek
      kelimelik sütuna sıkışıp üç satıra bölünüyordu; kendi satırına insin. */
   .kpi-foot{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--ink-3);flex-wrap:wrap}
@@ -277,7 +370,7 @@
   .mk{position:absolute;top:0;transform:translateX(-50%);display:flex;flex-direction:column;
       align-items:center;gap:2px;white-space:nowrap;cursor:pointer;border:0;background:0;padding:0}
   .mk i{width:1px;height:5px;background:var(--ink-3);display:block}
-  .mk b{font:700 10px/1 Sora,sans-serif;color:var(--ink-2);background:var(--canvas);
+  .mk b{font:700 11px/1 Manrope,sans-serif;color:var(--ink-2);background:var(--card-2);
         border-radius:var(--r-pill);padding:3px 8px}
   .mk:hover b,.mk.on b{background:var(--violet-soft);color:var(--violet)}
   /* kenar kırpılmasını önle: ilk/son güne düşen işaret ortalanırsa kartın
@@ -289,7 +382,7 @@
      yüzden <2 gün varken sahte düz çizgi yerine dürüst bir not basılıyor;
      grafik veri biriktikçe kendiliğinden dolar. */
   .spark{width:100%;height:26px;color:var(--brand);margin-top:8px;display:block}
-  .spark-note{font-size:10.5px;color:var(--ink-3);margin-top:8px;height:26px;display:flex;align-items:center}
+  .spark-note{font-size:11px;color:var(--ink-3);margin-top:8px;height:26px;display:flex;align-items:center}
   /* === deney görünümü === marker'a dokununca öncesi/sonrası karşılaştırma —
      bkz. docs/backlog.md round 2, "değiştir → ölç → öğren" döngüsü. */
   .mdelta{margin-top:2px}
@@ -297,7 +390,7 @@
   .mdelta table{width:100%;border-collapse:collapse;font-size:12.5px}
   .mdelta th{font-weight:600;color:var(--ink-3);font-size:11px;text-align:right;padding:3px 6px}
   .mdelta th:first-child{text-align:left}
-  .mdelta td{padding:5px 6px;border-top:1px solid var(--line)}
+  .mdelta td{padding:5px 6px;border-top:1px solid var(--hair)}
   .mdelta td.num{text-align:right;font-variant-numeric:tabular-nums}
 
   /* === filtreler === */
@@ -308,22 +401,22 @@
   .filters select:focus,.filters input:focus{outline:0;border-color:var(--brand)}
   .fchip{border:0;background:var(--canvas);color:var(--ink-2);font:inherit;font-size:12px;font-weight:600;
     padding:7px 13px;border-radius:var(--r-pill);cursor:pointer}
-  .fchip.on{background:var(--brand);color:#fff}
+  .fchip.on{background:var(--accent-btn-bg);color:var(--accent-btn-ink)}
   .fcount{margin-left:auto;font-size:12px;color:var(--ink-3)}
 
   /* === tablo === */
   .tw{overflow:auto;max-height:430px;margin:0 -4px}
   table.dt{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}
   table.dt thead th{position:sticky;top:0;background:var(--card);text-align:right;font-size:11px;font-weight:600;
-    color:var(--ink-3);padding:0 8px 10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+    color:var(--ink-3);padding:0 8px 10px 0;border-bottom:1px solid var(--hair);cursor:pointer}
   table.dt thead th:first-child{text-align:left;padding-left:4px}
-  table.dt td{padding:11px 8px 11px 0;border-bottom:1px solid var(--line)}
+  table.dt td{padding:11px 8px 11px 0;border-bottom:1px solid var(--hair)}
   table.dt td:first-child{padding-left:4px}
   table.dt tbody tr:last-child td{border-bottom:0}
   table.dt td.num{text-align:right;font-variant-numeric:tabular-nums}
   table.dt tbody tr{transition:background .12s}
   table.dt tbody tr:hover td{background:var(--canvas)}
-  table.dt tfoot td{border-top:1px solid var(--line);font-weight:700;padding-top:11px}
+  table.dt tfoot td{border-top:1px solid var(--hair);font-weight:700;padding-top:11px}
   table.dt tfoot td.num{color:var(--brand)}
 
   /* === dar ekranda tablo → liste kartı === bkz. docs/backlog.md round 4, B10.
@@ -340,18 +433,18 @@
     table.dt-cards,table.dt-cards tbody{display:block}
     table.dt-cards thead{display:none}
     table.dt-cards tbody tr{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;
-      padding:11px 2px;border-bottom:1px solid var(--line)}
+      padding:11px 2px;border-bottom:1px solid var(--hair)}
     table.dt-cards tbody tr:hover td{background:0}
     table.dt-cards td{display:block;padding:0;border:0}
     /* 1. satır: ad esner, birincil ölçü sağa yaslanır */
     table.dt-cards td:first-child{flex:1;min-width:0;font-weight:600;
       overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    table.dt-cards td.pri{text-align:right;font-family:Sora,sans-serif;font-weight:700}
+    table.dt-cards td.pri{text-align:right;font-family:Manrope,sans-serif;font-weight:700}
     /* thead gizliyken çıplak bir sayı hangi ölçü olduğunu söylemez; birincil
        hücre de etiketini yanında taşıyor (etiketi olmayanlar — ör. karar
        rozeti — kendi kendini anlatıyor). */
     table.dt-cards td.pri[data-l]::after{content:" " attr(data-l);
-      font-family:"IBM Plex Sans",sans-serif;font-size:11px;font-weight:500;color:var(--ink-3)}
+      font-family:Manrope,sans-serif;font-size:11px;font-weight:500;color:var(--ink-3)}
     /* Satır kırma ZORUNLU: flex sığdıkça hepsini tek satıra dizer, yani
        "ad + birincil / kalanlar" ayrımı kendiliğinden oluşmaz. `tr::after` bir
        flex öğesidir (ebeveynin pseudo'su) — sıfır yükseklikli, tam genişlikli
@@ -402,15 +495,15 @@
   .tile{background:var(--canvas);border-radius:14px;padding:12px}
   .tile .fl{font-size:20px}
   .tile .nm{font-size:12px;color:var(--ink-3);margin-top:6px}
-  .tile .vl{font-family:Sora,sans-serif;font-weight:700;font-size:17px}
+  .tile .vl{font-family:Manrope,sans-serif;font-weight:700;font-size:17px}
   .tile .vl small{font-weight:500;font-size:11px;color:var(--ink-3)}
 
   /* === gauge === */
   .gauge-wrap{display:grid;place-items:center;padding:6px 0 2px}
-  .gauge-val{font-family:Sora,sans-serif;font-weight:700;font-size:30px;line-height:1;margin-top:-42px}
+  .gauge-val{font-family:Manrope,sans-serif;font-weight:700;font-size:30px;line-height:1;margin-top:-42px}
   .gauge-lb{font-size:12px;color:var(--ink-3);margin-top:4px}
-  .gauge-foot{display:flex;justify-content:space-between;border-top:1px solid var(--line);margin-top:14px;padding-top:12px;font-size:12.5px;color:var(--ink-3)}
-  .gauge-foot b{color:var(--ink);font-family:Sora,sans-serif}
+  .gauge-foot{display:flex;justify-content:space-between;border-top:1px solid var(--hair);margin-top:14px;padding-top:12px;font-size:12.5px;color:var(--ink-3)}
+  .gauge-foot b{color:var(--ink);font-family:Manrope,sans-serif}
 
   /* === huni === */
   .funnel{display:flex;align-items:flex-end;gap:12px;height:150px;margin-top:6px}
@@ -418,15 +511,16 @@
   .fbars{display:flex;align-items:flex-end;gap:2px;height:100%}
   .fbars i{flex:1;border-radius:3px;background:var(--line);display:block}
   .fbars i.on{background:var(--brand)}
-  .fpct{font-family:Sora,sans-serif;font-weight:700;font-size:15px;margin-bottom:6px}
+  .fpct{font-family:Manrope,sans-serif;font-weight:700;font-size:15px;margin-bottom:6px}
   .fname{font-size:11.5px;color:var(--ink-3);margin-top:9px}
   .fval{font-size:13px;font-weight:600}
   /* === mağaza/ürün ayracı === huniye eklenen 4-5. adımlar (App Export'tan,
      ülkesiz/farklı pencere) mağaza adımlarından (ASC, ülke bazlı) ayrı bir
      kaynak — bkz. docs/backlog.md round 5/6, B2 "dikiş" notu. */
-  .fdiv{flex:none;width:1px;align-self:stretch;background:var(--line);position:relative;margin:0 2px}
+  .fdiv{flex:none;width:1px;align-self:stretch;background:var(--hair);position:relative;margin:0 2px}
+  /* CAPS kaldırıldı (Türkçe i→I) ve 9px → 11px: 11px altı işlevsel metin yasak */
   .fdiv span{position:absolute;top:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;
-    font-size:9px;font-weight:600;letter-spacing:.04em;color:var(--ink-3);text-transform:uppercase}
+    font-size:11px;font-weight:700;color:var(--ink-2)}
   .fbars.product i.on{background:var(--amber)}
   .funnel-note{font-size:11px;color:var(--ink-3);margin-top:10px}
 
@@ -436,30 +530,30 @@
   .srcgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px}
   .srcgrid .it{display:flex;align-items:center;gap:8px;font-size:12.5px}
   .srcgrid .it .dot{width:8px;height:8px;border-radius:50%;flex:none}
-  .srcgrid .it b{margin-left:auto;font-family:Sora,sans-serif;font-weight:600}
+  .srcgrid .it b{margin-left:auto;font-family:Manrope,sans-serif;font-weight:600}
 
   /* === kırılım === */
-  .brk{padding:11px 0;border-bottom:1px solid var(--line)}
+  .brk{padding:11px 0;border-bottom:1px solid var(--hair)}
   .brk:last-child{border-bottom:0}
   .brk-top{display:flex;align-items:center;gap:9px;margin-bottom:7px;font-size:13px}
   .brk-top .dot{width:8px;height:8px;border-radius:50%}
-  .brk-top .v{margin-left:auto;font-weight:700;font-family:Sora,sans-serif}
+  .brk-top .v{margin-left:auto;font-weight:700;font-family:Manrope,sans-serif}
   .brk-top .p{color:var(--ink-3);font-size:12px;width:42px;text-align:right}
   .brk-track{height:7px;border-radius:var(--r-pill);background:var(--canvas);overflow:hidden}
   .brk-fill{height:100%;border-radius:var(--r-pill)}
 
   /* === lider tablosu === */
-  .lb{padding:12px 0;border-bottom:1px solid var(--line)}
+  .lb{padding:12px 0;border-bottom:1px solid var(--hair)}
   .lb:last-child{border-bottom:0}
   .lb-top{display:flex;align-items:center;gap:10px;margin-bottom:7px}
   .lb-av{width:30px;height:30px;border-radius:10px;flex:none;display:grid;place-items:center;
-    font-family:Sora,sans-serif;font-weight:700;font-size:12px;background:var(--canvas);color:var(--ink-2)}
+    font-family:Manrope,sans-serif;font-weight:700;font-size:12px;background:var(--canvas);color:var(--ink-2)}
   .lb-name{font-size:13px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .lb-star{font-size:13px;font-weight:700;font-family:Sora,sans-serif}
+  .lb-star{font-size:13px;font-weight:700;font-family:Manrope,sans-serif}
   .lb-sub{font-size:11.5px;color:var(--ink-3)}
   .lb-track{height:7px;border-radius:var(--r-pill);background:var(--canvas);overflow:hidden}
   .lb-fill{height:100%;border-radius:var(--r-pill);background:var(--ink-3);opacity:.35}
-  .lb.self .lb-av{background:var(--brand);color:#fff}
+  .lb.self .lb-av{background:var(--accent-btn-bg);color:var(--accent-btn-ink)}
   .lb.self .lb-fill{background:var(--brand);opacity:1}
   .lb.self .lb-name,.lb.self .lb-star{color:var(--brand)}
   /* son 14 günde sürüm çıkaran özne — "rakip hareketi" sinyali ayrı bir
@@ -469,7 +563,7 @@
 
   /* === yorumlar === */
   .revlist{max-height:460px;overflow:auto;margin:0 -4px;padding:0 4px}
-  .rev{padding:14px 0;border-bottom:1px solid var(--line)}
+  .rev{padding:14px 0;border-bottom:1px solid var(--hair)}
   .rev:last-child{border-bottom:0}
   .rev-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
   .badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:var(--r-pill);background:var(--brand-soft);color:var(--brand)}
@@ -524,21 +618,117 @@
   .thin-wrap{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0}
   .thin-chip{font-size:11.5px;color:var(--ink-3);background:var(--canvas);
     border-radius:var(--r-pill);padding:5px 10px;white-space:nowrap}
-  .thin-chip b{color:var(--ink-2);font-family:Sora,sans-serif}
+  .thin-chip b{color:var(--ink-2);font-family:Manrope,sans-serif}
   @keyframes spin{to{transform:rotate(360deg)}}
   #syncBtn.busy svg{animation:spin 1.1s linear infinite}
   @media (prefers-reduced-motion:reduce){#syncBtn.busy svg{animation:none}}
+
+  /* ══════════════════════════════════════════════════════════════════════
+     DURUM PRİMİTİFLERİ — onaylı mockup'tan (docs/design-refs/) indirildi.
+     Panelin üç durum kuralının GÖRSEL karşılığı: var / yok / ölçülmedi.
+     Boş bir kart neden boş olduğunu söylemek zorunda; söylemeyen bir kart
+     "sorun yok" gibi okunuyor ve bu, ölçülmemişi sıfır saymakla aynı hata.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  /* Üçüncü durum: ölçülmedi. Ne yeşil ne kırmızı — kendi token'ı var. */
+  .unmeasured{display:flex;gap:10px;align-items:flex-start;background:var(--unmeasured-soft);
+    border-radius:var(--r-inner);padding:13px 15px;font-size:12.5px;color:var(--ink-2);line-height:1.55}
+  .unmeasured svg{width:16px;height:16px;flex:none;margin-top:1px;color:var(--ink-3)}
+  .unmeasured b{color:var(--ink)}
+
+  /* YÖNLENDİREN FALLBACK — hiçbir kart çıkmaz sokakta bitmez.
+     Eksik bir kırılım düz bir uyarı DEĞİL, o konunun ölçülen en derin hâline
+     giden bir butondur: "ülke × gün yok → ülke × 7 günlük pencere → aç". */
+  .fb{display:flex;gap:11px;align-items:flex-start;background:var(--card-2);
+    border-radius:var(--r-inner);padding:13px 15px;flex-wrap:wrap}
+  .fb>svg{width:16px;height:16px;flex:none;margin-top:2px;color:var(--ink-3)}
+  .fb-body{flex:1;min-width:180px;font-size:12.5px;color:var(--ink-2);line-height:1.55}
+  .fb-body b{color:var(--ink)}
+  .fb-act{all:unset;cursor:pointer;white-space:nowrap;font:700 12px/1 Manrope,sans-serif;
+    color:var(--accent-text);background:var(--accent-soft);padding:9px 13px;border-radius:var(--r-pill)}
+  .fb-act:hover{box-shadow:var(--shadow-sm)}
+
+  /* HER METRİK ÜÇ ŞEY SÖYLER: sayı · ne sağlar · ne kaybettirir.
+     "Ne sağlar" panelin kendi ÖLÇÜLMÜŞ oranından hesaplanır, tahminden değil. */
+  .kpi-why{margin-top:11px;padding-top:10px;border-top:1px solid var(--hair);display:grid;gap:6px}
+  .kpi-why>div{font-size:12px;line-height:1.5;color:var(--ink-2)}
+  .kpi-why b{display:block;font:700 11px/1.6 Manrope,sans-serif;letter-spacing:.06em;margin-bottom:1px}
+  .kpi-why .gain b{color:var(--ok-ink)}
+  .kpi-why .loss b{color:var(--crit-ink)}
+  .kpi-why em{font-style:normal;font-weight:700;color:var(--ink)}
+
+  /* HUNİ ZİNCİR OLARAK — zaman serisi olarak değil. Mutlak sayı · girişin
+     yüzdesi · bir önceki adımın yüzdesi · ve KAÇ KİŞİNİN GEÇMEDİĞİ kendi
+     satırında, kırmızı. Zaman serisi ayrı bir kart; ikisi karıştırılmaz. */
+  .fn-stage{padding:13px 0;border-top:1px solid var(--hair)}
+  .fn-stage:first-child{border-top:0;padding-top:2px}
+  .fn-top{display:flex;align-items:baseline;gap:10px}
+  .fn-name{font:700 13.5px/1.3 Manrope,sans-serif;flex:1;min-width:0}
+  .fn-val{font:800 19px/1 Manrope,sans-serif;font-variant-numeric:tabular-nums}
+  .fn-pct{font:700 12px/1 Manrope,sans-serif;padding:4px 8px;border-radius:var(--r-pill);
+    background:var(--unmeasured-soft);color:var(--ink-2);white-space:nowrap}
+  .fn-bar{height:9px;border-radius:5px;background:var(--ground);margin-top:9px;overflow:hidden}
+  .fn-bar i{display:block;height:100%;border-radius:5px}
+  .fn-sub{font-size:12px;color:var(--ink-3);margin-top:7px;line-height:1.5}
+  .fn-sub b{color:var(--ink-2);font-weight:700}
+  .fn-drop{display:flex;align-items:center;gap:8px;margin:9px 0 0;font-size:12px;
+    color:var(--crit-ink);background:var(--crit-soft);padding:8px 11px;border-radius:var(--r-inner)}
+  .fn-drop svg{width:14px;height:14px;flex:none}
+  .fn-drop b{font-weight:800;font-variant-numeric:tabular-nums}
+
+  /* HİÇBİR SAYI HOVER'A BAĞLI OLAMAZ — panel iPhone'dan okunuyor, dokunmada
+     hover yok; tooltip TEK kanal olduğunda o sayı sahibinin ana cihazında hiç
+     görünmez. Her grafik yanında her zaman ekranda duran bir okuma satırı. */
+  .rd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card-2);
+    border-radius:var(--r-inner);padding:11px 13px;margin-bottom:12px}
+  .rd-day{font:800 14px/1 Manrope,sans-serif;white-space:nowrap}
+  .rd-items{display:flex;gap:14px;flex-wrap:wrap;flex:1}
+  .rd-item{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+  .rd-item i{width:11px;height:3px;border-radius:2px;flex:none}
+  .rd-item i.dot{width:9px;height:9px;border-radius:50%}
+  .rd-item b{font:800 13.5px/1 Manrope,sans-serif;color:var(--ink);font-variant-numeric:tabular-nums}
+  .rd-nav{display:flex;gap:4px}
+  .rd-nav button{all:unset;cursor:pointer;width:30px;height:30px;border-radius:9px;display:grid;
+    place-items:center;background:var(--ground);color:var(--ink-2)}
+  .rd-nav button:hover{background:var(--hair);color:var(--ink)}
+  .rd-nav svg{width:15px;height:15px}
+
+  /* Çıpa şeridinin YATAY KAYDIĞI belli değildi: 9 bölgenin ~3'ü görünüyor ve
+     kesilen sekme kenarda bıçak gibi duruyordu. Kenar gradyanı "devamı var"ı
+     söylüyor; maskeli değil boyalı, çünkü maske eski Safari'de kaydırmayı
+     bozuyor. */
+  .anchors-wrap{position:relative;min-width:0}
+  .anchors-wrap::after{content:"";position:absolute;top:0;right:0;bottom:0;width:28px;
+    pointer-events:none;background:linear-gradient(90deg,transparent,var(--canvas))}
+
+  /* Uygulama seçici mobilde gizliydi: iki uygulama arasında geçmenin YOLU
+     YOKTU (≥1080px'te panelde, altında hiçbir yerde). Şeride taşındı. */
+  .mapp{display:none}
+  @media (max-width:1079.98px){
+    .mapp{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+    .mapp::-webkit-scrollbar{display:none}
+    .mapp button{flex:none;all:unset;cursor:pointer;display:flex;align-items:center;gap:7px;
+      background:var(--card);color:var(--ink-2);font:600 12px/1 Manrope,sans-serif;
+      padding:8px 12px;border-radius:var(--r-pill);box-shadow:var(--sh-card);white-space:nowrap}
+    .mapp button.on{background:var(--panel);color:var(--panel-ink)}
+  }
 </style></head>
 <body>
 
 <!-- Anahtar kapısı: veri ancak elde okuma sırrı varsa gelir. -->
 <div id="gate" style="display:none;max-width:400px;margin:16vh auto;padding:0 20px">
-  <div class="card" style="text-align:center">
-    <div class="card-title" style="margin-bottom:6px">App Cockpit</div>
-    <div class="card-sub" style="margin-bottom:16px">Panel okuma anahtarını gir</div>
-    <input id="gateKey" type="password" placeholder="anahtar"
-      style="width:100%;font:inherit;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--canvas);color:var(--ink)">
-    <button id="gateBtn" class="pillbtn" style="width:100%;justify-content:center;margin-top:12px">Aç</button>
+  <div class="card" style="text-align:center;padding:28px 26px">
+    <div style="width:44px;height:44px;border-radius:13px;margin:0 auto 14px;display:grid;place-items:center;
+      background:var(--panel);color:var(--panel-ink)">
+      <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
+    </div>
+    <div style="font-size:19px;font-weight:700;letter-spacing:-.025em;margin-bottom:5px">App Cockpit</div>
+    <div class="card-sub" style="margin-bottom:18px">Panel okuma anahtarını gir</div>
+    <input id="gateKey" type="password" placeholder="anahtar" autocomplete="off"
+      style="width:100%;font:inherit;font-weight:600;padding:12px 14px;border-radius:var(--r-pill);border:0;
+        background:var(--ground);color:var(--ink);text-align:center">
+    <button id="gateBtn" class="pillbtn" style="width:100%;justify-content:center;margin-top:11px;
+      background:var(--accent-btn-bg);color:var(--accent-btn-ink)">Aç</button>
     <div id="gateErr" style="color:var(--down);font-size:12.5px;margin-top:10px"></div>
   </div>
 </div>
@@ -552,12 +742,12 @@
       <span class="brand-mark">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 5-8 4 5"/></svg>
       </span>
-      <span><span class="brand-name">Cockpit</span><span class="brand-sub" id="brandSub">…</span></span>
+      <span style="min-width:0"><span class="brand-name">App Cockpit</span><br><span class="brand-sub" id="brandSub">…</span></span>
     </div>
 
 
     <div>
-      <div class="nav-label">MENÜ</div>
+      <div class="nav-label">Menü</div>
       <div class="nav">
         <button class="on" data-view="ozet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Özet</button>
         <button data-view="aso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>ASO &amp; kelimeler</button>
@@ -572,7 +762,7 @@
     </div>
 
     <div>
-      <div class="nav-label">UYGULAMALAR</div>
+      <div class="nav-label">Uygulamalar</div>
         <div class="nav" id="appNav"></div>
       </div>
 
@@ -621,7 +811,7 @@
       </div>
     </div>
 
-    <nav class="tabs"><button class="on" data-view="ozet">Özet</button><button data-view="portfoy">Portföy</button><button data-view="para">Para</button><button data-view="pazar">Pazarlar</button><button data-view="aso">ASO</button><button data-view="urun">Ürün sağlığı</button><button data-view="veri">Uygulama verisi</button><button data-view="yorum">Yorumlar</button><button data-view="saglik">Veri sağlığı</button></nav>
+    <div class="tabs-wrap"><nav class="tabs"><button class="on" data-view="ozet">Özet</button><button data-view="portfoy">Portföy</button><button data-view="para">Para</button><button data-view="pazar">Pazarlar</button><button data-view="aso">ASO</button><button data-view="urun">Ürün sağlığı</button><button data-view="veri">Uygulama verisi</button><button data-view="yorum">Yorumlar</button><button data-view="saglik">Veri sağlığı</button></nav></div>
 
     <!-- mobil sabit şerit: aralık seçici + bölge çıpaları. Masaüstünde gizli
          (aralık seçici orada başlıkta duruyor, sayfa da o kadar uzun değil).
@@ -630,7 +820,10 @@
          çıkıyor. -->
     <div class="mbar" id="mbar">
       <div class="seg"><button data-range="1">1G</button><button class="on" data-range="7">7G</button><button data-range="30">1A</button><button data-range="0">Baştan</button></div>
-      <div class="anchors" id="mAnchors" hidden></div>
+      <div class="anchors-wrap"><div class="anchors" id="mAnchors" hidden></div></div>
+      <!-- Uygulama seçici ≥1080px'te panelde; altında HİÇBİR YERDE yoktu, yani
+           telefondan iki uygulama arasında geçmenin yolu yok. Şeride taşındı. -->
+      <div class="mapp" id="mApp"></div>
     </div>
 
     <div class="view" id="v-ozet">
@@ -655,7 +848,7 @@
       <div class="card c12 rev-band" data-prelaunch-only>
         <div class="rev-item">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#8f96a3,#5f6773)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--ink-3) 15%,transparent);color:var(--ink-3)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19l3-3M9 15l-4 1 1-4 7-7a4 4 0 0 1 6 6l-7 7-3-3z"/></svg>
             </span>
             <span class="kpi-name">Mağaza durumu</span>
@@ -665,7 +858,7 @@
         </div>
         <div class="rev-item">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#7679e4,#4f53c9)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/></svg>
             </span>
             <span class="kpi-name">İzlenen rakip</span>
@@ -675,7 +868,7 @@
         </div>
         <div class="rev-item">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#22bfa3,#0c8571)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s3) 15%,transparent);color:var(--s3)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
             </span>
             <span class="kpi-name">Takip edilen kelime</span>
@@ -724,7 +917,7 @@
       <div class="card c12 rev-band" data-store-only>
         <div class="rev-item">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#c9a227,#8f6f0f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s4) 15%,transparent);color:var(--s4)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </span>
             <span class="kpi-name">MRR<br><span class="card-sub">RevenueCat · güncel</span></span>
@@ -733,7 +926,7 @@
         </div>
         <div class="rev-item">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#c9a227,#8f6f0f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s4) 15%,transparent);color:var(--s4)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </span>
             <span class="kpi-name">Aktif abonelik<br><span class="card-sub">RevenueCat · güncel</span></span>
@@ -742,7 +935,7 @@
         </div>
         <div class="rev-item">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#c9a227,#8f6f0f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s4) 15%,transparent);color:var(--s4)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><circle cx="12" cy="11" r="3"/></svg>
             </span>
             <span class="kpi-name">Reklam geliri<br><span class="card-sub" id="gAdRevLabel">AdMob · seçili aralık</span></span>
@@ -755,7 +948,7 @@
 
       <div class="card c3" data-store-only>
         <div class="kpi-top">
-          <span class="kpi-ic" style="background:linear-gradient(145deg,#7679e4,#4f53c9)">
+          <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
           </span>
           <span class="kpi-name">Gösterim<br><span class="card-sub">App Store'da görüldü</span></span>
@@ -766,7 +959,7 @@
 
       <div class="card c3" data-store-only>
         <div class="kpi-top">
-          <span class="kpi-ic" style="background:linear-gradient(145deg,#eeb04a,#d18e18)">
+          <span class="kpi-ic" style="background:color-mix(in oklab,var(--s4) 15%,transparent);color:var(--s4)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18"/></svg>
           </span>
           <span class="kpi-name">Ürün sayfası<br><span class="card-sub">sayfayı açan</span></span>
@@ -777,7 +970,7 @@
 
       <div class="card c3" data-store-only>
         <div class="kpi-top">
-          <span class="kpi-ic" style="background:linear-gradient(145deg,#22bfa3,#0c8571)">
+          <span class="kpi-ic" style="background:color-mix(in oklab,var(--s3) 15%,transparent);color:var(--s3)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 21h16"/></svg>
           </span>
           <span class="kpi-name">İndirme<br><span class="card-sub">ilk kez indiren</span></span>
@@ -788,7 +981,7 @@
 
       <div class="card c3" data-store-only>
         <div class="kpi-top">
-          <span class="kpi-ic" style="background:linear-gradient(145deg,#e8709f,#c9407a)">
+          <span class="kpi-ic" style="background:color-mix(in oklab,var(--s5) 15%,transparent);color:var(--s5)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20L20 4"/><circle cx="7" cy="7" r="3"/><circle cx="17" cy="17" r="3"/></svg>
           </span>
           <span class="kpi-name">Dönüşüm<br><span class="card-sub">gösterim → indirme</span></span>
@@ -957,19 +1150,19 @@
     <!-- ================= ASO ================= -->
     <div class="view" id="v-aso" style="display:none">
       <div class="grid">
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#22bfa3,#0c8571)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s3) 15%,transparent);color:var(--s3)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v18M3 12h18"/></svg></span>
           <span class="kpi-name">Fırsat<br><span class="card-sub">talep var, bizde yok</span></span></div>
           <div class="kpi-val tnum" id="aGap">–</div></div>
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#3fbf7a,#17864f)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s3) 15%,transparent);color:var(--s3)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg></span>
           <span class="kpi-name">Kapsanan<br><span class="card-sub">metadata'da var</span></span></div>
           <div class="kpi-val tnum" id="aCov">–</div></div>
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#e8705f,#c33a2b)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s2) 15%,transparent);color:var(--s2)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
           <span class="kpi-name">Ölü ağırlık<br><span class="card-sub">yer kaplıyor, talep yok</span></span></div>
           <div class="kpi-val tnum" id="aDead">–</div></div>
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#8f96a3,#5f6773)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--ink-3) 15%,transparent);color:var(--ink-3)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/></svg></span>
           <span class="kpi-name">Ölçülmemiş<br><span class="card-sub">talep verisi yok</span></span></div>
           <div class="kpi-val tnum" id="aUnm">–</div></div>
@@ -1064,7 +1257,7 @@
              çökme/RC olaylarından daha temel, üstte olmalı. -->
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </span>
             <span class="kpi-name">Toplam kullanıcı<br><span class="card-sub">tüm zamanlar, kayıtlı</span></span>
@@ -1074,7 +1267,7 @@
         </div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
             </span>
             <span class="kpi-name">Aktif hane<br><span class="card-sub" id="upHhSub">toplam hanenin %</span></span>
@@ -1084,7 +1277,7 @@
         </div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
             </span>
             <span class="kpi-name">Yeni kullanıcı (bugün)<br><span class="card-sub" id="upNewSub">son 7g · son 30g</span></span>
@@ -1094,7 +1287,7 @@
         </div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8v4h8z"/></svg>
             </span>
             <span class="kpi-name">Toplam işlem<br><span class="card-sub">tüm zamanlar, kayıtlı</span></span>
@@ -1112,7 +1305,7 @@
         <div class="c12 region-label">Aktiflik</div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
             </span>
             <span class="kpi-name">Günlük aktif<br><span class="card-sub">uygulamayı açan kişi</span></span>
@@ -1122,7 +1315,7 @@
         </div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
             </span>
             <span class="kpi-name">Haftalık aktif<br><span class="card-sub">tekilleştirilmiş</span></span>
@@ -1132,7 +1325,7 @@
         </div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
             </span>
             <span class="kpi-name">28 günlük aktif<br><span class="card-sub" id="upMauSub">RevenueCat · güncel</span></span>
@@ -1152,7 +1345,7 @@
              sonu/hafta içi ritmiyle oynar. -->
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>
             </span>
             <span class="kpi-name">Yapışkanlık<br><span class="card-sub" id="upStickSub">ortalama günlük / 28 günlük</span></span>
@@ -1169,7 +1362,7 @@
         <div class="c12 region-label">Tutma</div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
             </span>
             <span class="kpi-name">Aktivasyon<br><span class="card-sub" id="upActSub">en az 1 işlem ekleyen</span></span>
@@ -1179,7 +1372,7 @@
         </div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/></svg>
             </span>
             <span class="kpi-name">Ertesi gün dönen<br><span class="card-sub" id="upRetNdSub">24–48 saat · alt sınır</span></span>
@@ -1188,7 +1381,7 @@
         </div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
             </span>
             <span class="kpi-name">7+ gün sonra gelen<br><span class="card-sub" id="upRet7Sub">kayıttan 7 gün sonra hâlâ</span></span>
@@ -1197,7 +1390,7 @@
         </div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
             </span>
             <span class="kpi-name">30+ gün sonra gelen<br><span class="card-sub" id="upRet30Sub">kayıttan 30 gün sonra hâlâ</span></span>
@@ -1216,7 +1409,7 @@
         <div class="c12 region-label">Ürün sağlığı</div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
             </span>
             <span class="kpi-name">Çökme<br><span class="card-sub" id="upCrashSub">son 7 gün</span></span>
@@ -1225,7 +1418,7 @@
         </div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>
             </span>
             <span class="kpi-name">Alışkanlık derinliği<br><span class="card-sub">toplam işlem / aktif hane</span></span>
@@ -1234,7 +1427,7 @@
         </div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/></svg>
             </span>
             <span class="kpi-name">RevenueCat olayları<br><span class="card-sub" id="upRcSub">son 7 gün</span></span>
@@ -1243,7 +1436,7 @@
         </div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#4a90c9,#2a5a8f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
             </span>
             <span class="kpi-name">Apple ASN<br><span class="card-sub" id="upAsnSub">son 7 gün</span></span>
@@ -1317,7 +1510,7 @@
         <div class="c12 region-label">Reklam</div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#c9a227,#8f6f0f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s4) 15%,transparent);color:var(--s4)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </span>
             <span class="kpi-name">Reklam geliri<br><span class="card-sub" id="paRevSub">seçili aralık</span></span>
@@ -1326,7 +1519,7 @@
         </div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#c9a227,#8f6f0f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s4) 15%,transparent);color:var(--s4)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><circle cx="12" cy="11" r="3"/></svg>
             </span>
             <span class="kpi-name">Gösterim<br><span class="card-sub">gerçekten ekrana gelen</span></span>
@@ -1335,7 +1528,7 @@
         </div>
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#c9a227,#8f6f0f)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s4) 15%,transparent);color:var(--s4)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>
             </span>
             <span class="kpi-name">eCPM<br><span class="card-sub">bin gösterim başına</span></span>
@@ -1349,7 +1542,7 @@
              görünmemesi yüzünden fark edilmedi. -->
         <div class="card c3">
           <div class="kpi-top">
-            <span class="kpi-ic" style="background:linear-gradient(145deg,#e8705f,#c33a2b)">
+            <span class="kpi-ic" style="background:color-mix(in oklab,var(--s2) 15%,transparent);color:var(--s2)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
             </span>
             <span class="kpi-name">Kaçan gösterim<br><span class="card-sub" id="paMissSub">dolu geldi, basılmadı</span></span>
@@ -1439,12 +1632,12 @@
 
     <div class="view" id="v-yorum" style="display:none">
       <div class="grid">
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#22bfa3,#0c8571)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s3) 15%,transparent);color:var(--s3)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.6 5.6 6.4.8-4.7 4.3 1.2 6.3L12 17l-5.5 3 1.2-6.3L3 9.4l6.4-.8z"/></svg></span>
           <span class="kpi-name">Bizim puanımız<br><span class="card-sub">ömür boyu · yıldız oyları</span></span></div>
           <div class="kpi-val tnum" id="yRating">–</div><div class="kpi-foot" id="yVotes"></div>
           <div class="kpi-foot" id="yRating30"></div></div>
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#7679e4,#4f53c9)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
           <span class="kpi-name">Bizim yorum</span></div>
           <!-- Alt satır `.kpi-foot`ta, `.kpi-name > .card-sub`ta DEĞİL: mobilde
@@ -1455,7 +1648,7 @@
           <div class="kpi-val tnum" id="ySelf">–</div>
           <div class="kpi-foot" id="ySelfSub">toplanan</div>
           <div class="kpi-foot" id="ySelfAns"></div></div>
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#8f96a3,#5f6773)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--ink-3) 15%,transparent);color:var(--ink-3)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/></svg></span>
           <span class="kpi-name">Rakip yorum</span></div>
           <!-- Aynı gerekçe: bu alt satır "feed tavanı ~50, gerçek sayı daha
@@ -1463,7 +1656,7 @@
                pazar büyüklüğü sanılır. -->
           <div class="kpi-val tnum" id="yRival">–</div>
           <div class="kpi-foot" id="yRivalSub">izlenen rakiplerden</div></div>
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#e8705f,#c33a2b)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s2) 15%,transparent);color:var(--s2)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v5M12 16v.5"/><circle cx="12" cy="12" r="9"/></svg></span>
           <span class="kpi-name">Rakip şikâyeti<br><span class="card-sub">1–2 yıldız · yol haritan</span></span></div>
           <div class="kpi-val tnum" id="yLow">–</div></div>
@@ -1506,19 +1699,19 @@
          belirlediği görünmez olur ve doğrulanamaz. -->
     <div class="view" id="v-pazar" style="display:none">
       <div class="grid">
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#4a90d9,#1f5fa8)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
           <span class="kpi-name" id="pzK1">Ölçülen ülke<br><span class="card-sub" id="pzWin">–</span></span></div>
           <div class="kpi-val tnum" id="pzCountries">–</div></div>
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#3fbf7a,#17864f)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s3) 15%,transparent);color:var(--s3)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v13M7 12l5 5 5-5M5 21h14"/></svg></span>
           <span class="kpi-name" id="pzK2">İndirme gelen<br><span class="card-sub" id="pzDlSub">–</span></span></div>
           <div class="kpi-val tnum" id="pzDlCountries">–</div></div>
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#9b7ede,#6a4bb0)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h10M9 3v2M11 5c0 5-3 9-7 11M7 9c1 3 4 6 7 7M14 21l4-10 4 10M15.5 18h5"/></svg></span>
           <span class="kpi-name" id="pzK3">Listeleme dili<br><span class="card-sub" id="pzLocSub">–</span></span></div>
           <div class="kpi-val tnum" id="pzLocales">–</div></div>
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#eeb04a,#d18e18)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s4) 15%,transparent);color:var(--s4)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 7v6M12 17v.5"/><circle cx="12" cy="12" r="9"/></svg></span>
           <span class="kpi-name" id="pzK4">Dilsiz trafik<br><span class="card-sub" id="pzNoLocSub">dili olmayan ülkelerden</span></span></div>
           <div class="kpi-val tnum" id="pzNoLoc">–</div></div>
@@ -1585,19 +1778,19 @@
 
     <div class="view" id="v-saglik" style="display:none">
       <div class="grid">
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#3fbf7a,#17864f)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s3) 15%,transparent);color:var(--s3)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg></span>
           <span class="kpi-name">Sağlıklı<br><span class="card-sub">veri akıyor</span></span></div>
           <div class="kpi-val tnum" id="sOk">–</div></div>
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#eeb04a,#d18e18)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s4) 15%,transparent);color:var(--s4)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6"/></svg></span>
           <span class="kpi-name">Veri yok<br><span class="card-sub">açık ama hiç yazmamış</span></span></div>
           <div class="kpi-val tnum" id="sNd">–</div></div>
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#e8705f,#c33a2b)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s2) 15%,transparent);color:var(--s2)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 7v6M12 17v.5"/><circle cx="12" cy="12" r="9"/></svg></span>
           <span class="kpi-name">Bayat<br><span class="card-sub">veri eskimiş</span></span></div>
           <div class="kpi-val tnum" id="sSt">–</div></div>
-        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:linear-gradient(145deg,#8f96a3,#5f6773)">
+        <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--ink-3) 15%,transparent);color:var(--ink-3)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
           <span class="kpi-name">Kapalı<br><span class="card-sub">gerekçesi yazılı</span></span></div>
           <div class="kpi-val tnum" id="sOff">–</div></div>
@@ -2502,11 +2695,11 @@ function drawRing(){
   segs.forEach(([k,col])=>{const p=cnt[k]/total*100;
     if(p>0){svg+=`<circle cx="21" cy="21" r="15.9" fill="none" stroke="${col}" stroke-width="5.5"
       stroke-dasharray="${p.toFixed(2)} ${(100-p).toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}" transform="rotate(-90 21 21)"/>`;off-=p;}});
-  svg+=`<text x="21" y="20" text-anchor="middle" font-family="Sora" font-size="8" font-weight="700" fill="var(--ink)">${cnt.GAP}</text>
+  svg+=`<text x="21" y="20" text-anchor="middle" font-family="Manrope" font-size="8" font-weight="700" fill="var(--ink)">${cnt.GAP}</text>
     <text x="21" y="26" text-anchor="middle" font-size="3.8" fill="var(--ink-3)">FIRSAT</text>`;
   el('ringSvg').innerHTML=svg;
   el('ringLegend').innerHTML=segs.map(([k,col])=>
-    `<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span style="width:9px;height:9px;border-radius:3px;background:${col};flex:none"></span>${VTAG[k][1]}<b style="margin-left:auto;font-family:Sora">${cnt[k]}</b></div>`).join("");
+    `<div style="display:flex;align-items:center;gap:8px;font-size:13px"><span style="width:9px;height:9px;border-radius:3px;background:${col};flex:none"></span>${VTAG[k][1]}<b style="margin-left:auto;font-family:Manrope">${cnt[k]}</b></div>`).join("");
   el('ringMeta').textContent=`${rows.length} terim`;
 }
 
@@ -2719,11 +2912,19 @@ function fillSelects(){
     `<button class="${a.slug===APP?'on':''}" data-app="${esc(a.slug)}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M11 18h2"/></svg>
       ${esc(a.name||a.slug)}</button>`).join("");
-  el('appNav').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
-    APP=b.dataset.app; PREF.set('app',APP);
-    el('appNav').querySelectorAll('button').forEach(x=>x.classList.remove('on'));
-    b.classList.add('on'); renderAll();
-  }));
+  /* Mobil kopya AYNI listeden üretiliyor: iki yerde elle tutulan bir liste
+     bir gün ayrışır ve o gün telefondaki seçici olmayan bir uygulamayı
+     gösterir. Tıklama iki yüzeyin işaretini birlikte güncelliyor. */
+  el('mApp').innerHTML = apps.map(a=>
+    `<button class="${a.slug===APP?'on':''}" data-app="${esc(a.slug)}">${esc(a.name||a.slug)}</button>`).join("");
+  const pickApp = slug => {
+    APP=slug; PREF.set('app',APP);
+    document.querySelectorAll('#appNav button,#mApp button').forEach(x=>
+      x.classList.toggle('on', x.dataset.app===slug));
+    renderAll();
+  };
+  document.querySelectorAll('#appNav button,#mApp button').forEach(b=>
+    b.addEventListener('click',()=>pickApp(b.dataset.app)));
   el('brandSub').textContent=`${apps.length} uygulama izleniyor`;
 }
 /* Üst satır ve aralık şeridi. AYRI fonksiyon çünkü iki farklı olayla
@@ -3371,17 +3572,17 @@ function renderPazarPre(){
   el('pzPreCoverSub').textContent =
     `${num(rows.length)} ölçüldü · ${num(openLeft)} ölçülebilir ama ölçülmedi · ${num(SF_ABSENT)} Apple Ads dizininde yok`;
   el('pzPreCover').innerHTML =
-    `<div class="brk"><div class="brk-top"><span class="dot" style="background:#3fbf7a"></span>
-      <b style="font-family:Sora">Ölçülen: ${rows.map(r=>`${FLAG[r.cc]||"🏳️"} ${String(r.cc).toUpperCase()}`).join(' ')||'yok'}</b></div>
+    `<div class="brk"><div class="brk-top"><span class="dot" style="background:var(--s3)"></span>
+      <b style="font-family:Manrope">Ölçülen: ${rows.map(r=>`${FLAG[r.cc]||"🏳️"} ${String(r.cc).toUpperCase()}`).join(' ')||'yok'}</b></div>
       <div style="font-size:12.5px;color:var(--ink-2)">Aşağıdaki tablo yalnız bu mağazalar arasında bir seçim yapar.</div></div>`+
-    `<div class="brk"><div class="brk-top"><span class="dot" style="background:#d18e18"></span>
-      <b style="font-family:Sora">${num(openLeft)} mağaza ölçülebilir ama ölçülmedi</b></div>
+    `<div class="brk"><div class="brk-top"><span class="dot" style="background:var(--s4)"></span>
+      <b style="font-family:Manrope">${num(openLeft)} mağaza ölçülebilir ama ölçülmedi</b></div>
       <div style="font-size:12.5px;color:var(--ink-2)">Bu mağazalarda talep de rakip de ÖLÇÜLMEDİ — "fırsat yok" demek değil, "bakmadık" demek. Lansman pazarını yalnız 5 ölçüme dayandırmadan önce bunlar ölçülmeli.</div></div>`+
-    `<div class="brk"><div class="brk-top"><span class="dot" style="background:#8f96a3"></span>
-      <b style="font-family:Sora">${num(SF_ABSENT)} mağaza Apple Ads dizininde yok</b></div>
+    `<div class="brk"><div class="brk-top"><span class="dot" style="background:var(--ink-3)"></span>
+      <b style="font-family:Manrope">${num(SF_ABSENT)} mağaza Apple Ads dizininde yok</b></div>
       <div style="font-size:12.5px;color:var(--ink-2)">${SF_TOTAL} mağazanın tamamı ${dShort(SF_SCAN_DAY)} ${String(SF_SCAN_DAY).slice(0,4)}'da tarandı; bu ${num(SF_ABSENT)}'ü iki turda da boş döndü. Bunlar yapılacak iş değil, bu araçla ölçülemeyen mağazalar — mağaza düzeyinde kalıcı bir özellik.</div></div>`+
-    (stale?`<div class="brk"><div class="brk-top"><span class="dot" style="background:#e8705f"></span>
-      <b style="font-family:Sora">asa_popularity konektörü KAPALI</b></div>
+    (stale?`<div class="brk"><div class="brk-top"><span class="dot" style="background:var(--s2)"></span>
+      <b style="font-family:Manrope">asa_popularity konektörü KAPALI</b></div>
       <div style="font-size:12.5px;color:var(--ink-2)">Bu sayılar elle alınmış bir anlık ölçüm; kendiliğinden tazelenmiyor ve bayatladığında Veri sağlığı uyarmaz. Yeni mağaza ölçmek Apple Ads oturumu açmayı gerektiriyor.</div></div>`:'');
 
   /* Talep skoru HER MAĞAZANIN KENDİ İÇİNDE normalize (100 o mağazanın
@@ -3524,8 +3725,8 @@ function renderPazar(){
     .sort((a,b)=>b.dl-a.dl||b.pv-a.pv);
   el('pzUnmeasured').innerHTML = unmeasured.length ? unmeasured.slice(0,12).map(r=>
     `<div class="brk"><div class="brk-top">
-      <span class="dot" style="background:#d18e18"></span>
-      <b style="font-family:Sora">${FLAG[r.cc]||"🏳️"} ${esc(countryLabel(r.cc))}</b>
+      <span class="dot" style="background:var(--s4)"></span>
+      <b style="font-family:Manrope">${FLAG[r.cc]||"🏳️"} ${esc(countryLabel(r.cc))}</b>
       <span class="v">${num(r.dl)} ind.</span></div>
       <div style="font-size:12.5px;color:var(--ink-2)">${num(r.pv)} sayfa görüntüleme · bu ülkede hiç anahtar kelime talebi ölçmedik</div></div>`).join("")
     : `<div class="empty">Trafiği olan her ülkede talep ölçümü var</div>`;
@@ -3958,9 +4159,11 @@ function renderSignals(){
         <span class="txt"><span class="hd">${esc(s.hd)}</span><div class="bd">${esc(s.bd)}</div></span>
         ${s.amt?`<span class="amt" style="color:${s.sev}">${esc(s.amt)}</span>`:''}
       </div>`).join('')
-    : `<div class="sig-none">${isPrelaunch()
-        ? 'Uygulama henüz yayında değil — ölçülecek trafik, gelir ve kullanıcı yok. Yayına çıkınca kurallar kendiliğinden işlemeye başlar.'
-        : 'İşaretlenecek bir şey yok — kurallar hacim eşiğinin altında kaldı ya da hiçbiri tetiklenmedi.'}</div>`;
+    : `<div class="unmeasured">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8.5v.5M12 11.5v4"/></svg>
+        <span>${isPrelaunch()
+          ? 'Uygulama henüz yayında değil — ölçülecek trafik, gelir ve kullanıcı <b>yok</b>. Yayına çıkınca kurallar kendiliğinden işlemeye başlar.'
+          : 'İşaretlenecek bir şey yok. Bu <b>"sorun yok" demek değil</b>: kurallar ya hacim eşiğinin altında kaldı ya hiçbiri tetiklenmedi — ikisi ayrı şey ve hangisi olduğu tek tek kuralda yazılı.'}</span></div>`;
 }
 
 /* Günlük gelir çubukları + kümülatif çizgi.
@@ -3995,9 +4198,9 @@ function drawRevenueTimeline(fmtRows){
   host.innerHTML=`<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"
       style="width:100%;height:180px;display:block;margin-top:6px">
       ${bars}
-      <path d="${line}" fill="none" stroke="#c9a227" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="${line}" fill="none" stroke="var(--s4)" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
     </svg>
-    <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-3);margin-top:4px">
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink-3);margin-top:4px">
       <span>${esc(dShort(days[0]))}</span>
       <span>en yüksek gün ${money2(maxBar)}</span>
       <span>${esc(dShort(days[days.length-1]))}</span>
@@ -4185,7 +4388,7 @@ function renderPara(){
   const mrr=stockValue('rc_mrr'), subs=stockValue('rc_active_subscriptions'),
         trials=stockValue('rc_active_trials'), rev28=stockValue('rc_revenue_28d'),
         users=stockValue('app_export_total_users');
-  const it=(lb,val)=>`<div class="it"><span class="dot" style="background:#c9a227"></span>${esc(lb)}<b>${val}</b></div>`;
+  const it=(lb,val)=>`<div class="it"><span class="dot" style="background:var(--s4)"></span>${esc(lb)}<b>${val}</b></div>`;
   el('paSubGrid').innerHTML=
     it('MRR',money2(mrr))+it('28 günlük gelir',money2(rev28))+
     it('Aktif abonelik',num(subs))+it('Aktif deneme',num(trials));
@@ -4670,8 +4873,8 @@ function drawBlockers(slug){
     : rows.length ? `Seni bekleyen iş yok · ${info.length} bilgi notu`
     : 'Engel yok';
   const row=(r,urgent)=>`<div class="brk"><div class="brk-top">
-      <span class="dot" style="background:${urgent?'#e8705f':'#8f96a3'}"></span>
-      <b style="font-family:Sora">${esc(r.slug)} · ${esc(r.source)}</b>
+      <span class="dot" style="background:${urgent?'var(--s2)':'var(--ink-3)'}"></span>
+      <b style="font-family:Manrope">${esc(r.slug)} · ${esc(r.source)}</b>
       <span class="v">${esc(r.kind||'')}</span></div>
       <div style="font-size:12.5px;color:var(--ink-2)">${esc(r.action||r.note||'')}</div></div>`;
   el('sBlockList').innerHTML = rows.length
@@ -4702,7 +4905,7 @@ function renderSaglik(){
   el('sBlocked').innerHTML=bl.length?bl.map(b=>`
     <div class="brk"><div class="brk-top">
       <span class="dot" style="background:var(--ink-3)"></span>
-      <b style="font-family:Sora">${esc(b.slug==='__global__'?'global':b.slug)}/${esc(b.source)}</b></div>
+      <b style="font-family:Manrope">${esc(b.slug==='__global__'?'global':b.slug)}/${esc(b.source)}</b></div>
       <div style="font-size:12.5px;color:var(--ink-2)">${esc(b.blocked_on||"sebep yazılmamış")}</div></div>`).join("")
     :`<div class="empty">Kapalı kaynak yok</div>`;
   drawSyncErrors(); drawDeferred();
@@ -4747,7 +4950,7 @@ function drawSyncErrors(){
     const calls=failedCalls(r.log_tail, r.error);
     return `<div class="brk${r.resolved?' resolved':''}"><div class="brk-top">
       <span class="dot" style="background:${r.resolved?'var(--ink-3)':'var(--down)'}"></span>
-      <b style="font-family:Sora">${esc(r.slug==='__global__'?'global':r.slug)}/${esc(r.source)}</b>
+      <b style="font-family:Manrope">${esc(r.slug==='__global__'?'global':r.slug)}/${esc(r.source)}</b>
       <span class="p" style="width:auto">${esc(String(r.started_at||'').slice(11,16))}</span>
       ${r.resolved?`<span class="tag cov" style="margin-left:auto">çözüldü</span>
         <span class="tag unm">${esc(r.failure_class||'HATA')}</span>`
@@ -4773,8 +4976,8 @@ function drawDeferred(){
       ? `${Math.max(1,Math.round((t-Date.now())/60000))} dk sonra`
       : 'bir sonraki koşuda';
     return `<div class="brk"><div class="brk-top">
-      <span class="dot" style="background:#d18e18"></span>
-      <b style="font-family:Sora">${esc(r.slug==='__global__'?'global':r.slug)}/${esc(r.source)}</b>
+      <span class="dot" style="background:var(--s4)"></span>
+      <b style="font-family:Manrope">${esc(r.slug==='__global__'?'global':r.slug)}/${esc(r.source)}</b>
       <span class="tag nod" style="margin-left:auto">${q?'karantina':'backoff'}</span></div>
       <div style="font-size:12.5px;color:var(--ink-2)">${esc(String(r.consecutive_failures||0))} ardışık hata · ${esc(wait)} yeniden denenecek${r.status?` · ${esc(r.status)}`:''}</div></div>`;
   }).join("") : `<div class="empty">Geri çekilmiş kaynak yok</div>`;
