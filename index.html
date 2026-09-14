@@ -4065,10 +4065,14 @@ function renderPazar(){
       <b style="font-family:Manrope">${FLAG[r.cc]||"🏳️"} ${esc(countryLabel(r.cc))}</b>
       <span class="v">${num(r.dl)} ind.</span></div>
       <div style="font-size:12.5px;color:var(--ink-2)">${num(r.pv)} sayfa görüntüleme · bu ülkede hiç anahtar kelime talebi ölçmedik</div></div>`).join("")
-    + (absentWithTraffic?`<div class="brk"><div class="brk-top"><span class="dot" style="background:var(--ink-3)"></span>
-      <b style="font-family:Manrope">${num(absentWithTraffic)} ülke listede yok</b></div>
-      <div style="font-size:12.5px;color:var(--ink-2)">Trafikleri var ama Apple Ads bu mağazaları tanımıyor (400) — ölçülemez, yapılacak iş değil.</div></div>`:'')
     : `<div class="empty">Trafiği olan her ölçülebilir ülkede talep ölçümü var</div>`;
+  /* Ölçülemeyen ama TRAFİĞİ olan ülkeler her iki halde de ekranda kalmalı:
+     liste boşalınca not da kaybolursa, o ülkelerin varlığı sessizce silinir
+     ve "her ülke kapsandı" gibi okunur. */
+  if(absentWithTraffic) el('pzUnmeasured').innerHTML +=
+    `<div class="brk"><div class="brk-top"><span class="dot" style="background:var(--ink-3)"></span>
+      <b style="font-family:Manrope">${num(absentWithTraffic)} ülkede trafik var ama ölçülemiyor</b></div>
+      <div style="font-size:12.5px;color:var(--ink-2)">Apple Ads bu mağazaları tanımıyor (400 Invalid storefront name) — yapılacak iş değil, aracın sınırı.</div></div>`;
 
   /* --- yapısal: ülke bazında kelime fırsatı --- */
   const gapByC={};
