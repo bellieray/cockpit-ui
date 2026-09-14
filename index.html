@@ -1762,7 +1762,7 @@
         </div>
         <div class="card c6" id="pzUnmeasuredCard">
           <div class="card-head"><div><div class="card-title">Talebi hiç ölçülmemiş pazarlar</div>
-            <div class="card-sub">trafik var, ASA anahtar kelime ölçümü yok</div></div></div>
+            <div class="card-sub" id="pzUnmeasuredSub">trafik var, ASA anahtar kelime ölçümü yok</div></div></div>
           <div id="pzUnmeasured"></div>
         </div>
         <div class="card c6" id="pzGapCard">
@@ -3772,7 +3772,17 @@ const ASA_FLOOR=5;
    ekranda tarihi ve yöntemi yazıyor. Popülerlik MAĞAZA düzeyinde bir
    özellik (uygulamaya göre değişmiyor), o yüzden sabit her uygulama için
    geçerli. */
-const SF_TOTAL=175, SF_INDEXED=91, SF_ABSENT=84, SF_SCAN_DAY='2026-08-26';
+const SF_TOTAL=175, SF_SCAN_DAY='2026-08-26';
+
+/* Kapsam sayıları artık SABİT DEĞİL: `panel.vw_market_coverage` satır satır
+   tutuyor ve API `coverage` olarak veriyor. Sabit oldukları sürece yeni
+   ölçülen bir mağaza sayıyı hiç değiştirmiyordu — panel, kapatılmış bir işi
+   haftalarca "yapılacak" diye gösterdi. Üç durum korunuyor: ölçüldü /
+   ölçülebilir ama ölçülmedi / araç bu mağazayı tanımıyor (400). */
+function coverageFor(){
+  return (D.coverage||[]).find(c=>c.slug===APP)
+      || {measured:0,open:0,absent:0,unknown:0,last_probe:null};
+}
 
 /* Ön-lansman: uygulama hiçbir mağazada yayında değil, dolayısıyla KENDİ
    trafiği yok. Elde olan tek kanıt dışarıdan ölçülen iki şey: mağaza başına
@@ -3818,8 +3828,9 @@ function renderPazarPre(){
   /* Payda 175 DEĞİL 91: ölçülebilir mağaza sayısı. 84 mağaza Apple Ads
      dizininde hiç yok, onları "ölçülmedi" saymak yapılamaz bir işi eksik
      gibi gösterirdi. */
-  const openLeft=Math.max(0,SF_INDEXED-rows.length);
-  el('pzK2').innerHTML=`Ölçülebilir ama ölçülmemiş<br><span class="card-sub" id="pzDlSub">${SF_INDEXED} ölçülebilir mağazadan</span>`;
+  const cov=coverageFor();
+  const openLeft=cov.open;
+  el('pzK2').innerHTML=`Ölçülebilir ama ölçülmemiş<br><span class="card-sub" id="pzDlSub">${num(cov.measured+cov.open)} ölçülebilir mağazadan</span>`;
   el('pzDlCountries').textContent=num(openLeft);
   el('pzK3').innerHTML=`Rakibi ölçülen mağaza<br><span class="card-sub" id="pzLocSub">${
     rows.length?rows.filter(r=>!r.rivals).length+' mağazada rakip ölçümü yok':'–'}</span>`;
@@ -3834,7 +3845,7 @@ function renderPazarPre(){
      bayatlayacak bir çalışması yoktur. */
   const stale = health && health.enabled===false;
   el('pzPreCoverSub').textContent =
-    `${num(rows.length)} ölçüldü · ${num(openLeft)} ölçülebilir ama ölçülmedi · ${num(SF_ABSENT)} Apple Ads dizininde yok`;
+    `${num(cov.measured)} ölçüldü · ${num(openLeft)} ölçülebilir ama ölçülmedi · ${num(cov.absent)} Apple Ads dizininde yok`;
   el('pzPreCover').innerHTML =
     `<div class="brk"><div class="brk-top"><span class="dot" style="background:var(--s3)"></span>
       <b style="font-family:Manrope">Ölçülen: ${rows.map(r=>`${FLAG[r.cc]||"🏳️"} ${String(r.cc).toUpperCase()}`).join(' ')||'yok'}</b></div>
@@ -3843,8 +3854,8 @@ function renderPazarPre(){
       <b style="font-family:Manrope">${num(openLeft)} mağaza ölçülebilir ama ölçülmedi</b></div>
       <div style="font-size:12.5px;color:var(--ink-2)">Bu mağazalarda talep de rakip de ÖLÇÜLMEDİ — "fırsat yok" demek değil, "bakmadık" demek. Lansman pazarını yalnız 5 ölçüme dayandırmadan önce bunlar ölçülmeli.</div></div>`+
     `<div class="brk"><div class="brk-top"><span class="dot" style="background:var(--ink-3)"></span>
-      <b style="font-family:Manrope">${num(SF_ABSENT)} mağaza Apple Ads dizininde yok</b></div>
-      <div style="font-size:12.5px;color:var(--ink-2)">${SF_TOTAL} mağazanın tamamı ${dShort(SF_SCAN_DAY)} ${String(SF_SCAN_DAY).slice(0,4)}'da tarandı; bu ${num(SF_ABSENT)}'ü iki turda da boş döndü. Bunlar yapılacak iş değil, bu araçla ölçülemeyen mağazalar — mağaza düzeyinde kalıcı bir özellik.</div></div>`+
+      <b style="font-family:Manrope">${num(cov.absent)} mağaza Apple Ads dizininde yok</b></div>
+      <div style="font-size:12.5px;color:var(--ink-2)">Apple Ads bu mağazalara <b>400 Invalid storefront name</b> diyor — sinyal boş sonuç değil, aracın kendi cevabı. ${SF_TOTAL} mağazalık tam tarama ${dShort(SF_SCAN_DAY)}'da yapıldı; bu liste o günden beri ölçüldükçe güncelleniyor. Yapılacak iş değil, bu araçla ölçülemeyen mağazalar.</div></div>`+
     (stale?`<div class="brk"><div class="brk-top"><span class="dot" style="background:var(--s2)"></span>
       <b style="font-family:Manrope">asa_popularity konektörü KAPALI</b></div>
       <div style="font-size:12.5px;color:var(--ink-2)">Bu sayılar elle alınmış bir anlık ölçüm; kendiliğinden tazelenmiyor ve bayatladığında Veri sağlığı uyarmaz. Yeni mağaza ölçmek Apple Ads oturumu açmayı gerektiriyor.</div></div>`:'');
@@ -4036,6 +4047,13 @@ function renderPazar(){
   const measured=new Set(gapsFor().map(r=>r.country));
   const unmeasured=rows.filter(r=>!measured.has(r.cc)&&(r.pv>0||r.dl>0))
     .sort((a,b)=>b.dl-a.dl||b.pv-a.pv);
+  /* Kartın altyazısı kapsamı da yazıyor: "trafiği olan her ülkede ölçüm var"
+     tek başına okununca "her mağaza ölçüldü" gibi anlaşılıyordu. Trafiksiz
+     ama ölçülebilir mağazalar ayrı bir kova ve ekranda kalmalı. */
+  const cvl=coverageFor();
+  el('pzUnmeasuredSub').textContent = cvl.measured
+    ? `${num(cvl.measured)} mağaza ölçüldü · ${num(cvl.open)} ölçülebilir ama ölçülmedi · ${num(cvl.absent)} Apple Ads dizininde yok${cvl.last_probe?' · son tarama '+dShort(cvl.last_probe):''}`
+    : 'trafik var, ASA anahtar kelime ölçümü yok';
   el('pzUnmeasured').innerHTML = unmeasured.length ? unmeasured.slice(0,12).map(r=>
     `<div class="brk"><div class="brk-top">
       <span class="dot" style="background:var(--s4)"></span>
