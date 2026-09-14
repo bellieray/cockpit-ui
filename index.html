@@ -4045,8 +4045,13 @@ function renderPazar(){
 
   /* --- yapısal: talebi hiç ölçülmemiş pazarlar --- */
   const measured=new Set(gapsFor().map(r=>r.country));
-  const unmeasured=rows.filter(r=>!measured.has(r.cc)&&(r.pv>0||r.dl>0))
+  /* Apple Ads'in tanımadığı mağazalar (400) bu listede YER ALMAZ: onlar
+     "bakmadık" değil "bu araçla bakılamıyor". Aynı listede göstermek, LT/UY
+     gibi ölçülemeyen pazarları yapılacak iş gibi okutuyordu. */
+  const absentCc=new Set((D.absentStores||[]).map(r=>r.cc));
+  const unmeasured=rows.filter(r=>!measured.has(r.cc)&&!absentCc.has(r.cc)&&(r.pv>0||r.dl>0))
     .sort((a,b)=>b.dl-a.dl||b.pv-a.pv);
+  const absentWithTraffic=rows.filter(r=>absentCc.has(r.cc)&&(r.pv>0||r.dl>0)).length;
   /* Kartın altyazısı kapsamı da yazıyor: "trafiği olan her ülkede ölçüm var"
      tek başına okununca "her mağaza ölçüldü" gibi anlaşılıyordu. Trafiksiz
      ama ölçülebilir mağazalar ayrı bir kova ve ekranda kalmalı. */
@@ -4060,7 +4065,10 @@ function renderPazar(){
       <b style="font-family:Manrope">${FLAG[r.cc]||"🏳️"} ${esc(countryLabel(r.cc))}</b>
       <span class="v">${num(r.dl)} ind.</span></div>
       <div style="font-size:12.5px;color:var(--ink-2)">${num(r.pv)} sayfa görüntüleme · bu ülkede hiç anahtar kelime talebi ölçmedik</div></div>`).join("")
-    : `<div class="empty">Trafiği olan her ülkede talep ölçümü var</div>`;
+    + (absentWithTraffic?`<div class="brk"><div class="brk-top"><span class="dot" style="background:var(--ink-3)"></span>
+      <b style="font-family:Manrope">${num(absentWithTraffic)} ülke listede yok</b></div>
+      <div style="font-size:12.5px;color:var(--ink-2)">Trafikleri var ama Apple Ads bu mağazaları tanımıyor (400) — ölçülemez, yapılacak iş değil.</div></div>`:'')
+    : `<div class="empty">Trafiği olan her ölçülebilir ülkede talep ölçümü var</div>`;
 
   /* --- yapısal: ülke bazında kelime fırsatı --- */
   const gapByC={};
