@@ -4149,11 +4149,23 @@ function renderPazar(){
   /* --- ölçüm yetersiz: elenenler GİZLENMİYOR --- */
   const thin=rows.filter(r=>r.searchImp<PZ_GATE.searchImp&&r.pv<PZ_GATE.pv)
     .sort((a,b)=>(b.pv+b.searchImp)-(a.pv+a.searchImp));
-  el('pzThinSub').textContent=`${thin.length} ülke kapıların altında · sayılar gerçek, oran çıkarmak için yetersiz`;
+  /* "65 ülke yetersiz" tek başına bir çıkmaz sokak: okuyan, bunun kalıcı bir
+     özellik mi yoksa zamanla kapanacak bir eksik mi olduğunu bilemiyor.
+     İkisini ayıran şey TABANIN SÜRESİ — Apple analytics instance'ları ~3 hafta
+     tutuluyor ve konektör her koşuda son 10 günü çekiyor, yani bu sekmenin
+     tabanı uygulamanın ömrü değil, biriktirdiğimiz gün sayısı. Kapıya yakın
+     olanlar birkaç haftada kendiliğinden geçer; taban seviyesindekiler için
+     bekleyecek bir şey yok. */
+  const near=thin.filter(r=>r.searchImp>=PZ_GATE.searchImp/2||r.pv>=PZ_GATE.pv/2);
+  el('pzThinSub').textContent=
+    `${thin.length} ülke kapıların altında · taban ${sDays.length} günlük mağaza verisi`
+    + (near.length?` · ${near.length}'i kapının yarısını geçmiş, biriktikçe ölçülebilir olur`:'');
   el('pzThin').innerHTML = thin.length
-    ? `<div class="thin-wrap">`+thin.map(r=>
-        `<span class="thin-chip">${FLAG[r.cc]||"🏳️"} ${String(r.cc).toUpperCase()}
-          <b>${num(r.searchImp)}</b>g <b>${num(r.pv)}</b>s <b>${num(r.dl)}</b>i</span>`).join("")+`</div>`
+    ? `<div class="thin-wrap">`+thin.map(r=>{
+        const isNear=r.searchImp>=PZ_GATE.searchImp/2||r.pv>=PZ_GATE.pv/2;
+        return `<span class="thin-chip"${isNear?' style="border-color:var(--s3)"':''}>${FLAG[r.cc]||"🏳️"} ${String(r.cc).toUpperCase()}
+          <b>${num(r.searchImp)}</b>g <b>${num(r.pv)}</b>s <b>${num(r.dl)}</b>i</span>`;
+      }).join("")+`</div>`
     : `<div class="empty">Her ülke kapıları geçti</div>`;
 }
 
