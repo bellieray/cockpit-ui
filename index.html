@@ -1227,6 +1227,28 @@
           <div class="tw" style="max-height:300px"><table class="dt" id="aRanks"></table></div>
         </div>
 
+        <!-- Sürümün arama görünürlüğüne etkisi.
+             "Arama sırası" kartı TERİM başına sinyal verir ama toplamı vermez;
+             bu kart toplamı verir ama terimi vermez. İkisi birlikte okunur —
+             gösterimi düşerken yükselen bir sıra kazanç DEĞİLDİR.
+             Terim kırılımı burada yok ÇÜNKÜ Apple vermiyor: Analytics Reports
+             API'sinde arama terimi boyutu hiç yok (2026-09-19, üç kanıt).
+             Bu bir eksiklik değil, bir SINIR — ve paneller sınırı gizlemez. -->
+        <div class="card c6">
+          <div class="card-head"><div><div class="card-title">Sürüm etkisi — arama</div>
+            <div class="card-sub">yayından önceki ve sonraki 14 gün · günlük ortalama arama gösterimi</div></div></div>
+          <div class="tw" style="max-height:300px"><table class="dt" id="aReleaseEffect"></table></div>
+        </div>
+
+        <!-- Bir serinin AKMAYI DURDURMASI sessiz kalamaz: konektör "HEALTHY" derken
+             veri geçmişte takılı olabilir (last_ok_at KOŞUYU ölçer, veriyi değil).
+             Apple analytics'i ~3 hafta tutuyor; çekilmeyen gün KALICI kayboluyor. -->
+        <div class="card c6">
+          <div class="card-head"><div><div class="card-title">Seri tazeliği</div>
+            <div class="card-sub">konektör koştu mu değil — veri akıyor mu</div></div></div>
+          <div class="tw" style="max-height:300px"><table class="dt" id="aFreshness"></table></div>
+        </div>
+
         <!-- ÖNCE / SONRA'nın eksik yarısı.
              Haftalık huni yukarıdaki "Arama hunisi" kartında ZATEN var, sürüm çizgisiyle
              birlikte — burada onu ikinci kez çizmek yok. Eksik olan şey ALAN
@@ -3526,6 +3548,39 @@ function renderAso(){
       `<tr><td>${esc(r.term)}</td><td>${FLAG[r.country]||"🏳️"} ${String(r.country).toUpperCase()}</td>
         <td class="num">${r.rank}</td><td class="num">${r.day||"–"}</td></tr>`).join("")
       :`<tr><td colspan="4" class="empty">Hiçbir terimde ilk 100'e girilmemiş. Sıra satırı YOK demek, sahte bir sıra yazmaktan iyidir.</td></tr>`)+`</tbody>`;
+
+  /* Sürüm etkisi. `verdict` ÜÇ durumlu: pencere dolmadan sayı basmak, bir sürümü
+     henüz görülmemiş veriyle yargılamaktır. Sayı yine gösteriliyor ama karar
+     "ölçülmedi" diyorsa satır soluk yazılıyor — okuyan kişi ikisini karıştırmasın. */
+  const re=(D.releaseEffect||[]).filter(r=>r.app_slug===APP);
+  el('aReleaseEffect').innerHTML=
+    `<thead><tr><th>Sürüm</th><th>Yayın</th><th>Önce/gün</th><th>Sonra/gün</th><th>Δ</th><th>Dönüşüm</th><th>Karar</th></tr></thead><tbody>`+
+    (re.length?re.map(r=>{
+      const ol=String(r.verdict||"").startsWith("ölçülmedi");
+      const d=r.impressions_change_pct==null?null:Number(r.impressions_change_pct);
+      return `<tr${ol?' style="opacity:.55"':''}><td>${esc(r.version)}</td><td class="num">${r.released_on||"–"}</td>
+        <td class="num">${r.before_impressions_per_day??"–"}</td>
+        <td class="num">${r.after_impressions_per_day??"–"}</td>
+        <td class="num ${d==null?'':(d>0?'up':'down')}">${d==null?"–":(d>0?"+":"")+d+"%"}</td>
+        <td class="num">${r.before_conversion_pct==null?"–":r.before_conversion_pct+"%→"+(r.after_conversion_pct??"–")+"%"}</td>
+        <td>${esc(r.verdict||"–")}</td></tr>`}).join("")
+      :`<tr><td colspan="7" class="empty">Yayınlanmış sürüm yok ya da analytics serisi henüz yayın tarihine ulaşmadı.</td></tr>`)+`</tbody>`;
+
+  /* Tazelik. BAYAT olanlar üstte ve kırmızı; olay akışları ayrı etiketli —
+     bir yorum akışının sessizliği geçerli bir durum, bir gösterim serisinin
+     sessizliği veri kaybı. İkisini aynı listede aynı renkte göstermek,
+     panelin kendi "var / yok / ölçülmedi" kuralını çiğner. */
+  const fr=(D.seriesFreshness||[]).filter(r=>r.app_slug===APP);
+  el('aFreshness').innerHTML=
+    `<thead><tr><th>Kaynak</th><th>En yeni veri</th><th>Geri</th><th>Yoğunluk</th><th>Durum</th></tr></thead><tbody>`+
+    (fr.length?fr.map(r=>{
+      const bayat=r.freshness==="BAYAT";
+      const olay=!r.is_continuous_series;
+      return `<tr><td>${esc(r.source)}</td><td class="num">${r.newest_period||"–"}</td>
+        <td class="num ${bayat?'down':''}">${r.days_behind==null?"–":r.days_behind+" gün"}</td>
+        <td class="num">${r.density_30d}</td>
+        <td${bayat?' class="down"':(olay?' style="opacity:.55"':'')}>${esc(r.freshness)}</td></tr>`}).join("")
+      :`<tr><td colspan="5" class="empty">Bu uygulama için etkin konektör yok.</td></tr>`)+`</tbody>`;
 
   renderAsoChanges();
   renderAsoSearch();
