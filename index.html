@@ -3549,6 +3549,17 @@ function renderAso(){
         <td class="num">${r.rank}</td><td class="num">${r.day||"–"}</td></tr>`).join("")
       :`<tr><td colspan="4" class="empty">Hiçbir terimde ilk 100'e girilmemiş. Sıra satırı YOK demek, sahte bir sıra yazmaktan iyidir.</td></tr>`)+`</tbody>`;
 
+  /* Karar metni tabloda KIRPILIYORDU — tarayıcıda görüldü: "ölçülmedi: sonrası penc…"
+     kartın kenarında kesiliyordu ve tablonun en önemli sütunu okunmuyordu. Veritabanındaki
+     tam metin dürüst kaydın kendisi, o KISALTILMIYOR; burada yalnız gösterim kısaltılıyor
+     ve tamamı `title` ile duruyor. */
+  const verdictShort = v => ({
+    'ölçülmedi: öncesi penceresi eksik':         'ölçülmedi · öncesi eksik',
+    'ölçülmedi: sonrası penceresi henüz dolmadı':'ölçülmedi · sonrası dolmadı',
+    'ölçülmedi: sonrası penceresi eksik':        'ölçülmedi · sonrası eksik',
+    'ölçülmedi: öncesinde arama gösterimi yok':  'ölçülmedi · öncesi sıfır',
+  })[v] || v || '–';
+
   /* Sürüm etkisi. `verdict` ÜÇ durumlu: pencere dolmadan sayı basmak, bir sürümü
      henüz görülmemiş veriyle yargılamaktır. Sayı yine gösteriliyor ama karar
      "ölçülmedi" diyorsa satır soluk yazılıyor — okuyan kişi ikisini karıştırmasın. */
@@ -3563,7 +3574,7 @@ function renderAso(){
         <td class="num">${r.after_impressions_per_day??"–"}</td>
         <td class="num ${d==null?'':(d>0?'up':'down')}">${d==null?"–":(d>0?"+":"")+d+"%"}</td>
         <td class="num">${r.before_conversion_pct==null?"–":r.before_conversion_pct+"%→"+(r.after_conversion_pct??"–")+"%"}</td>
-        <td>${esc(r.verdict||"–")}</td></tr>`}).join("")
+        <td title="${esc(r.verdict||"")}">${esc(verdictShort(r.verdict))}</td></tr>`}).join("")
       :`<tr><td colspan="7" class="empty">Yayınlanmış sürüm yok ya da analytics serisi henüz yayın tarihine ulaşmadı.</td></tr>`)+`</tbody>`;
 
   /* Tazelik. BAYAT olanlar üstte ve kırmızı; olay akışları ayrı etiketli —
