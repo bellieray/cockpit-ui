@@ -3553,12 +3553,11 @@ function renderAso(){
      kartın kenarında kesiliyordu ve tablonun en önemli sütunu okunmuyordu. Veritabanındaki
      tam metin dürüst kaydın kendisi, o KISALTILMIYOR; burada yalnız gösterim kısaltılıyor
      ve tamamı `title` ile duruyor. */
-  const verdictShort = v => ({
-    'ölçülmedi: öncesi penceresi eksik':         'ölçülmedi · öncesi eksik',
-    'ölçülmedi: sonrası penceresi henüz dolmadı':'ölçülmedi · sonrası dolmadı',
-    'ölçülmedi: sonrası penceresi eksik':        'ölçülmedi · sonrası eksik',
-    'ölçülmedi: öncesinde arama gösterimi yok':  'ölçülmedi · öncesi sıfır',
-  })[v] || v || '–';
+  /* İKİNCİ TUR: "ölçülmedi · sonrası dolmadı" DA kırpıldı (tarayıcıda görüldü) — yedi
+     sütunluk bir tablo yarım kartta bu kadar metin taşımıyor. Hücrede yalnız KARAR
+     duruyor; hangi pencerenin eksik olduğu ikincil bilgi ve `title`da. Önemli olan
+     "bu sayı henüz bir karar DEĞİL" uyarısının okunabilmesi. */
+  const verdictShort = v => !v ? '–' : (String(v).startsWith('ölçülmedi') ? 'ölçülmedi' : v);
 
   /* Sürüm etkisi. `verdict` ÜÇ durumlu: pencere dolmadan sayı basmak, bir sürümü
      henüz görülmemiş veriyle yargılamaktır. Sayı yine gösteriliyor ama karar
