@@ -2289,7 +2289,12 @@ const stocksFor=(app=APP)=> (D.stocks||[]).filter(r=>r.slug===app);
 
 /* ---------- KPI ---------- */
 function pctDelta(cur,prev){ if(!prev) return null; return (cur-prev)/prev*100; }
-function chip(d,n){
+/* Delta çipi. `metric` verilirse yön sözlükten geliyor: bir sayının ARTMASI
+   her metrikte iyi değil — çökme artışı kötü, reklam İSTEĞİ artışı israf,
+   keyword sırasının DÜŞMESİ iyi. Yön bilinmiyorsa (`good_direction` NULL)
+   çip nötr kalıyor: yanlış yön göstermektense yön iddia etmemek doğru. */
+const metricDir=m=>(D.dict||[]).find(x=>x.metric===m)?.good_direction||null;
+function chip(d,n,metric){
   if(d==null) return `<span class="chip flat">önceki dönem yok</span>`;
   const r=Math.round(Math.abs(d));
   // WHY: küçük örneklemde bir % değişim gürültüden ayrılamaz — Poisson sayım
@@ -2303,7 +2308,14 @@ function chip(d,n){
     // "Belirsiz olan bir sayı" ile "az değişmiş bir sayı" aynı görünüyordu.
     if(Math.abs(d)<2*se) return `<span class="chip flat" title="örneklem küçük (n=${n}) — güvenilir değişim eşiği aşılmadı">• ${r}% <b style="font-weight:600;opacity:.75">belirsiz</b></span>`;
   }
-  return d>=0 ? `<span class="chip up">▲ ${r}%</span>` : `<span class="chip down">▼ ${r}%</span>`;
+  const dir=metric?metricDir(metric):'up';
+  const arrow=d>=0?'▲':'▼';
+  if(dir==='neutral'||dir==null)
+    return `<span class="chip flat" title="${esc(metric||'')}: yön anlam taşımıyor — artış ne iyi ne kötü">${arrow} ${r}%</span>`;
+  // İyi mi kötü mü: işaret × yön. `down` metriklerde (çökme, israf, sıra)
+  // AZALIŞ iyidir, yani yeşil aşağı oktur.
+  const iyi = (dir==='up') === (d>=0);
+  return `<span class="chip ${iyi?'up':'down'}" title="${esc(metric||'')}: ${dir==='up'?'artış':'azalış'} iyi">${arrow} ${r}%</span>`;
 }
 
 /* === bölgesel "sessiz kriz" rozeti === (bkz. docs/backlog.md B8)
@@ -2414,7 +2426,7 @@ function renderDelta(markerDay,label){
   const rowHtml=r=>`<tr><td>${esc(r.label)}</td><td class="num">${num(r.before)}</td>
     <td class="num">${num(r.after)}</td><td class="num">${shortBefore
       ?`<span class="chip flat" title="önce penceresi yalnız ${d.beforeDays.length} gün — ${d.afterDays.length} günle kıyaslamak yanıltıcı olurdu">önceki dönem eksik</span>`
-      :chip(r.delta,r.after)}</td></tr>`;
+      :chip(r.delta,r.after,'store_impression')}</td></tr>`;
   const convTxt=v=>v==null?'–':v.toFixed(1)+'%';
   host.innerHTML=`<div class="mdelta-title">${esc(label)} — ${d.beforeDays.length}g önce · ${d.afterDays.length}g sonra</div>
     <table><thead><tr><th></th><th>önce</th><th>sonra</th><th>Δ</th></tr></thead><tbody>
@@ -2619,17 +2631,20 @@ function drawKpis(){
   // "▲%1468" üretiyordu. Eksik pencerede yön iddia etmiyoruz; kaç gün
   // olduğunu söylüyoruz.
   const shortPrev = prev.length>0 && prev.length<days.length;
-  const dchip=(c,o)=>{
+  // `metric` ŞART: yön sözlükten geliyor ve kart bazında değişiyor. Parametre
+  // olmadan hepsi "artış iyi" sayılırdı — dönüşüm için doğru, reklam isteği
+  // için yanlış.
+  const dchip=(c,o,metric)=>{
     if(shortPrev) return `<span class="chip flat" title="önceki dönemde yalnız ${prev.length} gün ölçüm var; ${days.length} günle karşılaştırmak yanıltıcı olurdu">önceki dönem eksik</span>`;
     const d=pctDelta(c,o);
-    return chip(d,c)+(d==null?'':'<span class="dsuf">önceki döneme göre</span>');
+    return chip(d,c,metric)+(d==null?'':'<span class="dsuf">önceki döneme göre</span>');
   };
   /* Bölgesel düşüş rozeti — eksik önceki pencerede delta çipiyle AYNI sebeple
      susuyor: karşılaştırılacak dönem yoksa ülke bazlı yön iddiası da yalan olur. */
   const reg=k=>shortPrev?'':regionBadges(k,days,prev);
-  el('kImp').textContent=num(cur.imp); el('kImpD').innerHTML=dchip(cur.imp,old.imp)+reg('imp');
-  el('kPv').textContent=num(cur.pv);   el('kPvD').innerHTML=dchip(cur.pv,old.pv)+reg('pv');
-  el('kDl').textContent=num(cur.dl);   el('kDlD').innerHTML=dchip(cur.dl,old.dl)+reg('dl');
+  el('kImp').textContent=num(cur.imp); el('kImpD').innerHTML=dchip(cur.imp,old.imp,'store_impression')+reg('imp');
+  el('kPv').textContent=num(cur.pv);   el('kPvD').innerHTML=dchip(cur.pv,old.pv,'store_page_view')+reg('pv');
+  el('kDl').textContent=num(cur.dl);   el('kDlD').innerHTML=dchip(cur.dl,old.dl,'downloads_first_time')+reg('dl');
   el('kConv').textContent=(conv||0).toFixed(1)+"%";
   /* Oran farkı PUAN olarak yazılıyor, yüzde olarak değil: %8'den %11'e çıkış
      "+%37" değil "+3,0 puan". Yüzdenin yüzdesi burada yanlış okunur.
