@@ -3732,6 +3732,11 @@ function bind(){
      Açıkken Bugün 7,2 ekrandan 17,9'a çıkıyordu — tam da düzeltmeye çalıştığımız
      şey. Kopyala düğmesi açmadan da çalışıyor: metni okumadan paylaşmak
      isteyen için bir dokunuş yeter. */
+  /* Taşıma İLK BOYAMADAN önce: `showView` yalnız sekmeye dokununca koşuyor,
+     yani sabah paneli açan kişi düzeltilmemiş Özet'i görüyordu (17,3 ekran),
+     ilk sekme gezintisinden sonra 8,1'e iniyordu. Görülen ilk ekran en çok
+     önem verilen ekrandır. */
+  relocateCards();
   el('wkToggle')?.addEventListener('click',()=>{
     const b=el('wkBody'); b.hidden=!b.hidden;
     el('wkToggle').textContent=b.hidden?'Aç':'Kapat';
