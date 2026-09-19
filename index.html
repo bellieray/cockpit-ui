@@ -3581,16 +3581,19 @@ function drawSheet(){
       if(dolu.length<2) return '';
       const d1=dolu.slice(-1), d0=dolu.slice(-2,-1);
       const w1=all.slice(-7), w0=all.slice(-14,-7);
-      const agg=(ds,mk2)=>{const r=countryRows(ds);
+      // `store` oranlarda aynı kaynak-tutarlılık: gün satırı da toplam satırı
+      // da aynı evreni okumalı, yoksa kart %4,6 derken alt satır %9,7 der.
+      const agg=(ds,mk2)=>{
+        if(mk2.ratio && mk2.store){ const f=storeFunnel(ds); return f.imp?f.dl/f.imp:null; }
+        const r=countryRows(ds);
         const sum2=(k)=>r.reduce((a,o)=>a+(o[k]||0),0);
         return mk2.ratio ? (sum2(mk2.den)?sum2(mk2.num)/sum2(mk2.den):null) : sum2(mk2.k);};
       const f=v=>v==null?'–':(mk.ratio?pct1(v):num(v));
       const gun1=agg(d1,mk), gun0=agg(d0,mk), haf1=agg(w1,mk), haf0=w0.length?agg(w0,mk):null;
-      const nG=mk.ratio?countryRows(d1).reduce((a,o)=>a+(o[mk.den]||0),0):gun1;
-      const cG=mk.ratio?confRatio(countryRows(d1).reduce((a,o)=>a+(o[mk.num]||0),0),nG,
-                 countryRows(d0).reduce((a,o)=>a+(o[mk.num]||0),0),
-                 countryRows(d0).reduce((a,o)=>a+(o[mk.den]||0),0))
-                : confCount(gun1,gun0);
+      const pay=(ds)=>mk.store?storeFunnel(ds).dl:countryRows(ds).reduce((a,o)=>a+(o[mk.num]||0),0);
+      const payda=(ds)=>mk.store?storeFunnel(ds).imp:countryRows(ds).reduce((a,o)=>a+(o[mk.den]||0),0);
+      const nG=mk.ratio?payda(d1):gun1;
+      const cG=mk.ratio?confRatio(pay(d1),nG,pay(d0),payda(d0)):confCount(gun1,gun0);
       return `<div class="sh-sec">GÜN VE HAFTA</div>
         <div class="sh-row" style="cursor:default;opacity:.62">
           <span class="sh-row-top"><span class="sh-cc">${esc(dShort(d0[0]))} → ${esc(dShort(d1[0]))}</span>
@@ -3632,7 +3635,10 @@ function drawSheet(){
       // aksiyon. Tek "dönüşüm" sayısı hangi adımın sızdırdığını söylemiyor —
       // ikon/başlık mı zayıf (gösterim→sayfa), yoksa ekran görüntüsü mü
       // (sayfa→indirme)? İkisi farklı iş.
-      const imp=sum(now,'imp'), pv=sum(now,'pv'), dl=sum(now,'dl');
+      // Huni adımları da MAĞAZA kaynaklarından: "gösterim → sayfa" oranı,
+      // gösterimi olmayan kaynakların sayfa görüntülemesini içeremez.
+      const _sf=storeFunnel(rangeDays());
+      const imp=_sf.imp, pv=_sf.pv, dl=_sf.dl;
       if(!imp) return '';
       const rows=[
         ['Gösterim → sayfa', pv, imp, 'ikon, başlık ve ilk ekran görüntüsü'],
