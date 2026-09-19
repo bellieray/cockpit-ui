@@ -3538,8 +3538,15 @@ function drawSheet(){
       // gün satırı GRİ ve OKSUZ, hafta satırı siyah ve oklu. Fark gizlenmiyor
       // (istek görmezden gelinmiş olurdu) ve yön iddia edilmiyor (yalan
       // olurdu). Rozet hangisi olduğunu kelimeyle söylüyor.
+      // SON ÖLÇÜLEN GÜN, takvimin son günü değil. `allDays()` takvim günü
+      // döndürüyor ve mağaza verisi 2 gün geriden geliyor — son iki günü
+      // körlemesine almak "0 → 0" yazdırıyordu. Sıfır ile ölçülmedi aynı şey
+      // değil (CLAUDE.md 3. ilke): ölçümü olan son iki gün karşılaştırılır ve
+      // hangi günler olduğu satırda yazar.
       const all=allDays(); if(all.length<4) return '';
-      const d1=all.slice(-1), d0=all.slice(-2,-1);
+      const dolu=all.filter(d=>countryRows([d]).some(o=>(o.imp||0)+(o.pv||0)+(o.dl||0)>0));
+      if(dolu.length<2) return '';
+      const d1=dolu.slice(-1), d0=dolu.slice(-2,-1);
       const w1=all.slice(-7), w0=all.slice(-14,-7);
       const agg=(ds,mk2)=>{const r=countryRows(ds);
         const sum2=(k)=>r.reduce((a,o)=>a+(o[k]||0),0);
@@ -3553,9 +3560,10 @@ function drawSheet(){
                 : confCount(gun1,gun0);
       return `<div class="sh-sec">GÜN VE HAFTA</div>
         <div class="sh-row" style="cursor:default;opacity:.62">
-          <span class="sh-row-top"><span class="sh-cc">Dün → bugün</span>
+          <span class="sh-row-top"><span class="sh-cc">${esc(dShort(d0[0]))} → ${esc(dShort(d1[0]))}</span>
             <span class="sh-now tnum">${esc(f(gun0))} → ${esc(f(gun1))}</span></span>
-          <span class="sh-row-sub">tek gün · ${esc(cG.label)} — yön iddiası yok, n=${num(nG||0)}</span>
+          <span class="sh-row-sub">son ölçülen iki gün · ${esc(cG.label)} — yön iddiası yok, n=${num(nG||0)}${
+            all[all.length-1]!==d1[0]?` · bugünün verisi henüz gelmedi`:''}</span>
         </div>
         <div class="sh-row" style="cursor:default">
           <span class="sh-row-top"><span class="sh-cc">Geçen hafta → bu hafta</span>
