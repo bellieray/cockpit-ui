@@ -3791,8 +3791,12 @@ function showView(v){
     n.title = RANGE_FREE_TABS.has(v) ? 'Bu sekme aralıktan bağımsız: konektör durumu anlık, portföy kendi tüm geçmişini gösteriyor.' : '';
   });
   drawCrumb();
-  buildAnchors();
   TAB_GROUPS[v].views.forEach(k=>RENDERERS[k]?.());
+  // SIRA önemli: çıpalar ve satır sınırı render EDİLDİKTEN sonra kurulur.
+  // Önce çağrılırsa henüz boş kaplara bakar ve ikisi de sessizce hiçbir şey
+  // yapmaz — sekme birleştirmede Ürün 26,8 ekran kalmasının sebebi buydu.
+  buildAnchors();
+  capTables();
 }
 
 /* ---------- ASO ---------- */
