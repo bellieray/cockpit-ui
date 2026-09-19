@@ -1194,7 +1194,7 @@
       </div>
 
       <!-- ülkeler -->
-      <div class="card c12" data-store-only>
+      <div data-move-to="pazar" class="card c12" data-store-only>
         <div class="card-head">
           <div><div class="card-title">Ülkeler</div><div class="card-sub" id="ctryMeta"></div></div>
         </div>
@@ -1211,7 +1211,7 @@
       <div class="c12 region-label">Kelimeler</div>
 
       <!-- kelimeler -->
-      <div class="card c8">
+      <div data-move-to="aso" class="card c8">
         <div class="card-head">
           <div><div class="card-title">Anahtar kelimeler</div><div class="card-sub">Talep elle toplandı <span id="kwFresh"></span></div></div>
         </div>
@@ -1245,7 +1245,7 @@
       <div class="c12 region-label">Rekabet &amp; yorumlar</div>
 
       <!-- puan -->
-      <div class="card c5">
+      <div data-move-to="aso" class="card c5">
         <div class="card-head">
           <div><div class="card-title">Puan sıralaması</div><div class="card-sub">biz + rakipler · son 30g puanı ve sürüm hareketi</div></div>
           <select id="lbSort" style="font:inherit;font-size:12.5px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
@@ -1256,7 +1256,7 @@
       </div>
 
       <!-- yorumlar -->
-      <div class="card c7">
+      <div data-move-to="yorum" class="card c7">
         <div class="card-head">
           <div><div class="card-title">Yorumlar</div><div class="card-sub" id="revMeta"></div></div>
         </div>
@@ -3782,7 +3782,22 @@ const RENDERERS={aso:()=>renderAso(),portfoy:()=>renderPortfoy(),para:()=>render
 const RANGE_FREE_TABS=new Set(['veri']);
 let VIEW = "bugun";
 function visibleViews(){ return (TAB_GROUPS[VIEW]||TAB_GROUPS.bugun).views; }
+/* Özet'te tekrar eden kartlar kendi sekmelerine TAŞINIR (silinmez).
+   Ölçülen hâli: Ülkeler 2.179px, Puan sıralaması 3.416px, Anahtar kelimeler
+   1.992px — dördü birlikte Bugün'ün yarısı, ve hepsinin tam hâli zaten başka
+   bir sekmede var. Karar yüzeyinde bir kartın ikinci kopyası bilgi değil,
+   gürültü. Taşıma DOM'da bir kez yapılıyor: markup'ı elle bölmek 87 kartlık
+   bir dosyada gereksiz risk, `data-move-to` niyeti tek yerde tutuyor. */
+let MOVED=false;
+function relocateCards(){
+  if(MOVED) return; MOVED=true;
+  document.querySelectorAll('[data-move-to]').forEach(card=>{
+    const host=el('v-'+card.dataset.moveTo)?.querySelector('.grid');
+    if(host) host.appendChild(card);
+  });
+}
 function showView(v){
+  relocateCards();
   if(!TAB_GROUPS[v]) v='bugun';
   VIEW = v;
   const on=new Set(TAB_GROUPS[v].views);
