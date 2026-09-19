@@ -3365,9 +3365,13 @@ function sheetRows(mk){
     if(mk.ratio){
       const nNow=r[mk.den], nPrev=p[mk.den];
       const vNow=nNow?r[mk.num]/nNow:null, vPrev=nPrev?p[mk.num]/nPrev:null;
+      // KATKI bir oranda pay farkı DEĞİL: indirmesi en çok düşen ülke, oranı
+      // yükselmiş olabilir. Toplam orana etkisi ≈ puan farkı × bu ülkenin
+      // paydadaki ağırlığı. Aksi hâlde n=4'lük bir ülkenin −45 puanı,
+      // n=169'luk bir ülkenin −8,5 puanının önüne geçiyordu.
       return {cc:r.cc, now:vNow, prev:vPrev, n:nNow,
               delta:(vNow!=null&&vPrev!=null)?(vNow-vPrev)*100:null,
-              contrib:(r[mk.num]||0)-(p[mk.num]||0),
+              contrib:(vNow!=null&&vPrev!=null)?(vNow-vPrev)*nNow:0,
               conf:confRatio(r[mk.num],nNow,p[mk.num],nPrev)};
     }
     const vNow=r[mk.k], vPrev=p[mk.k];
