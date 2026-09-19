@@ -4982,6 +4982,7 @@ function signalsFor(app=APP){
   /* --- 1. Reklam: dolu gelen envanter basılmıyor --------------------- */
   const fmtRows=(D.adByFormat||[]).filter(r=>r.slug===app);
   const formats=[...new Set(fmtRows.map(r=>r.format))];
+  const wasteful=[];   /* israf eden formatlar tek satırda toplanacak */
   formats.forEach(f=>{
     const a=adAgg(fmtRows.filter(r=>r.format===f));
     // Kapı: en az 50 eşleşmiş istek. Altında "show rate" istatistiksel
@@ -5009,12 +5010,31 @@ function signalsFor(app=APP){
         `Show rate %0. Envanter geliyor ama SDK tek bir gösterim yazmıyor — bu fill sorunu değil, render/kayıt hatası: reklam SDK'nın kendi görünümünün içinde çizilmiyor ya da hiç gösterime sokulmuyor. Sayılmayan gösterim = ödenmeyen gösterim; gerçek gelir kaybı bu satırda.`,
         `${num(a.matched)} sayılmadı`);
     } else {
-      add(3, SIG.AMBER, a.missed,
-        `${f}: gösterdiğinin ${Math.round(1/a.showRate)} katı reklam isteniyor`,
-        `${num(a.matched)} dolu istek geldi, ${num(a.missed)} tanesi kullanılmadan atıldı (show rate %${(a.showRate*100).toFixed(0)}). Bu kayıp gelir DEĞİL — gösterilmeyen reklamı kimse izlemedi, kimse ödemedi. İsrafın bedeli başka: gösterdiğinden kat kat fazla istek atmak AdMob'un eşleşme oranını kısmasına ve geçersiz-trafik incelemesine yol açar. Aksiyon: isteği gerçekten gösterilecek ana yaklaştır (ekran/kart görünür olunca yükle), daha çok göstermeye çalışma.`,
-        `${num(a.missed)} boşa`);
+      // TEK SATIRDA TOPLANIR, format başına bağırmaz. Dört formatın dördü de
+      // aynı arızayı yaşadığı için kuyruğun %80'i aynı cümlenin kopyasıydı;
+      // `metrics.md §8` panellerin en yaygın ölüm nedenini "her gün aynı dört
+      // kırmızı" diye yazıyor ve bu tam olarak oydu. Aksiyon zaten ortak
+      // (isteği gösterim anına yaklaştır), ayrı satır ayrı karar üretmiyor.
+      wasteful.push({f, ...a});
     }
   });
+  if(wasteful.length){
+    const tot=wasteful.reduce((x,w)=>x+w.missed,0);
+    const worst=[...wasteful].sort((x,y)=>x.showRate-y.showRate)[0];
+    const liste=wasteful.sort((x,y)=>y.missed-x.missed)
+      .map(w=>`${w.f} %${(w.showRate*100).toFixed(0)} (${num(w.missed)} boşa)`).join(' · ');
+    add(3, SIG.AMBER, tot,
+      wasteful.length===1
+        ? `${worst.f}: gösterdiğinin ${Math.round(1/worst.showRate)} katı reklam isteniyor`
+        : `${wasteful.length} reklam formatında istek israfı`,
+      `${liste}. Toplam ${num(tot)} dolu istek kullanılmadan atıldı. `
+      +`Bu kayıp gelir DEĞİL — gösterilmeyen reklamı kimse izlemedi, kimse ödemedi. `
+      +`İsrafın bedeli başka: gösterdiğinden kat kat fazla istek atmak AdMob'un eşleşme `
+      +`oranını kısmasına ve geçersiz-trafik incelemesine yol açar. `
+      +`Aksiyon hepsinde aynı: isteği gerçekten gösterilecek ana yaklaştır `
+      +`(ekran/kart görünür olunca yükle), daha çok göstermeye çalışma.`,
+      `${num(tot)} boşa`);
+  }
 
   /* --- 2. Ülke: mağaza gösterimi var, ürün sayfası yok --------------- */
   // Portföyde aralık seçicisi yok — her uygulama kendi TÜM geçmişiyle
