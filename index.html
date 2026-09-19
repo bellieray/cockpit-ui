@@ -3521,7 +3521,12 @@ function drawCrumb(span){
 const COLLAPSE_PX=900, COLLAPSE_PX_REF=420;
 function collapseTallCards(){
   const ref = VIEW==='veri';
-  const limit = ref ? COLLAPSE_PX_REF : COLLAPSE_PX;
+  // Masaüstünde eşik GEVŞEK: kartlar grid'de yan yana duruyor, yani sayfa
+  // yüksekliği kart yüksekliklerinin toplamı değil. Dar ekranda tek kolon
+  // olduğu için aynı kart sayfayı birebir uzatıyor. 420px'i masaüstünde
+  // uygulamak 21 kartı gereksiz yere kapatıyordu.
+  const dar = matchMedia('(max-width:1079.98px)').matches;
+  const limit = (ref && dar) ? COLLAPSE_PX_REF : COLLAPSE_PX;
   document.querySelectorAll('.view:not([style*="display: none"]) .card').forEach(c=>{
     if(c.dataset.noCollapse!=null) return;
     const head=c.querySelector('.card-head'); if(!head) return;
