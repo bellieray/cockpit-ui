@@ -4018,11 +4018,14 @@ let MOVED=false;
 function relocateCards(){
   if(MOVED) return; MOVED=true;
   document.querySelectorAll('[data-move-to]').forEach(card=>{
-    // `__drop`: kart hedefte ZATEN VAR, taşımak ikinci kopya üretir.
-    // Özet'teki "Anahtar kelimeler" ile ASO'daki "Tüm terimler" aynı 2.021
-    // satırı çiziyor — ikincisi üstelik filtreli. Taşıma bunu Büyüme
-    // sekmesinde yan yana iki kopyaya çevirmişti.
-    if(card.dataset.moveTo==='__drop'){ card.remove(); return; }
+    // `__drop`: kart hedefte ZATEN VAR (Özet'teki "Anahtar kelimeler" ile
+    // ASO'daki "Tüm terimler" aynı 2.021 satırı çiziyor, ikincisi üstelik
+    // filtreli). GİZLENİYOR, silinmiyor: `bind()` bu kartın içindeki beş
+    // kontrole (kwCountry, kwSearch, kwSort, kwFresh, kwTable) isimle
+    // bakıyor ve DOM'dan kaldırmak onu null'da patlatıp SONRAKİ tüm
+    // bağlamaları düşürüyordu — sekme düğmeleri dahil. Tek bir elemanı
+    // silmek, bir fonksiyonun geri kalanını sessizce iptal edebilir.
+    if(card.dataset.moveTo==='__drop'){ card.hidden=true; return; }
     const host=el('v-'+card.dataset.moveTo)?.querySelector('.grid');
     if(host) host.appendChild(card);
   });
