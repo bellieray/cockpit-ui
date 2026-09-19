@@ -3879,6 +3879,18 @@ function drawWeekly(){
 /* Değişmezler. Üç durum burada da geçerli: geçti / kaldı / HİÇ KOŞMADI.
    Üçüncüsü ayrı çizilir — koşmamış bir değişmez "sorun yok" demek değil,
    "bakılmadı" demek ve bu ikisini aynı göstermek sessiz onayın ta kendisi. */
+/* Bir koşunun "0 satır yazdı" demesi tek başına bir şey söylemiyor: veri
+   değişmemiş de olabilir, satırlar düşmüş de. Üçlü (geldi/yazıldı/değişmedi)
+   birlikte okunduğunda cümle kendini açıklıyor. */
+function syncRowsLabel(r){
+  const rec=Number(r.rows_received??0), wr=Number(r.rows_written??0);
+  const un=r.rows_unchanged==null?null:Number(r.rows_unchanged);
+  if(!rec) return 'veri gelmedi';
+  if(un==null) return `${num(rec)} geldi · ${num(wr)} yazıldı`;
+  const kayip=rec-wr-un;
+  return `${num(rec)} geldi · ${num(wr)} yazıldı · ${num(un)} değişmedi`
+    + (kayip>0?` · ${num(kayip)} DÜŞTÜ`:'');
+}
 function drawRecon(){
   const host=el('rcnList'); if(!host) return;
   const rows=(D.recon||[]);
@@ -6595,12 +6607,18 @@ function drawDeferred(){
       <div style="font-size:12.5px;color:var(--ink-2)">${esc(String(r.consecutive_failures||0))} ardışık hata · ${esc(wait)} yeniden denenecek${r.status?` · ${esc(r.status)}`:''}</div></div>`;
   }).join("") : `<div class="empty">Geri çekilmiş kaynak yok</div>`;
 }
+/* Bir kaynağın SON koşusunda satırların ne olduğu. "Koştu" ile "veri getirdi"
+   farklı şeyler ve tablo yalnız ilkini gösteriyordu. */
+function lastRunRows(h){
+  const r=(D.syncRecent||[]).find(x=>x.slug===h.app_slug && x.source===h.source);
+  return r ? syncRowsLabel(r) : '–';
+}
 function drawSTable(){
   const all=healthAll();
   const app=el('sApp').value, st=el('sStatus').value, q=el('sSearch').value.trim().toLowerCase();
   const rows=all.filter(r=>(!app||r.app_slug===app)&&(!st||hcls(r)===st)&&(!q||r.source.toLowerCase().includes(q)));
   el('sTable').innerHTML=
-    `<thead><tr><th>Kaynak</th><th>Ritim</th><th>Koşu</th><th>Saat</th><th>Son kalite</th><th>Hata</th><th>Durum</th></tr></thead><tbody>`+
+    `<thead><tr><th>Kaynak</th><th>Ritim</th><th>Koşu</th><th>Saat</th><th>Son koşuda satır</th><th>Son kalite</th><th>Hata</th><th>Durum</th></tr></thead><tbody>`+
     (rows.length?rows.map(r=>{
       const k=hcls(r);
       const tag=k==='ok'?'<span class="tag cov">Sağlıklı</span>':k==='nodata'?'<span class="tag nod">Veri yok</span>'
@@ -6608,10 +6626,11 @@ function drawSTable(){
       return `<tr><td>${esc(r.app_slug==='__global__'?'global':r.app_slug)}/${esc(r.source)}</td>
         <td class="num">${esc(r.cadence||"–")}</td><td class="num">${r.runs_total??"–"}</td>
         <td class="num">${r.hours_since_data==null?"–":Number(r.hours_since_data).toFixed(1)}</td>
+        <td class="num sec" data-l="satır">${esc(lastRunRows(r))}</td>
         <td class="num">${esc(r.last_run_quality||"–")}</td>
         <td class="num">${esc(r.last_failure_class||"–")}</td>
         <td class="num">${tag}</td></tr>`;
-    }).join(""):`<tr><td colspan="7" class="empty">Eşleşen konektör yok</td></tr>`)+`</tbody>`;
+    }).join(""):`<tr><td colspan="8" class="empty">Eşleşen konektör yok</td></tr>`)+`</tbody>`;
   el('sCount').textContent=`${rows.length} / ${all.length}`;
   el('sMeta').textContent=`${all.filter(r=>r.enabled).length} açık · ${all.filter(r=>!r.enabled).length} kapalı`;
 }
