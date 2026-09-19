@@ -2023,6 +2023,17 @@
         <div id="rcnList"></div>
       </div>
 
+      <!-- İkinci yol hesabı. Değişmez "geçti" der ama iki yolun DEĞERİNİ
+           göstermezse, "doğru" ile "iki yol aynı yanlışı yapıyor" ayrılamaz.
+           İnsan gözüyle karşılaştırılabilsin diye A ve B yan yana. -->
+      <div class="card c12" id="dfcCard">
+        <div class="card-head">
+          <div><div class="card-title">İkinci yol hesabı</div>
+            <div class="card-sub" id="dfcSub">–</div></div>
+        </div>
+        <div id="dfcList"></div>
+      </div>
+
       <div class="card c12" id="asrCard">
         <div class="card-head">
           <div><div class="card-title">Değişmezler</div>
@@ -3913,7 +3924,12 @@ function weeklyText(){
   // güvenebilir miyim" olmalı, son sorusu değil.
   const asrFail=(D.assertions||[]).filter(r=>r.passed===false&&r.severity!=='warn');
   const asrNone=(D.assertions||[]).filter(r=>r.passed==null);
-  L.push('', `5) DOĞRULUK (${num((D.assertions||[]).length)} değişmez)`);
+  const dfc=(D.differential||[]).filter(r=>r.metric.endsWith(':'+APP));
+  const dfcBad=dfc.filter(r=>Number(r.diff_pct)>0.5);
+  L.push('', `5) DOĞRULUK (${num((D.assertions||[]).length)} değişmez · ${num(dfc.length)} sayı iki yoldan hesaplandı)`);
+  if(dfcBad.length) dfcBad.forEach(r=>L.push(`   ✕ ${r.metric.split(':')[0]}: iki yol ayrışıyor (%${Number(r.diff_pct).toFixed(2)})`));
+  else if(dfc.length) L.push('   İkinci yol hesabı: hepsi aynı.');
+  else L.push('   ○ İkinci yol hiç koşmadı.');
   const asrWarn=(D.assertions||[]).filter(r=>r.passed===false&&r.severity==='warn');
   if(asrFail.length) asrFail.forEach(r=>L.push(`   ✕ ${r.title||r.key}`));
   if(asrWarn.length) asrWarn.forEach(r=>L.push(`   ▲ ${r.title||r.key} (kaynağın doğası, izleniyor)`));
@@ -3951,6 +3967,31 @@ function syncRowsLabel(r){
   const kayip=rec-wr-un;
   return `${num(rec)} geldi · ${num(wr)} yazıldı · ${num(un)} değişmedi`
     + (kayip>0?` · ${num(kayip)} DÜŞTÜ`:'');
+}
+/* Ad `store_conversion:spendy` biçiminde — uygulamaya ait olanlar süzülür. */
+const DFC_LABEL={
+  store_conversion:'Mağaza dönüşümü', ad_revenue_7d:'Reklam geliri (7g)',
+  downloads_7d:'İlk kez indirme (7g)', active_subscribers:'Aktif abone',
+  activation:'Aktivasyon'
+};
+function drawDifferential(){
+  const host=el('dfcList'); if(!host) return;
+  const rows=(D.differential||[]).filter(r=>r.metric.endsWith(':'+APP));
+  if(!rows.length){ host.innerHTML='<div class="empty">İkinci yol hiç koşmadı — bu bir "fark yok" değil, "bakılmadı" demek.</div>';
+    el('dfcSub').textContent='koşmadı'; return; }
+  const bad=rows.filter(r=>Number(r.diff_pct)>0.5);
+  el('dfcSub').textContent=`${num(rows.length)} sayı iki bağımsız yoldan · `
+    + (bad.length?`${num(bad.length)} ayrışıyor`:'hepsi aynı')
+    + ` · ${agoText(new Date(rows[0].checked_at))}`;
+  const fmt=v=>v==null?'ölçülmedi':(Math.abs(Number(v))<100?Number(v).toFixed(2):num(Number(v)));
+  host.innerHTML=rows.map(r=>{
+    const base=r.metric.split(':')[0];
+    const ok=!(Number(r.diff_pct)>0.5);
+    return `<div class="asr ${ok?'ok':'fail'}"><span class="asr-dot">${ok?'●':'✕'}</span>
+      <span class="asr-t">${esc(DFC_LABEL[base]||base)}
+        <span style="color:var(--ink-3)"> ${esc(fmt(r.value_sql))} ↔ ${esc(fmt(r.value_ts))}</span>
+        ${ok?'':`<div class="asr-d">Fark %${Number(r.diff_pct).toFixed(2)} — is_current bayrağı en yüksek revizyonda olmayabilir.</div>`}</span>
+      <span class="asr-when">${ok?'aynı':'FARKLI'}</span></div>`;}).join('');
 }
 function drawRecon(){
   const host=el('rcnList'); if(!host) return;
@@ -4076,7 +4117,7 @@ function renderAll(){
   const pre=isPrelaunch();
   el('v-ozet').classList.toggle('pre',pre);
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
-  drawCrumb(span); drawFresh(); drawWeekly(); drawAssertions(); drawRecon();
+  drawCrumb(span); drawFresh(); drawWeekly(); drawAssertions(); drawRecon(); drawDifferential();
   fillSelects(); drawSyncLabel(); renderSignals(); drawPrelaunch(); drawRevenue(); drawRetentionKpi(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   visibleViews().forEach(k=>RENDERERS[k]?.());
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
