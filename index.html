@@ -430,6 +430,33 @@
      çıpa şeridi (.mbar) gezilebilir tutuyor — iki madde birbirini tamamlıyor. */
   @media (max-width:679.98px){
     .tw-cards{max-height:none!important;overflow:visible}
+    /* …ama SINIRSIZ değil. `max-height:none` yatay kaydırmayı öldürmek için
+       doğru; satır sayısını serbest bırakmak için değil. Ölçülen hâli: Özet'te
+       2.021 satırlık kelime tablosu tek başına 134.902px = ~160 telefon ekranı,
+       sekmenin tamamı 149.840px. Masaüstünde aynı tablo 430px'lik kutuda
+       duruyordu — yani kırılan şey tablo değil, mobilde kutunun kapanmasıydı.
+       Çözüm dikey kaydırma tuzağını geri getirmek değil, satırı saymak:
+       ilk TW_CAP satır çizilir, gerisi `.tw-all` ile açılır. */
+    .tw-cards:not(.tw-all) table.dt-cards tbody tr:nth-child(n+26){display:none}
+  }
+  /* Düğme her genişlikte var ama yalnız mobilde ANLAMLI: masaüstünde kutu
+     zaten kaydırılıyor, orada capTables() hiç eklemiyor. */
+  /* === kaynak tazelik şeridi === */
+  .fresh{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;
+    padding:9px 16px;margin:0 0 4px;font-size:11.5px;color:var(--ink-3);
+    background:var(--canvas);border-bottom:1px solid var(--hair)}
+  .fresh b{font-weight:600;color:var(--ink-2)}
+  .fresh .fr{white-space:nowrap;font-variant-numeric:tabular-nums}
+  .fresh .fr.stale{color:var(--s2);font-weight:600}
+  .fresh .fr.stale b{color:var(--s2)}
+  .fresh .fr-lead{font-weight:600;color:var(--ink-2);margin-right:2px}
+
+  .tw-more{display:block;width:100%;margin-top:10px;padding:10px 12px;border:0;
+    background:var(--canvas);color:var(--ink-2);font:inherit;font-size:12.5px;
+    font-weight:600;border-radius:var(--r-md);cursor:pointer}
+  .tw-more:hover{background:var(--hair)}
+
+  @media (max-width:679.98px){
     table.dt-cards,table.dt-cards tbody{display:block}
     table.dt-cards thead{display:none}
     table.dt-cards tbody tr{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;
@@ -819,6 +846,15 @@
            telefondan iki uygulama arasında geçmenin yolu yok. Şeride taşındı. -->
       <div class="mapp" id="mApp"></div>
     </div>
+
+    <!-- Kaynak tazelik şeridi. NEDEN kart başına ölçüm tarihi YETMİYOR:
+         konektörler farklı saatlerde koşuyor, ekranda ASC'nin dünkü sayısı ile
+         AdMob'un bu sabahki sayısı YAN YANA duruyor ve tek bir "bugünkü durum"
+         gibi okunuyor. "Dönüşüm düştü ama gelir sabit" cümlesi aslında iki
+         farklı günü kıyaslıyor olabilir. Her kart tek başına doğru, tarihi de
+         yazılı — yanlış, iki doğru sayıyı yan yana koyma anında doğuyor.
+         Veri: vw_series_freshness (koşuyu değil, AKAN VERİYİ ölçer). -->
+    <div class="fresh" id="freshBar" hidden></div>
 
     <div class="view" id="v-ozet">
     <div class="grid">
@@ -3152,6 +3188,56 @@ function drawCrumb(span){
     el('rangeLabelText').textContent = txt || `Son ${RANGE} gün`;
   }
 }
+/* Mobilde kart-tablo satır sınırı — CSS'teki `nth-child(n+26)` ile AYNI sayı.
+   Düğme her render'da yeniden kuruluyor çünkü tablolar `innerHTML` ile
+   yeniden yazılıyor; kalıcı bir dinleyici ilk yeniden yazımda kopardı.
+
+   NEDEN satır sayısı DOM'dan okunuyor: burada okunan şey bir metrik değil,
+   çizilmiş satır adedi. Kartların üstündeki toplamlar veri dizilerinden
+   (`gapsFor()` gibi) geliyor, DOM'dan değil — yani gizlenen satır hiçbir
+   toplamı değiştirmiyor. Tersi olsaydı "50 satırın toplamı" diye sessiz bir
+   yanlış doğardı. */
+const TW_CAP=25;
+function capTables(){
+  const narrow=matchMedia('(max-width:679.98px)').matches;
+  document.querySelectorAll('.tw-cards').forEach(w=>{
+    w.querySelector(':scope > .tw-more')?.remove();
+    const n=w.querySelectorAll('table.dt-cards > tbody > tr').length;
+    if(!narrow || n<=TW_CAP){ w.classList.remove('tw-all'); return; }
+    const b=document.createElement('button');
+    b.className='tw-more';
+    const label=()=> w.classList.contains('tw-all')
+      ? `${num(n)} satırın tümü · ilk ${TW_CAP}'e dön`
+      : `${num(n)} satırın ${TW_CAP}'i · tümünü göster`;
+    b.textContent=label();
+    b.addEventListener('click',()=>{ w.classList.toggle('tw-all'); b.textContent=label(); });
+    w.appendChild(b);
+  });
+}
+
+/* Kaynak tazelik şeridi.
+   `days_behind` konektörün koştuğu anı değil, en yeni VERİ periyodunu ölçüyor:
+   boş ama başarılı bir çekim "koştu" der, "veri geldi" demez. BAYAT olanlar
+   öne alınıyor; hepsi güncelse şerit tek satıra iniyor ama GİZLENMİYOR —
+   "hangi gün konuşuyorum" sorusu her zaman görünür kalmalı. */
+function drawFresh(){
+  const rows=(D.seriesFreshness||[])
+    .filter(r=>r.app_slug===APP||r.app_slug==='__global__');
+  const bar=el('freshBar');
+  if(!rows.length){ bar.hidden=true; return; }
+  bar.hidden=false;
+  const stale=rows.filter(r=>r.freshness==='BAYAT');
+  const sorted=[...rows].sort((a,b)=>(b.days_behind??0)-(a.days_behind??0));
+  const one=r=>{
+    const d=r.days_behind;
+    const age = d==null ? 'ölçülmedi' : d<=0 ? 'bugün' : d===1 ? 'dün' : `${d} gün önce`;
+    return `<span class="fr${r.freshness==='BAYAT'?' stale':''}" title="${esc(r.source)} · en yeni veri ${esc(r.newest_period||'yok')}"><b>${esc(r.source)}</b> ${esc(age)}</span>`;
+  };
+  bar.innerHTML =
+    `<span class="fr-lead">${stale.length?`${num(stale.length)} kaynak bayat`:'Kaynaklar güncel'}</span>`
+    + sorted.map(one).join('');
+}
+
 function renderAll(){
   const days=rangeDays();
   const a=(D.apps||[]).find(x=>x.slug===APP);
@@ -3165,13 +3251,14 @@ function renderAll(){
   const pre=isPrelaunch();
   el('v-ozet').classList.toggle('pre',pre);
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
-  drawCrumb(span);
+  drawCrumb(span); drawFresh();
   fillSelects(); drawSyncLabel(); renderSignals(); drawPrelaunch(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   if(VIEW==='aso') renderAso(); else if(VIEW==='portfoy') renderPortfoy(); else if(VIEW==='para') renderPara(); else if(VIEW==='pazar') renderPazar(); else if(VIEW==='urun') renderUrun(); else if(VIEW==='veri') renderVeri(); else if(VIEW==='yorum') renderYorum(); else if(VIEW==='saglik') renderSaglik();
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
   // yukarıda değişiyor ve bazı region-label'lar görünür/gizli olabiliyor —
   // sekme değişmeden çıpa şeridi bayat kalmasın diye burada da yeniden kurulur.
   buildAnchors();
+  capTables();
 }
 
 /* ---------- mobil sabit şerit ---------- */
