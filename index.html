@@ -1979,6 +1979,18 @@
 
     <div class="view" id="v-saglik" style="display:none">
       <div class="grid">
+      <div class="c12 region-label">Doğruluk</div>
+      <!-- Değişmezler. `testing.md` Katman 1: "başarısız olan bir değişmezin
+           ilgili metriği çizilmez ve panele şerit uyarı basılır." Assertion'lar
+           koşuyordu ama sonucu hiçbir yerde görünmüyordu — ölçülen ama
+           gösterilmeyen doğruluk, ölçülmemiş doğruluk kadar işe yarıyor. -->
+      <div class="card c12" id="asrCard">
+        <div class="card-head">
+          <div><div class="card-title">Değişmezler</div>
+            <div class="card-sub" id="asrSub">–</div></div>
+        </div>
+        <div id="asrList"></div>
+      </div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s3) 15%,transparent);color:var(--s3)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12l5 5L20 6"/></svg></span>
           <span class="kpi-name">Sağlıklı<br><span class="card-sub">veri akıyor</span></span></div>
