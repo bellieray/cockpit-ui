@@ -523,6 +523,7 @@
   /* Aralıktan bağımsız sekmede seçici soluk ve tıklanabilir kalır — gizlemek
      "neden yok" sorusunu cevapsız bırakır (üç durum kuralının aynısı). */
   .range-muted{opacity:.45}
+  .win-note{font-size:11.5px;color:var(--ink-3);line-height:1.45;margin:-6px 4px 0}
 
   /* === katlanabilir uzun kart === */
   /* `!important` ŞART: mobil kart-tablo kuralı `.tw-cards{max-height:none
@@ -1115,6 +1116,9 @@
       </div>
 
       <div class="c12 region-label" data-store-only>Trafik</div>
+      <!-- Mağaza penceresi takvim penceresinden farklıysa söyler (Apple ~2 gün
+           geriden). Başlıktaki "13–19 Eyl" ile kartlardaki sayı çelişmesin. -->
+      <div class="c12 win-note" id="storeWinNote" data-store-only hidden></div>
 
       <div class="card c3" data-store-only>
         <div class="kpi-top">
@@ -2302,6 +2306,57 @@ function prevRangeDays(){
 }
 const inRange=(day,set)=>set.has(day);
 
+/* MAĞAZA PENCERESİ — Apple verisi 2 gün GERİDEN geliyor.
+   `rangeDays()` takvimin son N gününü alıyor; mağaza verisi o günlerin son
+   ikisinde henüz yok ve toplamlara SIFIR olarak giriyordu. Ölçülen: "7G"
+   penceresinde mağaza verisi 5 günde vardı, önceki pencerede 7 günde — yani
+   "Gösterim +%23" 5 günü 7 güne kıyaslıyordu. Aynı gün sayısına bölününce
+   +%72. Büyümeyi olduğundan az gösteriyordu ve düşen bir metrikte işaret
+   tersine dönebilirdi. Oranlar etkilenmiyordu (pay ve payda aynı günlerden);
+   hacim kartları ve delta çipleri etkileniyordu.
+
+   ÇÖZÜM pencereyi ölçülmüş son güne HİZALAMAK; sıfır varsaymak değil.
+   "Ölçülmedi ≠ sıfır" (CLAUDE.md 3. ilke) pencere seviyesinde de geçerli.
+   Reklam verisi bugüne kadar geliyor ve kendi penceresinde (`rangeDays`)
+   kalıyor — ikisini aynı pencereye zorlamak reklamın 2 günlük tazeliğini
+   çöpe atardı. Mağaza verisi hiç yoksa (lansman öncesi) takvim penceresine
+   düşülüyor. */
+const _lastStoreCache={};
+function lastStoreIdx(all,app=APP){
+  const key=(D.generatedAt||'')+'|'+app;
+  if(_lastStoreCache[key]!==undefined) return _lastStoreCache[key];
+  const has=new Set();
+  (D.byCountryDaily||[]).forEach(r=>{ if(r.slug===app && Number(r.v||0)>0) has.add(r.day); });
+  let idx=-1;
+  for(let i=all.length-1;i>=0;i--){ if(has.has(all[i])){ idx=i; break; } }
+  return (_lastStoreCache[key]=idx);
+}
+function storeDays(){
+  const all=allDays(); if(!all.length) return [];
+  const idx=lastStoreIdx(all);
+  if(idx<0) return rangeDays();
+  const upto=all.slice(0,idx+1);
+  return RANGE===0 ? upto : upto.slice(-RANGE);
+}
+function storePrevDays(){
+  const all=allDays(); if(!all.length) return [];
+  const idx=lastStoreIdx(all);
+  if(idx<0) return prevRangeDays();
+  const upto=all.slice(0,idx+1);
+  if(RANGE===0||upto.length<=RANGE) return [];
+  return upto.slice(Math.max(0,upto.length-RANGE*2), upto.length-RANGE);
+}
+/* Mağaza penceresi takvim penceresinden farklıysa söyler: okuyan hangi
+   günleri gördüğünü bilmeli, yoksa başlıktaki "13–19 Eyl" ile kartlardaki
+   sayı çelişir. */
+function storeWindowNote(){
+  const st=storeDays(), rg=rangeDays();
+  if(!st.length||!rg.length) return '';
+  if(st[st.length-1]===rg[rg.length-1] && st[0]===rg[0]) return '';
+  return `Mağaza verisi ${dShort(st[st.length-1])}'ye kadar (Apple ~2 gün geriden): `
+       + `${dShort(st[0])} – ${dShort(st[st.length-1])} · ${num(st.length)} gün, önceki pencereyle aynı uzunlukta`;
+}
+
 /* ---------- toplayıcılar ---------- */
 function sumMetric(days, metricKey){
   const by=appIdx(APP).sum.get(METRIC[metricKey]);
@@ -2769,7 +2824,8 @@ function drawRevenue(){
   el('gAdRev').textContent=money2(adRev);
 }
 function drawKpis(){
-  const days=rangeDays(), prev=prevRangeDays();
+  const days=storeDays(), prev=storePrevDays();
+  const wn=el('storeWinNote'); if(wn){ const t=storeWindowNote(); wn.textContent=t; wn.hidden=!t; }
   const cur={imp:sumMetric(days,'imp'),pv:sumMetric(days,'pv'),dl:sumMetric(days,'dl')};
   const old={imp:sumMetric(prev,'imp'),pv:sumMetric(prev,'pv'),dl:sumMetric(prev,'dl')};
   /* DÖNÜŞÜM KAYNAK-TUTARLI. Payı tüm kaynaklardan (`cur.dl`), paydayı yalnız
@@ -2823,9 +2879,13 @@ function drawKpis(){
   (function renderWhy(){
     const pc=(a,b)=> (b>0 && a!=null) ? (a/b*100) : null;
     const p1=v=> v==null ? null : v.toFixed(1).replace('.',',');
-    const per100 = pc(cur.dl, cur.imp);          /* 100 gösterim ≈ kaç indirme */
-    const tapRate = pc(cur.pv, cur.imp);
-    const pvToDl  = pc(cur.dl, cur.pv);
+    // KAYNAK-TUTARLI: bu üçü kartlardaki cümleleri besliyor ("100 gösterim ≈ 9
+    // indirme", "gösterimin %46'sı sayfayı açıyor"). İlk düzeltmede Dönüşüm
+    // kartı ve detay yüzeyi temizlendi, bu üç oran atlandı ve kartın kendi
+    // metni %4,6 derken yanında "100 gösterim ≈ 9 indirme" yazıyordu.
+    const per100 = pc(sf.dl, sf.imp);            /* 100 gösterim ≈ kaç indirme */
+    const tapRate = pc(sf.pv, sf.imp);
+    const pvToDl  = pc(sf.dl, sf.pv);
     /* Kurulum başına reklam geliri: iki ucu da ÖLÇÜLEN aynı pencereden.
        Biri yoksa oran basılmıyor — uydurma bir birim maliyet üretmemek için. */
     /* Reklam geliri AYNI pencereden, AYNI toplayıcıyla: farklı pencereden
@@ -3028,8 +3088,8 @@ function drawChart(){
 
 /* ---------- kaynak ---------- */
 function drawSrc(){
-  const rows=sourceRows(rangeDays()), s=el('srcSort').value;
-  const sfT=storeFunnel(rangeDays());
+  const rows=sourceRows(storeDays()), s=el('srcSort').value;
+  const sfT=storeFunnel(storeDays());
   /* İKİ AYRI ORAN, iki ayrı kolon. Eskiden tek "Dön.%" kolonu vardı ve
      gösterim ölçülmeyen kaynaklarda SESSİZCE sayfa→indirmeye düşüyordu:
      arama satırı %5,4 (gösterim→indirme), yönlendirme satırı %71,4
@@ -3086,8 +3146,8 @@ function drawCtry(){
   // (mağazada görülen kaçı indirdi). İkisini aynı satırda göstermek doğru —
   // ama oranın paydası gösterim olduğu için payı da mağaza indirmesi olmalı,
   // yoksa referans linkinden gelen indirmeler mağaza dönüşümünü şişirir.
-  const all=countryRows(rangeDays());
-  const st=new Map(countryRows(rangeDays(),true).map(r=>[r.cc,r]));
+  const all=countryRows(storeDays());
+  const st=new Map(countryRows(storeDays(),true).map(r=>[r.cc,r]));
   const q=el('ctrySearch').value.trim().toLowerCase(), s=el('ctrySort').value, min=+el('ctryMin').value;
   const cr=r=>{ const k=st.get(r.cc); return k&&k.imp ? k.dl/k.imp : 0; };
   // Arama yalnız ülke KODUNA bakıyordu: "türkiye" ya da "germany" yazınca
@@ -3653,7 +3713,7 @@ function sheetClose(){ if(location.hash) history.back(); else drawSheet(); }
    doğrudan cevabı. Hacme ya da alfabeye göre sıralamak onu gizler. */
 function sheetRows(mk){
   const so=!!mk.store;
-  const now=countryRows(rangeDays(),so), prev=countryRows(prevRangeDays(),so);
+  const now=countryRows(storeDays(),so), prev=countryRows(storePrevDays(),so);
   const hasPrev=prev.length>0;
   const pm=new Map(prev.map(r=>[r.cc,r]));
   return now.map(r=>{
@@ -3685,7 +3745,7 @@ function sheetRows(mk){
    Panel NEDEN demiyor, "birlikte değişti" diyor — n bu ölçekte nedensellik
    taşımaz (CLAUDE.md, 12. ilke ve ölçek notu). */
 function sheetEvents(cc){
-  const days=rangeDays(); if(!days.length) return [];
+  const days=storeDays(); if(!days.length) return [];
   const from=days[0], to=days[days.length-1];
   const locales=new Set((D.countryLang||[]).filter(r=>r.country===cc).map(r=>r.locale));
   const out=[];
@@ -3698,14 +3758,14 @@ function sheetEvents(cc){
 }
 
 function sheetDaily(cc,mk){
-  const set=new Set(rangeDays()), by=new Map();
+  const set=new Set(storeDays()), by=new Map();
   (D.byCountryDaily||[]).filter(r=>r.slug===APP&&r.country===cc&&set.has(r.day)).forEach(r=>{
     const o=by.get(r.day)||{imp:0,pv:0,dl:0}; by.set(r.day,o);
     if(r.metric==='store_impression') o.imp+=Number(r.v||0);
     else if(r.metric==='store_page_view') o.pv+=Number(r.v||0);
     else if(r.metric==='downloads_first_time') o.dl+=Number(r.v||0);
   });
-  return rangeDays().map(d=>{
+  return storeDays().map(d=>{
     const o=by.get(d)||{imp:0,pv:0,dl:0};
     return {d, v: mk.ratio ? (o[mk.den]?o[mk.num]/o[mk.den]:0) : o[mk.k]};
   });
@@ -3721,7 +3781,7 @@ function drawSheet(){
   const def=(D.dict||[]).find(x=>x.metric===key);
   el('shTitle').textContent=def?.title||mk.t;
 
-  const now=countryRows(rangeDays()), prev=countryRows(prevRangeDays());
+  const now=countryRows(storeDays()), prev=countryRows(storePrevDays());
   const sum=(rows,k)=>rows.reduce((a,r)=>a+(r[k]||0),0);
   let head;
   if(mk.ratio){
@@ -3730,7 +3790,7 @@ function drawSheet(){
     // evrenden olmalı. Kırılım satırları ülke bazında kalıyor — orada payda
     // da pay da aynı ülkenin mağaza trafiği, sapma tek bir ülkede oranı
     // bozmuyor ama toplamda iki katına çıkarıyordu.
-    const sfN=mk.store?storeFunnel(rangeDays()):null, sfP=mk.store?storeFunnel(prevRangeDays()):null;
+    const sfN=mk.store?storeFunnel(storeDays()):null, sfP=mk.store?storeFunnel(storePrevDays()):null;
     const nN=mk.store?sfN.imp:sum(now,mk.den), nP=mk.store?sfP.imp:sum(prev,mk.den);
     const kN=mk.store?sfN.dl:sum(now,mk.num),  kP=mk.store?sfP.dl:sum(prev,mk.num);
     const vN=nN?kN/nN:null, vP=nP?kP/nP:null;
@@ -3829,7 +3889,7 @@ function drawSheet(){
       // (sayfa→indirme)? İkisi farklı iş.
       // Huni adımları da MAĞAZA kaynaklarından: "gösterim → sayfa" oranı,
       // gösterimi olmayan kaynakların sayfa görüntülemesini içeremez.
-      const _sf=storeFunnel(rangeDays());
+      const _sf=storeFunnel(storeDays());
       const imp=_sf.imp, pv=_sf.pv, dl=_sf.dl;
       if(!imp) return '';
       const rows=[
@@ -3837,7 +3897,7 @@ function drawSheet(){
         ['Sayfa → indirme',  dl, pv,  'ekran görüntüleri, açıklama, puan'],
       ].filter(r=>r[2]>0);
       const rev=(D.adByFormat||[]).filter(r=>r.slug===APP&&r.metric==='ad_estimated_earnings'
-        &&inRange(r.day,new Set(rangeDays()))).reduce((a,r)=>a+Number(r.v||0),0);
+        &&inRange(r.day,new Set(storeDays()))).reduce((a,r)=>a+Number(r.v||0),0);
       return `<div class="sh-sec">HUNİ ADIMLARI</div>`
         + rows.map(([t,k,n,why])=>{
             const w=wilson(k,n);
@@ -3879,10 +3939,11 @@ addEventListener('hashchange',()=>{ SH_OPEN=null; drawSheet(); });
 const WK_NOTE_KEY=()=>'wknote_'+APP;
 function weeklyText(){
   const a=(D.apps||[]).find(x=>x.slug===APP);
-  const days=rangeDays();
+  const days=rangeDays();   /* olaylar TAKVİM penceresinde: 18 Eyl'deki bir sürüm mağaza verisi 17'ye kadar diye düşmemeli */
   const L=[];
   L.push(`HAFTALIK ÖZET — ${a?.name||APP}`);
   L.push(`${LAST_SPAN} · karşılaştırma: önceki eşit dönem`);
+  const swn=storeWindowNote(); if(swn) L.push(swn);
   L.push('='.repeat(46));
 
   const sigs=signalsFor();
@@ -3892,7 +3953,7 @@ function weeklyText(){
   if(!sigs.length) L.push('   eşiğinin altında kaldı ya hiçbiri tetiklenmedi.');
 
   // 2) en büyük değişimler — yalnız gürültü ÜSTÜ olanlar
-  const now=countryRows(rangeDays()), prev=countryRows(prevRangeDays());
+  const now=countryRows(storeDays()), prev=countryRows(storePrevDays());
   const sum=(r,k)=>r.reduce((x,o)=>x+(o[k]||0),0);
   const cand=[['Gösterim','imp'],['Ürün sayfası','pv'],['İndirme','dl']]
     .map(([t,k])=>{const c=sum(now,k),p=sum(prev,k);return {t,c,p,conf:confCount(c,p),d:c-p};})
@@ -5515,7 +5576,7 @@ function signalsFor(app=APP){
   // Portföyde aralık seçicisi yok — her uygulama kendi TÜM geçmişiyle
   // değerlendirilir; "hangi app ilgimi hak ediyor" sorusu 7 günlük bir
   // pencereye sığmıyor.
-  const days=new Set(app===APP?rangeDays():allDays(app));
+  const days=new Set(app===APP?storeDays():allDays(app));
   const cAgg={};
   (D.byCountryDaily||[]).filter(r=>r.slug===app&&days.has(r.day)).forEach(r=>{
     const c=cAgg[r.country]||(cAgg[r.country]={imp:0,pv:0,dl:0});
@@ -5642,7 +5703,7 @@ function signalsFor(app=APP){
      "33 puan kaydı" diye bağırır. Kural yalnız kaynağın KENDİ gösterimi
      eşiği geçerse tetikleniyor. */
   if(app===APP){
-    const nowS=sourceRows(rangeDays()), prevS=sourceRows(prevRangeDays());
+    const nowS=sourceRows(storeDays()), prevS=sourceRows(storePrevDays());
     const tot=a=>a.reduce((x,r)=>x+(r.imp||0),0);
     const tN=tot(nowS), tP=tot(prevS);
     if(tN>0 && tP>0){
