@@ -3654,11 +3654,18 @@ function drawSheet(){
               <span class="sh-now tnum">${pct1(k/n)}</span></span>
               <span class="sh-row-sub">${num(k)} / ${num(n)}${w?` · %95 aralık ${pct1(w[0])}–${pct1(w[1])}`:''} · bu adımı ${esc(why)} belirler</span>
             </div>`;}).join('')
-        + (dl>0 ? `<div class="sh-row" style="cursor:default">
+        + (()=>{
+            // BURADA payda TÜM kurulumlar, mağaza kurulumu değil: reklam
+            // geliri uygulamayı NEREDEN indirdiğine bakmadan her kullanıcıdan
+            // geliyor. Huni oranlarının aksine burada iki uç zaten aynı
+            // evrende — mağaza kurulumuna bölmek geliri şişirirdi ($0,11
+            // yerine $0,05 doğrusu).
+            const tumDl=sum(now,'dl');
+            return tumDl>0 ? `<div class="sh-row" style="cursor:default">
               <span class="sh-row-top"><span class="sh-cc">Kurulum başına reklam geliri</span>
-              <span class="sh-now tnum">${money2(rev/dl)}</span></span>
-              <span class="sh-row-sub">${money2(rev)} / ${num(dl)} kurulum · ücretli kanal açmanın üst sınırı budur</span>
-            </div>` : '');
+              <span class="sh-now tnum">${money2(rev/tumDl)}</span></span>
+              <span class="sh-row-sub">${money2(rev)} / ${num(tumDl)} kurulum (her kaynak) · ücretli kanal açmanın üst sınırı budur</span>
+            </div>` : '';})();
     })()}
 
     <div class="sh-sec">TANIM</div>
