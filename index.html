@@ -455,6 +455,8 @@
     background:var(--canvas);color:var(--ink-2);font:inherit;font-size:12.5px;
     font-weight:600;border-radius:var(--r-md);cursor:pointer}
   .tw-more:hover{background:var(--hair)}
+  /* Masaüstünde sınır yok (kutu zaten 430px'te kaydırılıyor) — düğme de yok. */
+  @media (min-width:680px){ .tw-more{display:none} }
 
   @media (max-width:679.98px){
     table.dt-cards,table.dt-cards tbody{display:block}
@@ -3192,6 +3194,12 @@ function drawCrumb(span){
    Düğme her render'da yeniden kuruluyor çünkü tablolar `innerHTML` ile
    yeniden yazılıyor; kalıcı bir dinleyici ilk yeniden yazımda kopardı.
 
+   NEDEN genişlik JS'te SORULMUYOR: düğme her genişlikte kuruluyor, görünürlüğüne
+   CSS karar veriyor (masaüstünde `display:none`). Genişliği JS'te sormak, cihaz
+   döndürüldüğünde yeniden çalışacak bir olay dinleyicisi gerektirirdi; o
+   dinleyici tetiklenmezse tablo "satırları gizlenmiş ama düğmesi yok" hâlinde
+   kalır — satırlar sessizce kaybolur. Olaya hiç bağlanmamak bu sınıfı kapatıyor.
+
    NEDEN satır sayısı DOM'dan okunuyor: burada okunan şey bir metrik değil,
    çizilmiş satır adedi. Kartların üstündeki toplamlar veri dizilerinden
    (`gapsFor()` gibi) geliyor, DOM'dan değil — yani gizlenen satır hiçbir
@@ -3199,11 +3207,10 @@ function drawCrumb(span){
    yanlış doğardı. */
 const TW_CAP=25;
 function capTables(){
-  const narrow=matchMedia('(max-width:679.98px)').matches;
   document.querySelectorAll('.tw-cards').forEach(w=>{
     w.querySelector(':scope > .tw-more')?.remove();
     const n=w.querySelectorAll('table.dt-cards > tbody > tr').length;
-    if(!narrow || n<=TW_CAP){ w.classList.remove('tw-all'); return; }
+    if(n<=TW_CAP){ w.classList.remove('tw-all'); return; }
     const b=document.createElement('button');
     b.className='tw-more';
     const label=()=> w.classList.contains('tw-all')
@@ -3214,13 +3221,6 @@ function capTables(){
     w.appendChild(b);
   });
 }
-/* Genişlik değişimi de yeniden kurdurur: CSS eşiği kendi geçiyor ama düğme
-   JS'te. Yalnız render'a bağlanırsa telefonu yatay çevirmek (ya da masaüstünde
-   pencereyi daraltmak) sınırı uygulanmış AMA "tümünü göster"i olmayan bir
-   tablo bırakır — satırlar sessizce kaybolur. `matchMedia` dinleyicisi eşiğin
-   iki yönünü de yakalıyor; `resize` gereksiz, eşik dışı her piksel boşuna
-   çalıştırırdı. */
-try{ matchMedia('(max-width:679.98px)').addEventListener('change',capTables); }catch{}
 
 /* Kaynak tazelik şeridi.
    `days_behind` konektörün koştuğu anı değil, en yeni VERİ periyodunu ölçüyor:
