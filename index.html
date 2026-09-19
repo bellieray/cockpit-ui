@@ -2355,6 +2355,25 @@ function storePrevDays(){
   if(RANGE===0||upto.length<=RANGE) return [];
   return upto.slice(Math.max(0,upto.length-RANGE*2), upto.length-RANGE);
 }
+/* REKLAM PENCERESİ — bugünün verisi KISMİ.
+   AdMob bugünü sabah 07:25'te çekiyor: günün ilk yedi saati. Ölçülen: günlük
+   reklam isteği 600-1.000 iken 19 Eylül = 175, ve o satır 19 Eylül 07:25'te
+   ölçülmüş. Pencerenin son günü kısmi olunca toplam ~%12 düşük çıkıyor ve son
+   çubuk gerçek bir düşüş gibi görünüyor. Bugün pencereden ÇIKARILIYOR; reklam
+   verisi mağazadan tazedir (1 gün, 2 değil) ve mağaza penceresine zorlanırsa
+   o tazelik çöpe gider. Gün dizgisi UTC: ölçüm satırları UTC gün taşıyor. */
+const todayUtc=()=>new Date().toISOString().slice(0,10);
+function adDays(){
+  const done=allDays().filter(d=>d<todayUtc());
+  const src=done.length?done:allDays();
+  return RANGE===0?src:src.slice(-RANGE);
+}
+function adWindowNote(){
+  const a=adDays(), r=rangeDays();
+  if(!a.length||!r.length||a[a.length-1]===r[r.length-1]) return '';
+  return `bugün kısmi, dışarıda`;
+}
+
 /* Mağaza penceresi takvim penceresinden farklıysa söyler: okuyan hangi
    günleri gördüğünü bilmeli, yoksa başlıktaki "13–19 Eyl" ile kartlardaki
    sayı çelişir. */
@@ -2827,7 +2846,7 @@ function drawRetentionKpi(){
 
 function drawRevenue(){
   const mrr=stockValue('rc_mrr'), subs=stockValue('rc_active_subscriptions'),
-        trials=stockValue('rc_active_trials'), adRev=sumMetric(rangeDays(),'rev');
+        trials=stockValue('rc_active_trials'), adRev=sumMetric(adDays(),'rev');
   // WHY `money2` (iki ondalık): günlük reklam geliri sentlerle ölçülüyor.
   // Kuruşları atan `money` burada "$0" yazıyordu — Para sekmesi "$6.74"
   // derken Özet "$7", tek günlük aralıkta ise "$0". Aynı sayı iki sekmede
@@ -2836,6 +2855,7 @@ function drawRevenue(){
   el('gMrr').textContent=money2(mrr);
   el('gSubs').textContent=subs==null?'–':num(subs)+(trials?' · '+num(trials)+' deneme':'');
   el('gAdRev').textContent=money2(adRev);
+  const gl=el('gAdRevLabel'); if(gl) gl.textContent='AdMob · seçili aralık'+(adWindowNote()?' · '+adWindowNote():'');
 }
 function drawKpis(){
   const days=storeDays(), prev=storePrevDays();
@@ -5857,7 +5877,7 @@ function renderSignals(){
    gibi okunan bir yalan üretirdi. */
 function drawRevenueTimeline(fmtRows){
   const host=el('paTimeline'); if(!host) return;
-  const days=rangeDays();
+  const days=adDays();
   const earn=new Map(days.map(d=>[d,0]));
   fmtRows.filter(r=>r.metric==='ad_estimated_earnings').forEach(r=>{
     if(earn.has(r.day)) earn.set(r.day, earn.get(r.day)+Number(r.v||0));
@@ -5949,13 +5969,13 @@ function renderCohort(){
 }
 
 function renderPara(){
-  const days=new Set(rangeDays());
+  const days=new Set(adDays());
   const fmtRows=(D.adByFormat||[]).filter(r=>r.slug===APP && days.has(r.day));
   const formats=[...new Set(fmtRows.map(r=>r.format))];
   const tot=adAgg(fmtRows);
 
   el('paRev').textContent=money2(tot.earn);
-  el('paRevSub').textContent=`AdMob · ${days.size} gün`;
+  el('paRevSub').textContent=`AdMob · ${days.size} gün`+(adWindowNote()?' · '+adWindowNote():'');
   el('paImp').textContent=num(tot.imp);
   el('paRpm').textContent=tot.rpm==null?'–':money2(tot.rpm);
   el('paMiss').textContent=num(tot.missed);
