@@ -3332,7 +3332,9 @@ function wilson(k,n,z=1.96){
    kadar belirsiz"i aynı göstermek olurdu. */
 function confRatio(kNow,nNow,kPrev,nPrev){
   const a=wilson(kNow,nNow), b=wilson(kPrev,nPrev);
-  if(!a||!b) return {dot:'○',label:'ölçülemedi'};
+  // Payda yoksa karşılaştırma YOK — "gürültü" demek bir iddia olurdu.
+  if(!b) return {dot:'○',label:'önceki dönem yok'};
+  if(!a) return {dot:'○',label:'bu dönem ölçüm yok'};
   const ayrik = a[1]<b[0] || b[1]<a[0];
   if(ayrik) return {dot:'●',label:'gürültü üstü'};
   const wide=Math.max(a[1]-a[0],b[1]-b[0]);
@@ -3356,6 +3358,7 @@ function sheetClose(){ if(location.hash) history.back(); else drawSheet(); }
    doğrudan cevabı. Hacme ya da alfabeye göre sıralamak onu gizler. */
 function sheetRows(mk){
   const now=countryRows(rangeDays()), prev=countryRows(prevRangeDays());
+  const hasPrev=prev.length>0;
   const pm=new Map(prev.map(r=>[r.cc,r]));
   return now.map(r=>{
     const p=pm.get(r.cc)||{imp:0,pv:0,tap:0,dl:0};
@@ -3372,7 +3375,10 @@ function sheetRows(mk){
             delta:pctDelta(vNow,vPrev), contrib:vNow-vPrev,
             conf:confCount(vNow,vPrev)};
   }).filter(r=>r.now!=null||r.prev)
-    .sort((a,b)=>a.contrib-b.contrib);
+    // SIRALAMA: önceki dönem varsa en büyük NEGATİF katkı önce ("bu düşüşü
+    // hangisi yaptı"). Önceki dönem yoksa o soru sorulamıyor demektir —
+    // katkıya göre sıralamak n=1'lik bir ülkeyi başa koyar; hacme düşülür.
+    .sort(hasPrev ? (a,b)=>a.contrib-b.contrib : (a,b)=>(b.n||0)-(a.n||0));
 }
 
 /* Bir ülkede o dönem NE OLDU: listeleme değişiklikleri (o dilin) + sürümler.
@@ -3437,7 +3443,9 @@ function drawSheet(){
   el('shBody').innerHTML=`
     <div class="sh-val tnum">${esc(head.val)}</div>
     <div class="sh-sub">
-      ${head.prev!=null?`önceki dönem ${esc(head.prev)}${head.delta?` · <b>${esc(head.delta)}</b>`:''}<br>`:''}
+      ${head.prev!=null
+        ? `önceki dönem ${esc(head.prev)}${head.delta?` · <b>${esc(head.delta)}</b>`:''}<br>`
+        : `önceki dönem yok — seçili aralık tüm geçmişi kapsıyor<br>`}
       n=${num(head.n)} · <span class="sh-dot">${head.conf.dot}</span> ${esc(head.conf.label)}
       · ${esc(LAST_SPAN)}
     </div>
