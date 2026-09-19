@@ -1238,7 +1238,7 @@
       <div class="c12 region-label">Kelimeler</div>
 
       <!-- kelimeler -->
-      <div data-move-to="aso" class="card c8">
+      <div data-move-to="__drop" class="card c8">
         <div class="card-head">
           <div><div class="card-title">Anahtar kelimeler</div><div class="card-sub">Talep elle toplandı <span id="kwFresh"></span></div></div>
         </div>
@@ -1363,19 +1363,19 @@
         <div class="card c4">
           <div class="card-head"><div><div class="card-title">Ülke bazında kelime</div>
             <div class="card-sub">fırsat / kapsanan / ölü</div></div></div>
-          <div class="tw" style="max-height:300px"><table class="dt" id="aByCountry"></table></div>
+          <div class="tw tw-cards" style="max-height:300px"><table class="dt dt-cards" id="aByCountry"></table></div>
         </div>
 
         <div class="card c6">
           <div class="card-head"><div><div class="card-title">Talep değişimi</div>
             <div class="card-sub">iki ölçüm arası hareket eden terimler</div></div></div>
-          <div class="tw" style="max-height:300px"><table class="dt" id="aMovers"></table></div>
+          <div class="tw tw-cards" style="max-height:300px"><table class="dt dt-cards" id="aMovers"></table></div>
         </div>
 
         <div class="card c6">
           <div class="card-head"><div><div class="card-title">Arama sırası</div>
             <div class="card-sub">ilk 100'e giren terimler</div></div></div>
-          <div class="tw" style="max-height:300px"><table class="dt" id="aRanks"></table></div>
+          <div class="tw tw-cards" style="max-height:300px"><table class="dt dt-cards" id="aRanks"></table></div>
         </div>
 
         <!-- Sürümün arama görünürlüğüne etkisi.
@@ -1941,7 +1941,7 @@
         <div class="card c6" id="pzGapCard">
           <div class="card-head"><div><div class="card-title">Ülke bazında kelime fırsatı</div>
             <div class="card-sub" id="pzGapSub">talebi ölçülmüş, metadata'da olmayan terimler</div></div></div>
-          <div class="tw" style="max-height:340px"><table class="dt" id="pzGapTable"></table></div>
+          <div class="tw tw-cards" style="max-height:340px"><table class="dt dt-cards" id="pzGapTable"></table></div>
         </div>
 
         <div class="region-label c12" id="pzGateLabel">Ölçülebilir bulgular · hacim kapısı var</div>
@@ -4018,6 +4018,11 @@ let MOVED=false;
 function relocateCards(){
   if(MOVED) return; MOVED=true;
   document.querySelectorAll('[data-move-to]').forEach(card=>{
+    // `__drop`: kart hedefte ZATEN VAR, taşımak ikinci kopya üretir.
+    // Özet'teki "Anahtar kelimeler" ile ASO'daki "Tüm terimler" aynı 2.021
+    // satırı çiziyor — ikincisi üstelik filtreli. Taşıma bunu Büyüme
+    // sekmesinde yan yana iki kopyaya çevirmişti.
+    if(card.dataset.moveTo==='__drop'){ card.remove(); return; }
     const host=el('v-'+card.dataset.moveTo)?.querySelector('.grid');
     if(host) host.appendChild(card);
   });
