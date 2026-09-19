@@ -2267,6 +2267,25 @@ function sourceRows(days){
   });
   return Object.values(by);
 }
+/* MAĞAZA kaynakları. `store_impression` Apple tarafından YALNIZ mağaza içi
+   arama ve gezinme için sayılıyor; `downloads_first_time` ise her kaynaktan
+   geliyor (başka uygulamadan link, web linki, "Unavailable"). Payı tüm
+   kaynaklardan, paydayı yalnız mağazadan almak dönüşümü İKİ KAT şişiriyordu:
+   ölçüldü, 145/1.511 = %9,6 görünüyordu, kaynak-tutarlı hâli 69/1.511 = %4,6.
+   Aynı ada iki farklı evren yazmak `metrics.md §7.1`in yasakladığı şey. */
+const STORE_SOURCES=new Set(['App Store search','App Store browse']);
+function storeFunnel(days){
+  const set=new Set(days), o={imp:0,pv:0,tap:0,dl:0};
+  (D.bySourceDaily||[]).filter(r=>r.slug===APP&&inRange(r.day,set)
+    &&STORE_SOURCES.has(r.source_type||'')).forEach(r=>{
+      const v=Number(r.v||0);
+      if(r.metric==='store_impression') o.imp+=v;
+      else if(r.metric==='store_page_view') o.pv+=v;
+      else if(r.metric==='store_tap') o.tap+=v;
+      else if(r.metric==='downloads_first_time') o.dl+=v;
+    });
+  return o;
+}
 function countryRows(days){
   const set=new Set(days), by={};
   (D.byCountryDaily||[]).filter(r=>r.slug===APP&&inRange(r.day,set)).forEach(r=>{
@@ -2625,7 +2644,14 @@ function drawKpis(){
   const days=rangeDays(), prev=prevRangeDays();
   const cur={imp:sumMetric(days,'imp'),pv:sumMetric(days,'pv'),dl:sumMetric(days,'dl')};
   const old={imp:sumMetric(prev,'imp'),pv:sumMetric(prev,'pv'),dl:sumMetric(prev,'dl')};
-  const conv = cur.imp ? cur.dl/cur.imp*100 : 0;
+  /* DÖNÜŞÜM KAYNAK-TUTARLI. Payı tüm kaynaklardan (`cur.dl`), paydayı yalnız
+     mağazadan (`cur.imp`) almak oranı iki kat şişiriyordu — mağazada hiç
+     görünmeden gelen indirmeler (App referrer 60, Web referrer 15) mağaza
+     dönüşümü gibi sayılıyordu. Ölçülen: %9,6 yerine %4,6. Kartın büyük
+     sayıları (gösterim, indirme) TÜM kaynakları göstermeye devam ediyor —
+     onlar hacim, bu bir oran ve oranın iki ucu aynı evrenden olmak zorunda. */
+  const sf=storeFunnel(days), sfPrev=storeFunnel(prev);
+  const conv = sf.imp ? sf.dl/sf.imp*100 : 0;
   // WHY: önceki pencere seçili pencereden KISAysa (ölçüm daha yeni başladıysa)
   // oran karşılaştırması yalan söyler — 7 günlük toplamı 1 güne bölmek
   // "▲%1468" üretiyordu. Eksik pencerede yön iddia etmiyoruz; kaç gün
@@ -2650,7 +2676,7 @@ function drawKpis(){
      "+%37" değil "+3,0 puan". Yüzdenin yüzdesi burada yanlış okunur.
      Önceki pencere eksikse diğer kartlarla AYNI sebeple susuyor. */
   (function(){
-    const oldConv = (old.imp>0) ? old.dl/old.imp*100 : null;
+    const oldConv = (sfPrev.imp>0) ? sfPrev.dl/sfPrev.imp*100 : null;
     const h=el('kConvD'); if(!h) return;
     if(shortPrev){ h.innerHTML=`<span class="chip flat" title="önceki dönemde yalnız ${prev.length} gün ölçüm var">önceki dönem eksik</span>`; return; }
     if(oldConv==null || conv==null){ h.innerHTML=`<span class="chip flat">karşılaştırılacak önceki pencere yok</span>`; return; }
@@ -3389,8 +3415,8 @@ const SHEET_METRICS={
   store_impression:    {t:'Gösterim',     k:'imp', src:'App Store · gösterim'},
   store_page_view:     {t:'Ürün sayfası', k:'pv',  src:'App Store · sayfa görüntüleme'},
   downloads_first_time:{t:'İndirme',      k:'dl',  src:'App Store · ilk kez indirme'},
-  conversion:          {t:'Dönüşüm',      k:null,  num:'dl', den:'imp', ratio:true,
-                        src:'türetilmiş: indirme / gösterim'},
+  conversion:          {t:'Dönüşüm',      k:null,  num:'dl', den:'imp', ratio:true, store:true,
+                        src:'türetilmiş: mağaza indirmesi / mağaza gösterimi'},
 };
 let SH_OPEN=null;   /* açık kırılım satırı (ülke kodu) */
 
@@ -3507,9 +3533,16 @@ function drawSheet(){
   const sum=(rows,k)=>rows.reduce((a,r)=>a+(r[k]||0),0);
   let head;
   if(mk.ratio){
-    const nN=sum(now,mk.den), nP=sum(prev,mk.den);
-    const vN=nN?sum(now,mk.num)/nN:null, vP=nP?sum(prev,mk.num)/nP:null;
-    const c=confRatio(sum(now,mk.num),nN,sum(prev,mk.num),nP);
+    // `store:true` olan oranlarda toplam KAYNAK-TUTARLI okunur (bkz.
+    // storeFunnel): ülke kırılımı kaynak taşımıyor, oysa oranın iki ucu aynı
+    // evrenden olmalı. Kırılım satırları ülke bazında kalıyor — orada payda
+    // da pay da aynı ülkenin mağaza trafiği, sapma tek bir ülkede oranı
+    // bozmuyor ama toplamda iki katına çıkarıyordu.
+    const sfN=mk.store?storeFunnel(rangeDays()):null, sfP=mk.store?storeFunnel(prevRangeDays()):null;
+    const nN=mk.store?sfN.imp:sum(now,mk.den), nP=mk.store?sfP.imp:sum(prev,mk.den);
+    const kN=mk.store?sfN.dl:sum(now,mk.num),  kP=mk.store?sfP.dl:sum(prev,mk.num);
+    const vN=nN?kN/nN:null, vP=nP?kP/nP:null;
+    const c=confRatio(kN,nN,kP,nP);
     head={val:vN==null?'–':pct1(vN), prev:vP==null?null:pct1(vP), n:nN,
           delta:(vN!=null&&vP!=null)?`${vN>=vP?'+':'−'}${Math.abs((vN-vP)*100).toFixed(1)} puan`:null, conf:c};
   }else{
