@@ -442,16 +442,23 @@
   /* Düğme her genişlikte var ama yalnız mobilde ANLAMLI: masaüstünde kutu
      zaten kaydırılıyor, orada capTables() hiç eklemiyor. */
   /* === kaynak tazelik şeridi === */
-  .fresh{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;
-    padding:9px 16px;margin:0 0 4px;font-size:11.5px;color:var(--ink-3);
-    background:var(--canvas);border-bottom:1px solid var(--hair)}
+  .fresh{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;
+    padding:8px 16px;margin:0;font-size:11.5px;color:var(--ink-3);
+    background:var(--card);border-bottom:1px solid var(--hair)}
   .fresh b{font-weight:600;color:var(--ink-2)}
-  .fresh .fr{white-space:nowrap;font-variant-numeric:tabular-nums}
-  .fresh .fr.stale{color:var(--s2);font-weight:600}
+  .fresh .fr{white-space:nowrap;font-variant-numeric:tabular-nums;
+    padding:2px 8px;border-radius:var(--r-pill);background:var(--canvas)}
+  .fresh .fr.stale{color:var(--s2);background:color-mix(in oklab,var(--s2) 12%,transparent)}
   .fresh .fr.stale b{color:var(--s2)}
-  /* Ölçülmedi ne bayat ne güncel — kendi tonu var (CLAUDE.md 3. ilke). */
-  .fresh .fr.unmeasured,.fresh .fr.unmeasured b{color:var(--unmeasured-soft,var(--ink-3));opacity:.75}
-  .fresh .fr-lead{font-weight:600;color:var(--ink-2);margin-right:2px}
+  /* Ölçülmedi ne bayat ne güncel: kendi ZEMİN tonu var (`--unmeasured-soft`
+     bir DOLGU rengi — metin rengi olarak kullanmak yazıyı görünmez yapıyordu,
+     ilk sürümün hatası). Metin okunur kalıyor, ayrımı zemin + kelime taşıyor. */
+  .fresh .fr.unmeasured{background:var(--unmeasured-soft);color:var(--ink-3)}
+  .fresh .fr.unmeasured b{color:var(--ink-2)}
+  .fresh .fr-lead{font-weight:600;color:var(--ink-2)}
+  .fresh .fr-more{border:0;font:inherit;font-size:11.5px;color:var(--ink-3);
+    background:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+  .fresh:not(.fresh-all) .fr.ok{display:none}
 
   .tw-more{display:block;width:100%;margin-top:10px;padding:10px 12px;border:0;
     background:var(--canvas);color:var(--ink-2);font:inherit;font-size:12.5px;
@@ -3230,8 +3237,20 @@ function capTables(){
    öne alınıyor; hepsi güncelse şerit tek satıra iniyor ama GİZLENMİYOR —
    "hangi gün konuşuyorum" sorusu her zaman görünür kalmalı. */
 function drawFresh(){
-  const rows=(D.seriesFreshness||[])
-    .filter(r=>r.app_slug===APP||r.app_slug==='__global__');
+  // Kaynak başına TEK satır: `frankfurter` hem uygulamaya hem `__global__`'a
+  // kayıtlı, ikisini de çizmek aynı kaynağı iki kez gösteriyordu. En kötü
+  // (en geride) olan kazanıyor — tazelik iddiası en iyimser satırdan değil,
+  // en kötüden okunmalı.
+  const seen=new Map();
+  for(const r of (D.seriesFreshness||[])){
+    if(r.app_slug!==APP && r.app_slug!=='__global__') continue;
+    const p=seen.get(r.source);
+    const worse = !p
+      || (r.days_behind==null && p.days_behind!=null)
+      || ((r.days_behind??-1) > (p.days_behind??-1) && p.days_behind!=null);
+    if(worse) seen.set(r.source,r);
+  }
+  const rows=[...seen.values()];
   const bar=el('freshBar');
   if(!rows.length){ bar.hidden=true; return; }
   bar.hidden=false;
@@ -3246,14 +3265,27 @@ function drawFresh(){
   const one=r=>{
     const d=r.days_behind;
     const age = d==null ? 'ölçülmedi' : d<=0 ? 'bugün' : d===1 ? 'dün' : `${d} gün önce`;
-    const cls = r.freshness==='BAYAT' ? ' stale' : (d==null ? ' unmeasured' : '');
+    const cls = r.freshness==='BAYAT' ? ' stale' : (d==null ? ' unmeasured' : ' ok');
     return `<span class="fr${cls}" title="${esc(r.source)} · en yeni veri ${esc(r.newest_period||'yok')}"><b>${esc(r.source)}</b> ${esc(age)}</span>`;
   };
+  // Varsayılan olarak yalnız SORUNLU kaynaklar çizilir; güncel olanlar tek bir
+  // sayıya iner. Şerit 227px kaplayınca panelin şikâyet edilen "içerikten önce
+  // chrome" sorununu büyütüyordu — ama güncel kaynaklar da GİZLENMİYOR, bir
+  // dokunuşla açılıyor: "kaç kaynağa baktım" sorusu cevapsız kalmamalı.
+  const ok=rows.length-stale.length-unmeasured.length;
   const lead = [
     stale.length ? `${num(stale.length)} bayat` : '',
     unmeasured.length ? `${num(unmeasured.length)} ölçülmedi` : '',
-  ].filter(Boolean).join(' · ') || 'Hepsi güncel';
-  bar.innerHTML = `<span class="fr-lead">${esc(lead)}</span>` + sorted.map(one).join('');
+  ].filter(Boolean).join(' · ') || `${num(ok)} kaynak güncel`;
+  bar.className='fresh';
+  bar.innerHTML = `<span class="fr-lead">${esc(lead)}</span>`
+    + sorted.map(one).join('')
+    + (ok && (stale.length||unmeasured.length)
+        ? `<button class="fr-more" type="button">+${num(ok)} güncel</button>` : '');
+  bar.querySelector('.fr-more')?.addEventListener('click',e=>{
+    bar.classList.toggle('fresh-all');
+    e.target.textContent = bar.classList.contains('fresh-all') ? 'güncelleri gizle' : `+${num(ok)} güncel`;
+  });
 }
 
 function renderAll(){
