@@ -1984,6 +1984,17 @@
            ilgili metriği çizilmez ve panele şerit uyarı basılır." Assertion'lar
            koşuyordu ama sonucu hiçbir yerde görünmüyordu — ölçülen ama
            gösterilmeyen doğruluk, ölçülmemiş doğruluk kadar işe yarıyor. -->
+      <!-- Uzlaştırma: iki kaynak aynı şeyi söylüyor mu. Tablolar şemada vardı
+           ama İÇİ BOŞTU — kontrol tanımı 0, koşu 0, fonksiyon yok. Ölçülmeyen
+           bir tutarsızlık, olmayan bir tutarsızlıkla aynı görünür. -->
+      <div class="card c12" id="rcnCard">
+        <div class="card-head">
+          <div><div class="card-title">Kaynak uzlaştırma</div>
+            <div class="card-sub" id="rcnSub">–</div></div>
+        </div>
+        <div id="rcnList"></div>
+      </div>
+
       <div class="card c12" id="asrCard">
         <div class="card-head">
           <div><div class="card-title">Değişmezler</div>
@@ -3825,6 +3836,28 @@ function drawWeekly(){
 /* Değişmezler. Üç durum burada da geçerli: geçti / kaldı / HİÇ KOŞMADI.
    Üçüncüsü ayrı çizilir — koşmamış bir değişmez "sorun yok" demek değil,
    "bakılmadı" demek ve bu ikisini aynı göstermek sessiz onayın ta kendisi. */
+function drawRecon(){
+  const host=el('rcnList'); if(!host) return;
+  const rows=(D.recon||[]);
+  if(!rows.length){ host.innerHTML='<div class="empty">Uzlaştırma kontrolü tanımlı değil.</div>';
+    el('rcnSub').textContent='—'; return; }
+  const bad=rows.filter(r=>r.status==='UNEXPLAINED');
+  const stale=rows.filter(r=>!r.status||r.status==='STALE');
+  el('rcnSub').textContent=`${num(rows.length)} kontrol · `
+    + (bad.length?`${num(bad.length)} açıklanamayan fark`:'fark yok')
+    + (stale.length?` · ${num(stale.length)} ölçülemedi`:'');
+  const rank=r=>r.status==='UNEXPLAINED'?0:(!r.status||r.status==='STALE')?1:2;
+  host.innerHTML=[...rows].sort((a,b)=>rank(a)-rank(b)).map(r=>{
+    const cls=r.status==='UNEXPLAINED'?'fail':(!r.status||r.status==='STALE')?'none':'ok';
+    const dot=cls==='ok'?'●':cls==='fail'?'✕':'○';
+    const vals=(r.value_a!=null&&r.value_b!=null)
+      ? `${num(Number(r.value_a))} ↔ ${num(Number(r.value_b))}` : 'ölçülemedi';
+    return `<div class="asr ${cls}">
+      <span class="asr-dot">${dot}</span>
+      <span class="asr-t">${esc(r.check_key)} <span style="color:var(--ink-3)">${esc(vals)}</span>
+        ${cls!=='ok'?`<div class="asr-d">${esc(r.description||'')}</div>`:''}</span>
+      <span class="asr-when">${esc(r.period_start||'')}</span></div>`;}).join('');
+}
 function drawAssertions(){
   const host=el('asrList'); if(!host) return;
   const rows=(D.assertions||[]);
@@ -3927,7 +3960,7 @@ function renderAll(){
   const pre=isPrelaunch();
   el('v-ozet').classList.toggle('pre',pre);
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
-  drawCrumb(span); drawFresh(); drawWeekly(); drawAssertions();
+  drawCrumb(span); drawFresh(); drawWeekly(); drawAssertions(); drawRecon();
   fillSelects(); drawSyncLabel(); renderSignals(); drawPrelaunch(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   visibleViews().forEach(k=>RENDERERS[k]?.());
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
