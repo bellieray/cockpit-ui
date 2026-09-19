@@ -3236,6 +3236,10 @@ function capTables(){
    boş ama başarılı bir çekim "koştu" der, "veri geldi" demez. BAYAT olanlar
    öne alınıyor; hepsi güncelse şerit tek satıra iniyor ama GİZLENMİYOR —
    "hangi gün konuşuyorum" sorusu her zaman görünür kalmalı. */
+/* Açık/kapalı hâli render'lar arasında YAŞAR: `drawFresh` her `renderAll`'da
+   innerHTML'i baştan yazıyor; durumu DOM sınıfında tutmak, uygulama veya sekme
+   değiştiren her tıklamada şeridi sessizce kapatırdı. */
+let FRESH_ALL=false;
 function drawFresh(){
   // Kaynak başına TEK satır: `frankfurter` hem uygulamaya hem `__global__`'a
   // kayıtlı, ikisini de çizmek aynı kaynağı iki kez gösteriyordu. En kötü
@@ -3277,15 +3281,16 @@ function drawFresh(){
     stale.length ? `${num(stale.length)} bayat` : '',
     unmeasured.length ? `${num(unmeasured.length)} ölçülmedi` : '',
   ].filter(Boolean).join(' · ') || `${num(ok)} kaynak güncel`;
-  bar.className='fresh';
+  bar.className = FRESH_ALL ? 'fresh fresh-all' : 'fresh';
   bar.innerHTML = `<span class="fr-lead">${esc(lead)}</span>`
     + sorted.map(one).join('')
     + (ok && (stale.length||unmeasured.length)
         ? `<button class="fr-more" type="button">+${num(ok)} güncel</button>` : '');
-  bar.querySelector('.fr-more')?.addEventListener('click',e=>{
-    bar.classList.toggle('fresh-all');
-    e.target.textContent = bar.classList.contains('fresh-all') ? 'güncelleri gizle' : `+${num(ok)} güncel`;
-  });
+  const more=bar.querySelector('.fr-more');
+  if(more){
+    more.textContent = FRESH_ALL ? 'güncelleri gizle' : `+${num(ok)} güncel`;
+    more.addEventListener('click',()=>{ FRESH_ALL=!FRESH_ALL; drawFresh(); });
+  }
 }
 
 function renderAll(){
