@@ -3532,6 +3532,38 @@ function drawSheet(){
       · ${esc(LAST_SPAN)}
     </div>
 
+    ${(()=>{
+      // GÜN vs GÜN. Sahibi açıkça istedi ("dün vs bugün"), ama günde ~16
+      // kurulumda tek günün farkı çoğunlukla gürültü. Üçüncü yol: göster, ama
+      // gün satırı GRİ ve OKSUZ, hafta satırı siyah ve oklu. Fark gizlenmiyor
+      // (istek görmezden gelinmiş olurdu) ve yön iddia edilmiyor (yalan
+      // olurdu). Rozet hangisi olduğunu kelimeyle söylüyor.
+      const all=allDays(); if(all.length<4) return '';
+      const d1=all.slice(-1), d0=all.slice(-2,-1);
+      const w1=all.slice(-7), w0=all.slice(-14,-7);
+      const agg=(ds,mk2)=>{const r=countryRows(ds);
+        const sum2=(k)=>r.reduce((a,o)=>a+(o[k]||0),0);
+        return mk2.ratio ? (sum2(mk2.den)?sum2(mk2.num)/sum2(mk2.den):null) : sum2(mk2.k);};
+      const f=v=>v==null?'–':(mk.ratio?pct1(v):num(v));
+      const gun1=agg(d1,mk), gun0=agg(d0,mk), haf1=agg(w1,mk), haf0=w0.length?agg(w0,mk):null;
+      const nG=mk.ratio?countryRows(d1).reduce((a,o)=>a+(o[mk.den]||0),0):gun1;
+      const cG=mk.ratio?confRatio(countryRows(d1).reduce((a,o)=>a+(o[mk.num]||0),0),nG,
+                 countryRows(d0).reduce((a,o)=>a+(o[mk.num]||0),0),
+                 countryRows(d0).reduce((a,o)=>a+(o[mk.den]||0),0))
+                : confCount(gun1,gun0);
+      return `<div class="sh-sec">GÜN VE HAFTA</div>
+        <div class="sh-row" style="cursor:default;opacity:.62">
+          <span class="sh-row-top"><span class="sh-cc">Dün → bugün</span>
+            <span class="sh-now tnum">${esc(f(gun0))} → ${esc(f(gun1))}</span></span>
+          <span class="sh-row-sub">tek gün · ${esc(cG.label)} — yön iddiası yok, n=${num(nG||0)}</span>
+        </div>
+        <div class="sh-row" style="cursor:default">
+          <span class="sh-row-top"><span class="sh-cc">Geçen hafta → bu hafta</span>
+            <span class="sh-now tnum">${esc(f(haf0))} → ${esc(f(haf1))}</span></span>
+          <span class="sh-row-sub">7 gün · karar bu satırdan okunur</span>
+        </div>`;
+    })()}
+
     <div class="sh-sec">KIRILIM · ÜLKE ${rows.length?`(${num(rows.length)})`:''}</div>
     ${rows.length?rows.map(r=>`
       <button class="sh-row" data-cc="${esc(r.cc)}" type="button">
