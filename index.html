@@ -2398,6 +2398,12 @@ function pctDelta(cur,prev){ if(!prev) return null; return (cur-prev)/prev*100; 
    keyword sırasının DÜŞMESİ iyi. Yön bilinmiyorsa (`good_direction` NULL)
    çip nötr kalıyor: yanlış yön göstermektense yön iddia etmemek doğru. */
 const metricDir=m=>(D.dict||[]).find(x=>x.metric===m)?.good_direction||null;
+/* Karşılaştırma penceresi SÖZLÜKTEN. Arayüz "önceki döneme göre" diye sabit
+   bir metin yazıyordu; sözlükte `default_comparison` dolu ve okunmuyordu.
+   İkisi çelişince hangisinin doğru olduğu bilinmez — 8. ilke tanımın tek
+   yerde olmasını istiyor ve o yer sözlük. Metrik bilinmiyorsa sabit metne
+   düşülüyor: uydurma bir pencere adı yazmaktansa genel kalmak doğru. */
+const metricCmp=m=>(D.dict||[]).find(x=>x.metric===m)?.default_comparison||null;
 function chip(d,n,metric){
   if(d==null) return `<span class="chip flat">önceki dönem yok</span>`;
   const r=Math.round(Math.abs(d));
@@ -2774,7 +2780,8 @@ function drawKpis(){
   const dchip=(c,o,metric)=>{
     if(shortPrev) return `<span class="chip flat" title="önceki dönemde yalnız ${prev.length} gün ölçüm var; ${days.length} günle karşılaştırmak yanıltıcı olurdu">önceki dönem eksik</span>`;
     const d=pctDelta(c,o);
-    return chip(d,c,metric)+(d==null?'':'<span class="dsuf">önceki döneme göre</span>');
+    const cmp=metricCmp(metric);
+    return chip(d,c,metric)+(d==null?'':`<span class="dsuf">${esc(cmp||'önceki döneme göre')}</span>`);
   };
   /* Bölgesel düşüş rozeti — eksik önceki pencerede delta çipiyle AYNI sebeple
      susuyor: karşılaştırılacak dönem yoksa ülke bazlı yön iddiası da yalan olur. */
@@ -2795,7 +2802,7 @@ function drawKpis(){
     const cls = Math.abs(d)<0.05 ? 'flat' : (d>0 ? 'up' : 'down');
     const sign = d>0?'+':'';
     h.innerHTML=`<span class="chip ${cls}">${sign}${d.toFixed(1).replace('.',',')} puan</span>`
-      +`<span class="dsuf">önceki döneme göre (%${oldConv.toFixed(1).replace('.',',')})</span>`;
+      +`<span class="dsuf">${esc(metricCmp('conversion')||'önceki döneme göre')} (%${oldConv.toFixed(1).replace('.',',')})</span>`;
   })();
 
   /* HER METRİK ÜÇ ŞEY SÖYLER: sayı · ne sağlar · ne kaybettirir (kural 2).
