@@ -5387,9 +5387,22 @@ function signalsFor(app=APP){
     const d=conv.reduce((s,r)=>s+Number(r.den||0),0);
     // Kapı: en az 50 yeni müşteri. Altında "%0 dönüşüm" normal.
     if(d>=50 && n===0){
+      // MEVCUT ABONE BAĞLAMI ŞART. Kart "hiçbiri ödemedi" derken aynı ekranda
+      // "4 aktif abonelik · MRR $11" yazıyordu ve bu bir ÇELİŞKİ gibi
+      // okunuyordu. İkisi de doğru: dönüşüm ÖLÇÜLEN kohortlarda sıfır,
+      // mevcut aboneler ölçüm penceresinden ÖNCE gelmiş. Panelin iki ekranı
+      // çelişirse ona güven biter ve bir daha geri gelmez (8. ilke) —
+      // çelişkiyi çözmek okuyanın işi değil, panelin işi.
+      const subs=stockValue('rc_active_subscriptions')||0;
+      const mrr=stockValue('rc_mrr');
       add(1, SIG.RED, 1e6,
         `${num(d)} yeni müşteriden hiçbiri ödemedi`,
-        `Ölçülen ${conv.length} kohortun tamamında ödemeye dönüşüm %0. Reklam tek gelir kaynağı.`, '%0');
+        `Ölçülen ${conv.length} kohortun tamamında ödemeye dönüşüm %0.`
+        + (subs>0
+           ? ` Paneldeki ${num(subs)} aktif abonelik${mrr?` (MRR ${money2(mrr)})`:''} bu pencereden ÖNCE gelmiş — çelişki değil: yeni gelen kimse abone olmuyor.`
+           : ' Reklam tek gelir kaynağı.')
+        + ` Paywall gösterimi ölçülmüyor, bu yüzden "görülmüyor mu, görülüp reddediliyor mu" ayrımı yapılamıyor.`,
+        '%0');
     }
   }
 
