@@ -524,6 +524,20 @@
      "neden yok" sorusunu cevapsız bırakır (üç durum kuralının aynısı). */
   .range-muted{opacity:.45}
 
+  /* === değişmez listesi === */
+  .asr{display:flex;gap:10px;align-items:baseline;padding:10px 2px;
+    border-bottom:1px solid var(--hair)}
+  .asr:last-child{border-bottom:0}
+  .asr-dot{font-size:11px;flex:none;width:14px}
+  .asr.ok .asr-dot{color:var(--s3)}
+  .asr.fail .asr-dot{color:var(--down)}
+  .asr.warn .asr-dot{color:var(--amber)}
+  .asr.none .asr-dot{color:var(--ink-3)}
+  .asr-t{flex:1;min-width:0;font-size:13px}
+  .asr-d{font-size:11.5px;color:var(--ink-3);margin-top:3px;line-height:1.45}
+  .asr-when{font-size:11px;color:var(--ink-3);white-space:nowrap;
+    font-variant-numeric:tabular-nums}
+
   /* === haftalık özet === */
   .wk-pre{margin:12px 0 0;white-space:pre-wrap;word-break:break-word;
     font:inherit;font-size:12.5px;line-height:1.55;color:var(--ink-2);
@@ -3728,9 +3742,18 @@ function weeklyText(){
   stale.forEach(r=>L.push(`   • ${r.source}: veri ${r.days_behind} gündür akmıyor`));
   if(!todo.length && !stale.length) L.push('   Yok — tüm etkin kaynaklar kendi bütçesi içinde.');
 
+  // Değişmezler özete GİRER: haftalık bakışın ilk sorusu "bu sayılara
+  // güvenebilir miyim" olmalı, son sorusu değil.
+  const asrFail=(D.assertions||[]).filter(r=>r.passed===false&&r.severity!=='warn');
+  const asrNone=(D.assertions||[]).filter(r=>r.passed==null);
+  L.push('', `5) DOĞRULUK (${num((D.assertions||[]).length)} değişmez)`);
+  if(asrFail.length) asrFail.forEach(r=>L.push(`   ✕ ${r.title||r.key}`));
+  if(asrNone.length) L.push(`   ○ ${num(asrNone.length)} değişmez hiç koşmadı`);
+  if(!asrFail.length && !asrNone.length) L.push('   Hepsi geçti.');
+
   // 5/6) not halkası
   let prevNote=''; try{ prevNote=localStorage.getItem(WK_NOTE_KEY())||''; }catch{}
-  L.push('', '5) GEÇEN NOT');
+  L.push('', '6) GEÇEN NOT');
   L.push(prevNote ? `   "${prevNote}"` : '   Yok — bu haftanın notunu aşağıya yaz, gelecek hafta burada çıkar.');
   return L.join('\n');
 }
@@ -3743,6 +3766,36 @@ function drawWeekly(){
   if(inp && document.activeElement!==inp){
     try{ inp.value=localStorage.getItem(WK_NOTE_KEY())||''; }catch{}
   }
+}
+
+/* Değişmezler. Üç durum burada da geçerli: geçti / kaldı / HİÇ KOŞMADI.
+   Üçüncüsü ayrı çizilir — koşmamış bir değişmez "sorun yok" demek değil,
+   "bakılmadı" demek ve bu ikisini aynı göstermek sessiz onayın ta kendisi. */
+function drawAssertions(){
+  const host=el('asrList'); if(!host) return;
+  const rows=(D.assertions||[]);
+  if(!rows.length){ host.innerHTML='<div class="empty">Değişmez tanımlı değil.</div>';
+    el('asrSub').textContent='—'; return; }
+  const fail=rows.filter(r=>r.passed===false);
+  const none=rows.filter(r=>r.passed==null);
+  const err=fail.filter(r=>r.severity!=='warn');
+  el('asrSub').textContent =
+    `${num(rows.length)} değişmez · ${err.length?`${num(err.length)} kırık`:'kırık yok'}`
+    + (fail.length-err.length?` · ${num(fail.length-err.length)} uyarı`:'')
+    + (none.length?` · ${num(none.length)} hiç koşmadı`:'');
+  const rank=r=>r.passed===false?(r.severity==='warn'?1:0):(r.passed==null?2:3);
+  host.innerHTML=[...rows].sort((a,b)=>rank(a)-rank(b)||a.key.localeCompare(b.key))
+    .map(r=>{
+      const cls = r.passed===false ? (r.severity==='warn'?'warn':'fail')
+                : r.passed==null ? 'none' : 'ok';
+      const dot = cls==='ok'?'●':cls==='fail'?'✕':cls==='warn'?'▲':'○';
+      const when = r.checked_at ? agoText(new Date(r.checked_at)) : 'hiç koşmadı';
+      return `<div class="asr ${cls}">
+        <span class="asr-dot">${dot}</span>
+        <span class="asr-t">${esc(r.title||r.key)}
+          ${r.passed===false&&r.description?`<div class="asr-d">${esc(r.description)}</div>`:''}</span>
+        <span class="asr-when">${esc(when)}</span>
+      </div>`;}).join('');
 }
 
 /* Kaynak tazelik şeridi.
@@ -3820,7 +3873,7 @@ function renderAll(){
   const pre=isPrelaunch();
   el('v-ozet').classList.toggle('pre',pre);
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
-  drawCrumb(span); drawFresh(); drawWeekly();
+  drawCrumb(span); drawFresh(); drawWeekly(); drawAssertions();
   fillSelects(); drawSyncLabel(); renderSignals(); drawPrelaunch(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   visibleViews().forEach(k=>RENDERERS[k]?.());
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
