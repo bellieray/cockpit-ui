@@ -444,6 +444,15 @@
   }
   /* Düğme her genişlikte var ama yalnız mobilde ANLAMLI: masaüstünde kutu
      zaten kaydırılıyor, orada capTables() hiç eklemiyor. */
+  /* `hidden` ÖZNİTELİĞİ yazar CSS'iyle ezilir: `.sheet{display:flex}` UA'nın
+     `[hidden]{display:none}` kuralını yener ve kapalı detay yüzeyi her
+     ekranın altında BOŞ bir kutu olarak duruyordu (yüzey eklendiğinden beri).
+     Testte yalnız `el.hidden === true` bakılmıştı, hesaplı `display` değil —
+     özniteliğin doğru olması görünmez olduğunu kanıtlamıyor. Genel kural
+     bu sınıfın tamamını kapatıyor: `display` tanımlayan her yeni bileşen
+     (.fresh, .sheet, ...) `hidden` ile de çalışır. */
+  [hidden]{display:none!important}
+
   /* === metrik detay yüzeyi === */
   .scrim{position:fixed;inset:0;background:rgba(0,0,0,.30);z-index:60;
     animation:scrimIn .18s ease-out}
