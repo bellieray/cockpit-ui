@@ -3214,6 +3214,13 @@ function capTables(){
     w.appendChild(b);
   });
 }
+/* Genişlik değişimi de yeniden kurdurur: CSS eşiği kendi geçiyor ama düğme
+   JS'te. Yalnız render'a bağlanırsa telefonu yatay çevirmek (ya da masaüstünde
+   pencereyi daraltmak) sınırı uygulanmış AMA "tümünü göster"i olmayan bir
+   tablo bırakır — satırlar sessizce kaybolur. `matchMedia` dinleyicisi eşiğin
+   iki yönünü de yakalıyor; `resize` gereksiz, eşik dışı her piksel boşuna
+   çalıştırırdı. */
+try{ matchMedia('(max-width:679.98px)').addEventListener('change',capTables); }catch{}
 
 /* Kaynak tazelik şeridi.
    `days_behind` konektörün koştuğu anı değil, en yeni VERİ periyodunu ölçüyor:
