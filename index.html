@@ -1153,6 +1153,23 @@
         <div class="kpi-why" id="kConvWhy"></div>
       </div>
 
+      <!-- TUTMA KARAR YÜZEYİNDE. Detayı Ürün sekmesinde duruyor ama pazartesi
+           sabahı "kullanıcı kaçıyor mu" sorusu bir sekme değiştirmeden
+           cevaplanamıyordu — ve sekme değiştirmek, günde iki dakikalık
+           kullanımda yapılmayan şeydir. Huninin son halkası: indirme geldi,
+           kullanıcı oldu, PEKİ KALDI MI. -->
+      <div class="card c3">
+        <div class="kpi-top">
+          <span class="kpi-ic" style="background:color-mix(in oklab,var(--s3) 15%,transparent);color:var(--s3)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+          </span>
+          <span class="kpi-name">Ertesi gün dönen<br><span class="card-sub" id="kRetSub">kayıttan 24–48 saat sonra</span></span>
+        </div>
+        <div class="kpi-val tnum" id="kRet">–</div>
+        <div class="kpi-foot"><span id="kRetD"></span></div>
+        <div class="kpi-why" id="kRetWhy"></div>
+      </div>
+
       <!-- büyük grafik -->
       <div class="card c8" data-store-only>
         <div class="card-head">
@@ -2685,6 +2702,32 @@ function drawPrelaunch(){
   el('plChecks').innerHTML=out.join('');
 }
 
+/* Bugün ekranındaki tutma kartı. Ürün sekmesindeki hesabın AYNISINI kullanıyor
+   — iki ekranda iki farklı sayı, panelin güvenilirliğini bitiren şeydir
+   (8. ilke: tanım tek yerde). */
+function drawRetentionKpi(){
+  const el1=el('kRet'); if(!el1) return;
+  const ret=stockValue('app_export_retention_next_day_retained');
+  const elig=stockValue('app_export_retention_next_day_eligible');
+  if(ret==null||elig==null||elig===0){
+    el1.textContent='–';
+    el('kRetD').innerHTML='<span class="chip flat">ölçülmedi</span>';
+    el('kRetWhy').textContent='Kendi backend verisinden tutma ölçümü gelmedi.';
+    return;
+  }
+  const pct=ret/elig*100;
+  el1.textContent='%'+pct.toFixed(0);
+  el('kRetSub').textContent=`${num(ret)}/${num(elig)} · 24–48 saat`;
+  // Wilson: küçük paydada yüzde tek başına yanıltır.
+  const w=wilson(ret,elig);
+  el('kRetD').innerHTML = w
+    ? `<span class="chip flat">%95 aralık %${(w[0]*100).toFixed(0)}–%${(w[1]*100).toFixed(0)}</span>`
+    : '';
+  el('kRetWhy').innerHTML = pct<20
+    ? 'Ertesi gün dönmeyen kullanıcı, mağazadan gelen kazancı <b>bir günde</b> harcıyor: yeni kurulum aramak yerine ilk günü düzeltmek daha ucuz.'
+    : 'Kayıt olan kullanıcıların ertesi gün geri dönme oranı — huninin son halkası.';
+}
+
 function drawRevenue(){
   const mrr=stockValue('rc_mrr'), subs=stockValue('rc_active_subscriptions'),
         trials=stockValue('rc_active_trials'), adRev=sumMetric(rangeDays(),'rev');
@@ -3961,7 +4004,7 @@ function renderAll(){
   el('v-ozet').classList.toggle('pre',pre);
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
   drawCrumb(span); drawFresh(); drawWeekly(); drawAssertions(); drawRecon();
-  fillSelects(); drawSyncLabel(); renderSignals(); drawPrelaunch(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
+  fillSelects(); drawSyncLabel(); renderSignals(); drawPrelaunch(); drawRevenue(); drawRetentionKpi(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   visibleViews().forEach(k=>RENDERERS[k]?.());
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
   // yukarıda değişiyor ve bazı region-label'lar görünür/gizli olabiliyor —
