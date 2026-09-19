@@ -525,8 +525,12 @@
   .range-muted{opacity:.45}
 
   /* === katlanabilir uzun kart === */
-  .cc.cc-closed > *:not(.card-head){max-height:0;overflow:hidden;
-    opacity:0;pointer-events:none;margin:0;transition:max-height .2s ease-out,opacity .15s}
+  /* `!important` ŞART: mobil kart-tablo kuralı `.tw-cards{max-height:none
+     !important}` taşıyor ve onsuz katlama sessizce hiçbir şey yapmıyor —
+     sınıf ekleniyor, düğme çıkıyor, yükseklik değişmiyor. */
+  .cc.cc-closed > *:not(.card-head){max-height:0!important;overflow:hidden!important;
+    opacity:0;pointer-events:none;margin:0;padding-top:0;padding-bottom:0;
+    border:0;transition:max-height .2s ease-out,opacity .15s}
   .cc:not(.cc-closed) > *:not(.card-head){max-height:none}
   .cc-btn{flex:none}
   @media (prefers-reduced-motion: reduce){ .cc.cc-closed > *:not(.card-head){transition:none} }
