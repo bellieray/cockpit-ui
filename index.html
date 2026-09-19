@@ -437,7 +437,10 @@
        duruyordu — yani kırılan şey tablo değil, mobilde kutunun kapanmasıydı.
        Çözüm dikey kaydırma tuzağını geri getirmek değil, satırı saymak:
        ilk TW_CAP satır çizilir, gerisi `.tw-all` ile açılır. */
-    .tw-cards:not(.tw-all) table.dt-cards tbody tr:nth-child(n+26){display:none}
+    /* Sınır SARMALAYICIYA değil TABLOYA bağlı: katalog kartlarındaki
+       `dt-cards` tabloların `.tw-cards` kabı YOK, ilk sürümde onlara hiç
+       dokunmuyordu ve "Uygulama verisi" tek başına 19.706px kalıyordu. */
+    table.dt-cards.tw-capped:not(.tw-all) > tbody > tr:nth-child(n+26){display:none}
   }
   /* Düğme her genişlikte var ama yalnız mobilde ANLAMLI: masaüstünde kutu
      zaten kaydırılıyor, orada capTables() hiç eklemiyor. */
@@ -3290,18 +3293,19 @@ function drawCrumb(span){
    yanlış doğardı. */
 const TW_CAP=25;
 function capTables(){
-  document.querySelectorAll('.tw-cards').forEach(w=>{
-    w.querySelector(':scope > .tw-more')?.remove();
-    const n=w.querySelectorAll('table.dt-cards > tbody > tr').length;
-    if(n<=TW_CAP){ w.classList.remove('tw-all'); return; }
+  document.querySelectorAll('table.dt-cards').forEach(t=>{
+    t.parentElement?.querySelector(':scope > .tw-more')?.remove();
+    const n=t.querySelectorAll(':scope > tbody > tr').length;
+    if(n<=TW_CAP){ t.classList.remove('tw-capped','tw-all'); return; }
+    t.classList.add('tw-capped');
     const b=document.createElement('button');
-    b.className='tw-more';
-    const label=()=> w.classList.contains('tw-all')
+    b.className='tw-more'; b.type='button';
+    const label=()=> t.classList.contains('tw-all')
       ? `${num(n)} satırın tümü · ilk ${TW_CAP}'e dön`
       : `${num(n)} satırın ${TW_CAP}'i · tümünü göster`;
     b.textContent=label();
-    b.addEventListener('click',()=>{ w.classList.toggle('tw-all'); b.textContent=label(); });
-    w.appendChild(b);
+    b.addEventListener('click',()=>{ t.classList.toggle('tw-all'); b.textContent=label(); });
+    t.insertAdjacentElement('afterend',b);
   });
 }
 
