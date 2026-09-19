@@ -524,6 +524,13 @@
      "neden yok" sorusunu cevapsız bırakır (üç durum kuralının aynısı). */
   .range-muted{opacity:.45}
 
+  /* === katlanabilir uzun kart === */
+  .cc.cc-closed > *:not(.card-head){max-height:0;overflow:hidden;
+    opacity:0;pointer-events:none;margin:0;transition:max-height .2s ease-out,opacity .15s}
+  .cc:not(.cc-closed) > *:not(.card-head){max-height:none}
+  .cc-btn{flex:none}
+  @media (prefers-reduced-motion: reduce){ .cc.cc-closed > *:not(.card-head){transition:none} }
+
   /* === değişmez listesi === */
   .asr{display:flex;gap:10px;align-items:baseline;padding:10px 2px;
     border-bottom:1px solid var(--hair)}
@@ -3490,6 +3497,38 @@ function drawCrumb(span){
     el('rangeLabelText').textContent = txt || `Son ${RANGE} gün`;
   }
 }
+/* KATLANABİLİR KART. Satır sınırı (`capTables`) yalnız `dt-cards` tablolarına
+   dokunuyor; div listesiyle çizilen kartlar (rakip sıralaması 33 satır =
+   3.274px) ve katalog kartları sınırın dışında kalıyordu. Bu mekanizma
+   içeriğin ŞEKLİNE bakmıyor: kart bir eşikten uzunsa başlığına bir düğme
+   koyup gövdesini kapatıyor.
+
+   NEDEN varsayılan KAPALI değil de EŞİĞE bağlı: kısa bir kartı kapatmak
+   okuma maliyetini artırır, uzun bir kartı açık bırakmak sayfayı gömer.
+   Eşik (900px ≈ bir telefon ekranının yarısı) ikisinin sınırı.
+
+   NEDEN `hidden` değil `max-height`: `hidden` kart içindeki grafiklerin
+   ölçümünü bozuyor (sıfır yükseklikte çizilen SVG boş kalıyor); gövde
+   görünür kalıyor, yalnız kırpılıyor. */
+const COLLAPSE_PX=900;
+function collapseTallCards(){
+  document.querySelectorAll('.view:not([style*="display: none"]) .card').forEach(c=>{
+    if(c.dataset.noCollapse!=null) return;
+    const head=c.querySelector('.card-head'); if(!head) return;
+    const h=c.scrollHeight;
+    const already=c.classList.contains('cc');
+    if(!already && h<=COLLAPSE_PX){ head.querySelector('.cc-btn')?.remove(); return; }
+    if(!already) c.classList.add('cc','cc-closed');
+    if(head.querySelector('.cc-btn')) return;
+    const b=document.createElement('button');
+    b.className='cc-btn viewall'; b.type='button';
+    const lbl=()=>c.classList.contains('cc-closed')?'Aç':'Kapat';
+    b.textContent=lbl();
+    b.addEventListener('click',()=>{ c.classList.toggle('cc-closed'); b.textContent=lbl(); });
+    head.appendChild(b);
+  });
+}
+
 /* Mobilde kart-tablo satır sınırı — CSS'teki `nth-child(n+26)` ile AYNI sayı.
    Düğme her render'da yeniden kuruluyor çünkü tablolar `innerHTML` ile
    yeniden yazılıyor; kalıcı bir dinleyici ilk yeniden yazımda kopardı.
@@ -4023,6 +4062,7 @@ function renderAll(){
   // sekme değişmeden çıpa şeridi bayat kalmasın diye burada da yeniden kurulur.
   buildAnchors();
   capTables();
+  collapseTallCards();
   // Açık yüzey de tazelenir: aralık ya da uygulama değişince sheet'teki
   // sayılar sessizce eski dönemi göstermeye devam ederdi.
   if(!el('sheet').hidden) drawSheet();
@@ -4296,6 +4336,7 @@ function showView(v){
   // yapmaz — sekme birleştirmede Ürün 26,8 ekran kalmasının sebebi buydu.
   buildAnchors();
   capTables();
+  collapseTallCards();
   // Kaydırma RENDER SONRASI: sayfa henüz kısayken scrollTo çağırmak hiçbir
   // şey yapmaz, tarayıcı o konuma kırpar.
   const y=SCROLL_POS[v]||0;
