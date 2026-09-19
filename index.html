@@ -3514,14 +3514,20 @@ function drawCrumb(span){
    NEDEN `hidden` değil `max-height`: `hidden` kart içindeki grafiklerin
    ölçümünü bozuyor (sıfır yükseklikte çizilen SVG boş kalıyor); gövde
    görünür kalıyor, yalnız kırpılıyor. */
-const COLLAPSE_PX=900;
+/* Eşik SEKMENİN İŞİNE göre. Karar sekmelerinde (Bugün, Büyüme, Para, Ürün)
+   yarım ekranı aşan kart katlanıyor; Veri sekmesi bir REFERANS yüzeyi —
+   oraya bakmaya değil, aramaya gidiliyor — ve orada eşik daha sıkı, çünkü
+   13 kart 500-900px arasında kalıp toplamda 30 ekran ediyordu. */
+const COLLAPSE_PX=900, COLLAPSE_PX_REF=420;
 function collapseTallCards(){
+  const ref = VIEW==='veri';
+  const limit = ref ? COLLAPSE_PX_REF : COLLAPSE_PX;
   document.querySelectorAll('.view:not([style*="display: none"]) .card').forEach(c=>{
     if(c.dataset.noCollapse!=null) return;
     const head=c.querySelector('.card-head'); if(!head) return;
     const h=c.scrollHeight;
     const already=c.classList.contains('cc');
-    if(!already && h<=COLLAPSE_PX){ head.querySelector('.cc-btn')?.remove(); return; }
+    if(!already && h<=limit){ head.querySelector('.cc-btn')?.remove(); return; }
     if(!already) c.classList.add('cc','cc-closed');
     if(head.querySelector('.cc-btn')) return;
     const b=document.createElement('button');
