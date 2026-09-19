@@ -2312,7 +2312,27 @@ function storeFunnel(days){
     });
   return o;
 }
-function countryRows(days){
+/* `storeOnly`: ülke kırılımını YALNIZ mağaza kaynaklarından kurar.
+   `byCountryDaily` kaynak taşımıyor, yani oranları oradan hesaplamak aynı
+   evren hatasını ülke bazında tekrar eder — ES'de App referrer'dan gelen bir
+   indirme, ES mağaza dönüşümü gibi görünür. `countryBySource` kaynağı
+   taşıyor; oran isteyen her yer bunu kullanıyor, hacim isteyen yerler
+   (kaç indirme geldi) tüm kaynakları toplamaya devam ediyor. */
+function countryRows(days, storeOnly){
+  if(storeOnly){
+    const set=new Set(days), by={};
+    (D.countryBySource||[]).filter(r=>r.slug===APP&&inRange(r.day,set)
+      &&STORE_SOURCES.has(r.source_type||'')).forEach(r=>{
+        const k=r.country;
+        by[k]=by[k]||{cc:k,imp:0,pv:0,tap:0,dl:0};
+        const v=Number(r.v||0);
+        if(r.metric==="store_impression") by[k].imp+=v;
+        else if(r.metric==="store_page_view") by[k].pv+=v;
+        else if(r.metric==="store_tap") by[k].tap+=v;
+        else if(r.metric==="downloads_first_time") by[k].dl+=v;
+      });
+    return Object.values(by);
+  }
   const set=new Set(days), by={};
   (D.byCountryDaily||[]).filter(r=>r.slug===APP&&inRange(r.day,set)).forEach(r=>{
     const k=r.country;
@@ -2760,11 +2780,14 @@ function drawKpis(){
       'Gösterim artarken oran düşüyorsa büyüme gibi görünen bir <em>kayıp</em> var: daha çok kişi görüyor, aynı kişi indiriyor.');
   })();
   el('gaugeVal').textContent=(conv||0).toFixed(1)+"%";
-  el('gaugeLb').textContent=`${num(cur.imp)} gösterim → ${num(cur.dl)} indirme`;
+  // Etiket de MAĞAZA sayılarını gösteriyor: gösterge %4,6 derken "1.272
+  // gösterim → 119 indirme" yazmak okuyana 119/1272=%9,4 dedirtirdi ve iki
+  // sayı birbirini yalanlardı.
+  el('gaugeLb').textContent=`${num(sf.imp)} gösterim → ${num(sf.dl)} indirme · yalnız mağaza kaynağı`;
   const arc=258, filled=Math.max(0,Math.min(1,conv/20));   /* %20 = tam yay */
   el('gaugeArc').setAttribute('stroke-dashoffset', String(Math.round(arc-arc*filled)));
-  el('gaugeF1').textContent=cur.imp?Math.round(cur.pv/cur.imp*100)+"%":"–";
-  el('gaugeF2').textContent=cur.pv?Math.round(cur.dl/cur.pv*100)+"%":"–";
+  el('gaugeF1').textContent=sf.imp?Math.round(sf.pv/sf.imp*100)+"%":"–";
+  el('gaugeF2').textContent=sf.pv?Math.round(sf.dl/sf.pv*100)+"%":"–";
   /* huni — mağaza (ASC, ülke bazlı) + ürün (App Export, ülkesiz) bir arada.
      Ürün yarısı ayrı bir pencereye sahip (app_export yalnız 1g/7g/30g anlık
      görüntü tutuyor, arayüzün RANGE'ine birebir uymayabilir) — etiket her
@@ -2773,10 +2796,17 @@ function drawKpis(){
   const nuLabel = RANGE===1 ? 'son 1g' : RANGE===30 ? 'son 30g' : 'son 7g';
   const newUsers = stockValue('app_export_new_users_'+nuWin);
   const activeHh = stockValue('app_export_active_households');
-  const storeSteps=[["Gösterim",cur.imp,100],["Ürün sayfası",cur.pv,cur.imp?cur.pv/cur.imp*100:0],
-               ["İndirme",cur.dl,cur.imp?cur.dl/cur.imp*100:0]];
-  const productSteps=[["Yeni kullanıcı",newUsers,cur.imp&&newUsers!=null?newUsers/cur.imp*100:0,nuLabel],
-               ["Aktif hane",activeHh,cur.imp&&activeHh!=null?activeHh/cur.imp*100:0,'güncel toplam']];
+  // HUNİ MAĞAZA KAYNAKLARINDAN. Zincirin her halkası bir önceki halkanın alt
+  // kümesi olmak zorunda; `cur.*` tüm kaynakları topluyor ve "ürün sayfası"
+  // adımı gösterimden büyük çıkabiliyordu (ölçüldü: 590 > 137).
+  const storeSteps=[["Gösterim",sf.imp,100],["Ürün sayfası",sf.pv,sf.imp?sf.pv/sf.imp*100:0],
+               ["İndirme",sf.dl,sf.imp?sf.dl/sf.imp*100:0]];
+  // ÜRÜN yarısı mağaza gösterimine bölünmeye DEVAM ediyor ve bu bilinçli:
+  // kullanıcı her kaynaktan geliyor, mağaza gösterimi huninin girişi. Ama
+  // artık payda yalnız mağaza olduğu için oran "mağazada görülen 100 kişiden
+  // kaçı kullanıcı oldu" sorusunu doğru soruyor.
+  const productSteps=[["Yeni kullanıcı",newUsers,sf.imp&&newUsers!=null?newUsers/sf.imp*100:0,nuLabel],
+               ["Aktif hane",activeHh,sf.imp&&activeHh!=null?activeHh/sf.imp*100:0,'güncel toplam']];
   /* HUNİ ZİNCİR OLARAK ÇİZİLİYOR (kural 10): aşama aşama, mutlak sayı ·
      girişin yüzdesi · bir önceki adımın yüzdesi · ve KAÇ KİŞİNİN GEÇMEDİĞİ
      kendi satırında, kırmızı. Eski hâli 12 mini çubuktan oluşan yatay bir
@@ -3487,7 +3517,8 @@ function sheetClose(){ if(location.hash) history.back(); else drawSheet(); }
    SIRALAMA en büyük NEGATİF katkıya göre — "bu düşüşü hangisi yaptı" sorusunun
    doğrudan cevabı. Hacme ya da alfabeye göre sıralamak onu gizler. */
 function sheetRows(mk){
-  const now=countryRows(rangeDays()), prev=countryRows(prevRangeDays());
+  const so=!!mk.store;
+  const now=countryRows(rangeDays(),so), prev=countryRows(prevRangeDays(),so);
   const hasPrev=prev.length>0;
   const pm=new Map(prev.map(r=>[r.cc,r]));
   return now.map(r=>{
