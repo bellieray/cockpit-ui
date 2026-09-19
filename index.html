@@ -5327,6 +5327,7 @@ const SIG_RULES=[
   {k:'wau_drop',          t:'haftalık aktif kullanıcı düşüşü'},
   {k:'rating_recent',     t:'son 30 günün puanı ömür boyu puanın altında'},
   {k:'traffic_mix_shift', t:'trafik kaynağı payı kaydı'},
+  {k:'panel_integrity',   t:'panelin kendi doğruluğu (değişmez + uzlaştırma)'},
 ];
 function signalsFor(app=APP){
   const out=[];
@@ -5481,6 +5482,38 @@ function signalsFor(app=APP){
         `Son tamamlanmış hafta bir öncekine göre %${Math.round((1-last/prev)*100)} düştü.`,
         `−%${Math.round((1-last/prev)*100)}`);
     }
+  }
+
+  /* --- 8. Panelin kendi doğruluğu ------------------------------------ */
+  /* `testing.md` Katman 1: "başarısız olan bir değişmezin ilgili metriği
+     ÇİZİLMEZ ve panele şerit uyarı basılır." Şerit Veri sekmesinde vardı ama
+     KARAR yüzeyinde yoktu — bir sayıya güvenilemeyeceğini o sayıya bakarken
+     bilmen gerekir, iki sekme öteden değil. 13. ilke: panel kendi sağlığını
+     ölçer; ölçüp söylememek yarısı. */
+  if(app===APP){
+    const asrFail=(D.assertions||[]).filter(r=>r.passed===false&&r.severity!=='warn');
+    const asrNone=(D.assertions||[]).filter(r=>r.passed==null);
+    if(asrFail.length){
+      add(1, SIG.RED, 1e7,
+        `${num(asrFail.length)} değişmez kırık — sayılar güvenilmez`,
+        asrFail.map(r=>r.title||r.key).join(' · ')
+        + '. Bir değişmez matematiksel olarak doğru olmak ZORUNDA olan şeydir; kırıldıysa onu besleyen metriğe karar dayandırılamaz. Veri sekmesinde hangisi olduğu yazılı.',
+        `${num(asrFail.length)} kırık`);
+    }
+    if(asrNone.length){
+      add(3, SIG.INFO, asrNone.length,
+        `${num(asrNone.length)} değişmez hiç koşmadı`,
+        'Koşmamış bir değişmez "sorun yok" demek değil, "bakılmadı" demek — ikisi ayrı şey ve aynı göstermek sessiz onaydır.',
+        'ölçülmedi');
+    }
+    const rcnBad=(D.recon||[]).filter(r=>r.status==='UNEXPLAINED');
+    rcnBad.forEach(r=>{
+      add(1, SIG.RED, 9e6,
+        `${r.check_key}: iki kaynak uyuşmuyor`,
+        `${num(Number(r.value_a))} ↔ ${num(Number(r.value_b))}, beklenen farkın üstünde kalan var. `
+        + (r.description||''),
+        'uyuşmazlık');
+    });
   }
 
   /* --- 7. Trafik kaynağı payı kaydı --------------------------------- */
