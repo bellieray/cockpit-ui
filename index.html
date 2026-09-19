@@ -3221,7 +3221,12 @@ function sourceWhy(source){
     return ` <b>${esc(source)}</b> hiç veri üretmedi${blk?` — ${esc(blk.action)}`:''}.`;
   if(r.freshness==='BAYAT')
     return ` <b>${esc(source)}</b> ${r.days_behind} gündür veri yazmıyor — sayı eksik olabilir.`;
-  return ` Kaynak <b>${esc(source)}</b> çalışıyor ve güncel: bu gerçekten <b>boş</b>, ölçülmemiş değil.`;
+  // Gün sayısı MESAJDA: `freshness` kaynağın kendi kadansına göre karar
+  // veriyor (yorum akışı seyrek, 17 gün BAYAT sayılmıyor) — ama okuyan için
+  // "güncel" ile "17 gün önce" aynı şey değil. Eşik geçilmemiş olabilir,
+  // veri yine de eski.
+  const yas = r.days_behind<=0 ? 'bugün' : r.days_behind===1 ? 'dün' : `${r.days_behind} gün önce`;
+  return ` Kaynak <b>${esc(source)}</b> çalışıyor (son veri ${esc(yas)}, kendi bütçesi içinde): bu gerçekten <b>boş</b>, ölçülmemiş değil.`;
 }
 function emptyFiltered(key, noun, cols, source){
   const f=FILTER_SETS[key];
