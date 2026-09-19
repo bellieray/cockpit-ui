@@ -524,6 +524,15 @@
      "neden yok" sorusunu cevapsız bırakır (üç durum kuralının aynısı). */
   .range-muted{opacity:.45}
 
+  /* === haftalık özet === */
+  .wk-pre{margin:12px 0 0;white-space:pre-wrap;word-break:break-word;
+    font:inherit;font-size:12.5px;line-height:1.55;color:var(--ink-2);
+    font-variant-numeric:tabular-nums}
+  .wk-note{margin-top:12px;width:100%;box-sizing:border-box;font:inherit;
+    font-size:12.5px;padding:10px 12px;border:1px solid var(--hair);
+    border-radius:var(--r-md);background:var(--canvas);color:var(--ink)}
+  .wk-note:focus{outline:0;border-color:var(--brand)}
+
   .tw-more{display:block;width:100%;margin-top:10px;padding:10px 12px;border:0;
     background:var(--canvas);color:var(--ink-2);font:inherit;font-size:12.5px;
     font-weight:600;border-radius:var(--r-md);cursor:pointer}
@@ -1023,6 +1032,21 @@
       <div class="c12 region-label" id="sigLabel">Sinyaller</div>
       <div class="card c12" id="sigCard">
         <div class="siglist" id="sigList"></div>
+      </div>
+
+      <!-- Haftalık özet. Sahibi haftada bir derin bakış yapıyor ve o bakışın
+           çıktısı panelde KALMAMALI — "performans metriklerini alabilmek"
+           istediği şey buydu. Panodaki metin WhatsApp'a, e-postaya, bir nota
+           yapıştırılır; PDF yok, kütüphane yok, build yok. -->
+      <div class="card c12" id="wkCard">
+        <div class="card-head">
+          <div><div class="card-title">Haftalık özet</div>
+            <div class="card-sub" id="wkSub">–</div></div>
+          <button class="viewall" id="wkCopy" type="button">Kopyala</button>
+        </div>
+        <pre class="wk-pre" id="wkText"></pre>
+        <input class="wk-note" id="wkNote" type="text" maxlength="160"
+               placeholder="Bu haftanın notu — tek satır, gelecek hafta karşına çıkar">
       </div>
 
       <div class="c12 region-label" data-store-only>Gelir</div>
@@ -3496,6 +3520,71 @@ function drawSheet(){
 }
 addEventListener('hashchange',()=>{ SH_OPEN=null; drawSheet(); });
 
+/* Haftalık özet metni — altı blok, boş blok ATLANMAZ, açıklanır.
+   Dördüncü blok ("ölçülmüyorlar") üç durum kuralının rapor seviyesi: panel
+   "göremiyorum" demiyor, "şu nedenle göremiyorum" diyor. Beşinci blok geçen
+   haftanın notunu geri getiriyor — karar → sonuç → yeni karar halkasının tek
+   veri bağı; onsuz panel karar defteri değil, sayı panosu kalır. */
+const WK_NOTE_KEY=()=>'wknote_'+APP;
+function weeklyText(){
+  const a=(D.apps||[]).find(x=>x.slug===APP);
+  const days=rangeDays();
+  const L=[];
+  L.push(`HAFTALIK ÖZET — ${a?.name||APP}`);
+  L.push(`${LAST_SPAN} · karşılaştırma: önceki eşit dönem`);
+  L.push('='.repeat(46));
+
+  const sigs=signalsFor();
+  L.push('', `1) SİNYALLER (${SIG_RULES.length} kural kontrol edildi)`);
+  if(sigs.length) sigs.slice(0,5).forEach(x=>L.push(`   • ${x.hd}${x.amt?` — ${x.amt}`:''}`));
+  else L.push('   Tetiklenen eşik yok. "Sorun yok" demek DEĞİL: kurallar ya hacim');
+  if(!sigs.length) L.push('   eşiğinin altında kaldı ya hiçbiri tetiklenmedi.');
+
+  // 2) en büyük değişimler — yalnız gürültü ÜSTÜ olanlar
+  const now=countryRows(rangeDays()), prev=countryRows(prevRangeDays());
+  const sum=(r,k)=>r.reduce((x,o)=>x+(o[k]||0),0);
+  const cand=[['Gösterim','imp'],['Ürün sayfası','pv'],['İndirme','dl']]
+    .map(([t,k])=>{const c=sum(now,k),p=sum(prev,k);return {t,c,p,conf:confCount(c,p),d:c-p};})
+    .filter(x=>x.p>0 && x.conf.dot!=='○')
+    .sort((x,y)=>Math.abs(y.d)-Math.abs(x.d)).slice(0,3);
+  L.push('', '2) EN BÜYÜK DEĞİŞİMLER (gürültü filtreli)');
+  if(cand.length) cand.forEach(x=>L.push(`   • ${x.t}: ${num(x.p)} → ${num(x.c)} (${x.d>=0?'+':'−'}${num(Math.abs(x.d))}, ${x.conf.label})`));
+  else L.push('   Gürültü tabanının üstüne çıkan değişim yok — ölçek küçük, bu beklenen.');
+
+  // 3) değişiklikler
+  const from=days[0], to=days[days.length-1];
+  const ev=[];
+  (D.releaseEffect||[]).filter(r=>r.app_slug===APP&&r.released_on>=from&&r.released_on<=to)
+    .forEach(r=>ev.push(`${r.released_on} — sürüm ${r.version} yayında`));
+  const lc=(D.listingChanges||[]).filter(r=>r.slug===APP&&r.noticed_on>=from&&r.noticed_on<=to);
+  if(lc.length) ev.push(`${lc[0].noticed_on} — listeleme değişikliği (${lc.length} dil)`);
+  L.push('', '3) BU DÖNEMDEKİ DEĞİŞİKLİKLER');
+  if(ev.length) ev.forEach(x=>L.push('   • '+x)); else L.push('   Kayıtlı sürüm ya da listeleme değişikliği yok.');
+
+  // 4) ölçülmüyorlar
+  const todo=(D.blockers||[]).filter(b=>b.slug===APP&&b.urgency==='yapilacak');
+  const stale=(D.seriesFreshness||[]).filter(r=>(r.app_slug===APP)&&r.freshness==='BAYAT');
+  L.push('', '4) ÖLÇÜLMÜYORLAR — bu haftanın kararına giremeyenler');
+  todo.forEach(b=>L.push(`   • ${b.source}: ${b.action}`));
+  stale.forEach(r=>L.push(`   • ${r.source}: veri ${r.days_behind} gündür akmıyor`));
+  if(!todo.length && !stale.length) L.push('   Yok — tüm etkin kaynaklar kendi bütçesi içinde.');
+
+  // 5/6) not halkası
+  let prevNote=''; try{ prevNote=localStorage.getItem(WK_NOTE_KEY())||''; }catch{}
+  L.push('', '5) GEÇEN NOT');
+  L.push(prevNote ? `   "${prevNote}"` : '   Yok — bu haftanın notunu aşağıya yaz, gelecek hafta burada çıkar.');
+  return L.join('\n');
+}
+function drawWeekly(){
+  const box=el('wkText'); if(!box) return;
+  box.textContent=weeklyText();
+  el('wkSub').textContent=`${LAST_SPAN} · panoya kopyalanabilir metin`;
+  const inp=el('wkNote');
+  if(inp && document.activeElement!==inp){
+    try{ inp.value=localStorage.getItem(WK_NOTE_KEY())||''; }catch{}
+  }
+}
+
 /* Kaynak tazelik şeridi.
    `days_behind` konektörün koştuğu anı değil, en yeni VERİ periyodunu ölçüyor:
    boş ama başarılı bir çekim "koştu" der, "veri geldi" demez. BAYAT olanlar
@@ -3571,7 +3660,7 @@ function renderAll(){
   const pre=isPrelaunch();
   el('v-ozet').classList.toggle('pre',pre);
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
-  drawCrumb(span); drawFresh();
+  drawCrumb(span); drawFresh(); drawWeekly();
   fillSelects(); drawSyncLabel(); renderSignals(); drawPrelaunch(); drawRevenue(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   visibleViews().forEach(k=>RENDERERS[k]?.());
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
@@ -3634,6 +3723,16 @@ function bind(){
     const card=el(id)?.closest('.card'); if(!card) return;
     card.classList.add('kpi-tap');
     card.addEventListener('click',()=>sheetOpen(metric));
+  });
+  el('wkCopy')?.addEventListener('click',async()=>{
+    const b=el('wkCopy');
+    try{ await navigator.clipboard.writeText(weeklyText()); b.textContent='kopyalandı'; }
+    catch{ b.textContent='kopyalanamadı — metni seçip kopyala'; }
+    setTimeout(()=>{ b.textContent='Kopyala'; },2200);
+  });
+  el('wkNote')?.addEventListener('change',e=>{
+    try{ localStorage.setItem(WK_NOTE_KEY(), e.target.value.trim()); }catch{}
+    drawWeekly();
   });
   el('shClose').addEventListener('click',sheetClose);
   el('scrim').addEventListener('click',sheetClose);
