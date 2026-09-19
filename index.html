@@ -3766,8 +3766,11 @@ const TAB_GROUPS={
   bugun:  {t:'Bugün',  q:'Bugün ne yapmalıyım?',        views:['ozet']},
   buyume: {t:'Büyüme', q:'Kullanıcı geliyor mu, nereden?', views:['pazar','aso']},
   para:   {t:'Para',   q:'Para geliyor mu, nereden?',    views:['para']},
-  urun:   {t:'Ürün',   q:'Kullanıcı ürünü kullanıyor mu?', views:['urun','veri','yorum']},
-  veri:   {t:'Veri',   q:'Sayılara güvenebilir miyim?',  views:['saglik','portfoy']},
+  urun:   {t:'Ürün',   q:'Kullanıcı ürünü kullanıyor mu?', views:['urun','yorum']},
+  // Ham katalog ('veri') ÜRÜN'de değil VERİ'de: doğası "hangi ham sayılar
+  // var" — bir ürün kararı değil, bir güven sorusu. Ürün sekmesinde tek
+  // başına 53 ekran ediyordu ve kararı gömüyordu.
+  veri:   {t:'Veri',   q:'Sayılara güvenebilir miyim?',  views:['saglik','veri','portfoy']},
 };
 const ALL_VIEWS=["ozet","portfoy","para","pazar","aso","urun","veri","yorum","saglik"];
 const RENDERERS={aso:()=>renderAso(),portfoy:()=>renderPortfoy(),para:()=>renderPara(),
