@@ -4022,9 +4022,15 @@ function relocateCards(){
     if(host) host.appendChild(card);
   });
 }
+/* Sekme başına kaydırma konumu. Günde birkaç dakikalık kullanımda her
+   dönüşte sayfanın başına atılmak, uzun sekmelerde aynı yolu tekrar
+   kaydırmak demek. `sessionStorage`: oturum boyunca hatırlar, ertesi gün
+   temiz başlar — bir haftalık eski konum bugünün verisiyle ilgisiz. */
+const SCROLL_POS={};
 function showView(v){
   relocateCards();
   if(!TAB_GROUPS[v]) v='bugun';
+  if(VIEW && VIEW!==v) SCROLL_POS[VIEW]=scrollY;
   VIEW = v;
   const on=new Set(TAB_GROUPS[v].views);
   ALL_VIEWS.forEach(k=>{ const n=el("v-"+k); if(n) n.style.display = on.has(k)?"":"none"; });
@@ -4041,6 +4047,11 @@ function showView(v){
   // yapmaz — sekme birleştirmede Ürün 26,8 ekran kalmasının sebebi buydu.
   buildAnchors();
   capTables();
+  // Kaydırma RENDER SONRASI: sayfa henüz kısayken scrollTo çağırmak hiçbir
+  // şey yapmaz, tarayıcı o konuma kırpar.
+  const y=SCROLL_POS[v]||0;
+  if(y) requestAnimationFrame(()=>scrollTo({top:y,behavior:'instant'}));
+  else scrollTo({top:0,behavior:'instant'});
 }
 
 /* ---------- ASO ---------- */
