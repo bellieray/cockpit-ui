@@ -2946,6 +2946,7 @@ function drawChart(){
 /* ---------- kaynak ---------- */
 function drawSrc(){
   const rows=sourceRows(rangeDays()), s=el('srcSort').value;
+  const sfT=storeFunnel(rangeDays());
   /* İKİ AYRI ORAN, iki ayrı kolon. Eskiden tek "Dön.%" kolonu vardı ve
      gösterim ölçülmeyen kaynaklarda SESSİZCE sayfa→indirmeye düşüyordu:
      arama satırı %5,4 (gösterim→indirme), yönlendirme satırı %71,4
@@ -2985,19 +2986,27 @@ function drawSrc(){
       <td class="num">${p1(crPv(r))}</td></tr>`).join("")+
     `</tbody><tfoot><tr><td>Toplam</td><td class="num">${num(T.imp)}</td><td class="num">${num(T.pv)}</td>
       <td class="num">${num(T.dl)}</td>
-      <td class="num">${T.imp?(T.dl/T.imp*100).toFixed(1):"–"}</td>
-      <td class="num">${T.pv?(T.dl/T.pv*100).toFixed(1):"–"}</td></tr></tfoot>`;
-  /* Toplam satırı iki oranı da KARIŞIK kümeden hesaplıyor: Gst→İnd'in payı
-     tüm indirmeler ama paydası yalnız arama+gezinme gösterimi. Bu kartın
-     dipnotu bunu zaten söylüyor ("satırlar yan yana durur, toplanmaz");
-     toplam satırı bir büyüklük fikri için duruyor, kaynak kıyası için değil. */
+      <td class="num" title="yalnız mağaza kaynağı (arama + gezinme)">${sfT.imp?(sfT.dl/sfT.imp*100).toFixed(1):"–"}</td>
+      <td class="num" title="yalnız mağaza kaynağı (arama + gezinme)">${sfT.pv?(sfT.dl/sfT.pv*100).toFixed(1):"–"}</td></tr></tfoot>`;
+  /* TOPLAM SATIRINDAKİ ORANLAR MAĞAZA KAYNAĞINDAN. Önceki hâli payı tüm
+     indirmelerden, paydayı yalnız arama+gezinme gösteriminden alıyordu ve
+     oranı iki katına çıkarıyordu. Kod bunu biliyordu ("toplam satırı bir
+     büyüklük fikri için duruyor") — ama ekranda duran bir sayı okunur ve
+     yanlışsa yanlış okunur; bilmek yazmakla aynı şey değil.
+     Hacim kolonları (gösterim/sayfa/indirme) TÜM kaynakları toplamaya
+     devam ediyor: onlar "ne kadar geldi" sorusunun cevabı. */
 }
 
 /* ---------- ülkeler ---------- */
 function drawCtry(){
+  // HACİM tüm kaynaklardan (kaç indirme geldi), ORAN yalnız mağazadan
+  // (mağazada görülen kaçı indirdi). İkisini aynı satırda göstermek doğru —
+  // ama oranın paydası gösterim olduğu için payı da mağaza indirmesi olmalı,
+  // yoksa referans linkinden gelen indirmeler mağaza dönüşümünü şişirir.
   const all=countryRows(rangeDays());
+  const st=new Map(countryRows(rangeDays(),true).map(r=>[r.cc,r]));
   const q=el('ctrySearch').value.trim().toLowerCase(), s=el('ctrySort').value, min=+el('ctryMin').value;
-  const cr=r=>r.imp?r.dl/r.imp:0;
+  const cr=r=>{ const k=st.get(r.cc); return k&&k.imp ? k.dl/k.imp : 0; };
   // Arama yalnız ülke KODUNA bakıyordu: "türkiye" ya da "germany" yazınca
   // sonuç yoktu, oysa listede bayrak var ve kullanıcı adı biliyor.
   // `Intl.DisplayNames` ülke adını hem Türkçe hem İngilizce veriyor —
@@ -3020,7 +3029,7 @@ function drawCtry(){
       <td class="num sec ${cr(r)>=.1?'up':(cr(r)===0?'flat':'')}" data-l="dön.%">${(cr(r)*100).toFixed(1)}</td></tr>`).join("")
       :emptyFiltered("ctry","ülke",5,"asc_analytics"))+`</tbody>`;
   el('ctryCount').textContent=`${rows.length} / ${all.length} ülke`;
-  el('ctryMeta').textContent=`${all.length} ülkede ölçüm var`;
+  el('ctryMeta').textContent=`${all.length} ülkede ölçüm var · dönüşüm yalnız mağaza kaynağından`;
 }
 
 /* ---------- sağlık ---------- */
