@@ -3759,9 +3759,11 @@ function weeklyText(){
   const asrFail=(D.assertions||[]).filter(r=>r.passed===false&&r.severity!=='warn');
   const asrNone=(D.assertions||[]).filter(r=>r.passed==null);
   L.push('', `5) DOĞRULUK (${num((D.assertions||[]).length)} değişmez)`);
+  const asrWarn=(D.assertions||[]).filter(r=>r.passed===false&&r.severity==='warn');
   if(asrFail.length) asrFail.forEach(r=>L.push(`   ✕ ${r.title||r.key}`));
+  if(asrWarn.length) asrWarn.forEach(r=>L.push(`   ▲ ${r.title||r.key} (kaynağın doğası, izleniyor)`));
   if(asrNone.length) L.push(`   ○ ${num(asrNone.length)} değişmez hiç koşmadı`);
-  if(!asrFail.length && !asrNone.length) L.push('   Hepsi geçti.');
+  if(!asrFail.length && !asrWarn.length && !asrNone.length) L.push('   Hepsi geçti.');
 
   // 5/6) not halkası
   let prevNote=''; try{ prevNote=localStorage.getItem(WK_NOTE_KEY())||''; }catch{}
