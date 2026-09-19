@@ -2353,8 +2353,13 @@ function storeWindowNote(){
   const st=storeDays(), rg=rangeDays();
   if(!st.length||!rg.length) return '';
   if(st[st.length-1]===rg[rg.length-1] && st[0]===rg[0]) return '';
-  return `Mağaza verisi ${dShort(st[st.length-1])}'ye kadar (Apple ~2 gün geriden): `
-       + `${dShort(st[0])} – ${dShort(st[st.length-1])} · ${num(st.length)} gün, önceki pencereyle aynı uzunlukta`;
+  const pv=storePrevDays();
+  // "Aynı uzunlukta" YALNIZ önceki pencere gerçekten aynı uzunluktaysa yazılır:
+  // 1A ve Baştan'da önceki dönem kısa ya da yok, orada bu cümle yalan olurdu.
+  const esit = pv.length===st.length;
+  return `Mağaza verisi ${dShort(st[st.length-1])} tarihine kadar (Apple ~2 gün geriden): `
+       + `${dShort(st[0])} – ${dShort(st[st.length-1])} · ${num(st.length)} gün`
+       + (esit ? ' · önceki pencereyle aynı uzunlukta' : pv.length ? ` · önceki pencere ${num(pv.length)} gün` : '');
 }
 
 /* ---------- toplayıcılar ---------- */
@@ -3056,7 +3061,11 @@ function smooth(pts){
   return d;
 }
 function drawChart(){
-  const days=rangeDays(), scale=el('chartScale').value;
+  // MAĞAZA penceresi: takvim penceresinin son iki günü Apple'dan henüz
+  // gelmemiş ve `v||0` onları SIFIR çiziyordu — çizgi sağ kenarda dibe çöküyor,
+  // son nokta orada duruyordu. Gerçek bir çöküşle ayırt edilemez. Ölçülmemiş
+  // gün sıfır değil, grafikte YOK (ui-and-motion.md: eksik gün boşluk çizilir).
+  const days=storeDays(), scale=el('chartScale').value;
   const cc=el('chartCountry').value||'';
   const W=600,H=230,top=14,bot=34;
   const on=Object.keys(seriesOn).filter(k=>seriesOn[k]);
@@ -3082,7 +3091,8 @@ function drawChart(){
   el('chartSvg').innerHTML=svg;
   el('chartX').innerHTML=days.map(d=>`<span>${d.slice(5).replace('-','.')}</span>`).join("");
   el('chartCount').textContent=`${on.length} seri · ${days.length} gün · tepe ${num(max)}`;
-  el('chartSub').textContent=`Günlük ölçüm · ${dShort(days[0])} – ${dShort(days[days.length-1])}`;
+  el('chartSub').textContent=`Günlük ölçüm · ${dShort(days[0])} – ${dShort(days[days.length-1])}`
+    + (storeWindowNote()?' · Apple verisi ~2 gün geriden':'');
   drawMarkers('chartMarks','chartMarkNote',days,versionMarks());
 }
 
