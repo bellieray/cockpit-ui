@@ -3554,6 +3554,34 @@ function drawSheet(){
       </div>`:''}
     `).join(''):`<div class="empty">Bu aralıkta ülke kırılımı yok</div>`}
 
+    ${(()=>{
+      // TÜRETİLMİŞ SAYILAR: huninin her adımı ayrı bir oran ve ayrı bir
+      // aksiyon. Tek "dönüşüm" sayısı hangi adımın sızdırdığını söylemiyor —
+      // ikon/başlık mı zayıf (gösterim→sayfa), yoksa ekran görüntüsü mü
+      // (sayfa→indirme)? İkisi farklı iş.
+      const imp=sum(now,'imp'), pv=sum(now,'pv'), dl=sum(now,'dl');
+      if(!imp) return '';
+      const rows=[
+        ['Gösterim → sayfa', pv, imp, 'ikon, başlık ve ilk ekran görüntüsü'],
+        ['Sayfa → indirme',  dl, pv,  'ekran görüntüleri, açıklama, puan'],
+      ].filter(r=>r[2]>0);
+      const rev=(D.adByFormat||[]).filter(r=>r.slug===APP&&r.metric==='ad_estimated_earnings'
+        &&inRange(r.day,new Set(rangeDays()))).reduce((a,r)=>a+Number(r.v||0),0);
+      return `<div class="sh-sec">HUNİ ADIMLARI</div>`
+        + rows.map(([t,k,n,why])=>{
+            const w=wilson(k,n);
+            return `<div class="sh-row" style="cursor:default">
+              <span class="sh-row-top"><span class="sh-cc">${esc(t)}</span>
+              <span class="sh-now tnum">${pct1(k/n)}</span></span>
+              <span class="sh-row-sub">${num(k)} / ${num(n)}${w?` · %95 aralık ${pct1(w[0])}–${pct1(w[1])}`:''} · bu adımı ${esc(why)} belirler</span>
+            </div>`;}).join('')
+        + (dl>0 ? `<div class="sh-row" style="cursor:default">
+              <span class="sh-row-top"><span class="sh-cc">Kurulum başına reklam geliri</span>
+              <span class="sh-now tnum">${money2(rev/dl)}</span></span>
+              <span class="sh-row-sub">${money2(rev)} / ${num(dl)} kurulum · ücretli kanal açmanın üst sınırı budur</span>
+            </div>` : '');
+    })()}
+
     <div class="sh-sec">TANIM</div>
     <div class="sh-def">${esc(def?.definition||'Sözlük kaydı yok — metrik eksik sayılır (1. ilke).')}</div>
     <div class="sh-def" style="color:var(--ink-3);margin-top:6px">Kaynak: ${esc(mk.src)}</div>
