@@ -449,6 +449,8 @@
   .fresh .fr{white-space:nowrap;font-variant-numeric:tabular-nums}
   .fresh .fr.stale{color:var(--s2);font-weight:600}
   .fresh .fr.stale b{color:var(--s2)}
+  /* Ölçülmedi ne bayat ne güncel — kendi tonu var (CLAUDE.md 3. ilke). */
+  .fresh .fr.unmeasured,.fresh .fr.unmeasured b{color:var(--unmeasured-soft,var(--ink-3));opacity:.75}
   .fresh .fr-lead{font-weight:600;color:var(--ink-2);margin-right:2px}
 
   .tw-more{display:block;width:100%;margin-top:10px;padding:10px 12px;border:0;
@@ -3233,16 +3235,25 @@ function drawFresh(){
   const bar=el('freshBar');
   if(!rows.length){ bar.hidden=true; return; }
   bar.hidden=false;
+  // ÜÇ DURUM, iki değil: bayat (veri var, eskimiş) · ölçülmedi (hiç veri yok)
+  // · güncel. İlk sürümde başlık yalnız BAYAT sayıyordu ve dört kaynak
+  // "ölçülmedi" iken "Kaynaklar güncel" yazıyordu — şeridin engellemek için
+  // var olduğu sessiz onayın ta kendisi.
   const stale=rows.filter(r=>r.freshness==='BAYAT');
-  const sorted=[...rows].sort((a,b)=>(b.days_behind??0)-(a.days_behind??0));
+  const unmeasured=rows.filter(r=>r.freshness!=='BAYAT' && r.days_behind==null);
+  const sorted=[...rows].sort((a,b)=>
+    (a.days_behind==null?1:0)-(b.days_behind==null?1:0) || (b.days_behind??0)-(a.days_behind??0));
   const one=r=>{
     const d=r.days_behind;
     const age = d==null ? 'ölçülmedi' : d<=0 ? 'bugün' : d===1 ? 'dün' : `${d} gün önce`;
-    return `<span class="fr${r.freshness==='BAYAT'?' stale':''}" title="${esc(r.source)} · en yeni veri ${esc(r.newest_period||'yok')}"><b>${esc(r.source)}</b> ${esc(age)}</span>`;
+    const cls = r.freshness==='BAYAT' ? ' stale' : (d==null ? ' unmeasured' : '');
+    return `<span class="fr${cls}" title="${esc(r.source)} · en yeni veri ${esc(r.newest_period||'yok')}"><b>${esc(r.source)}</b> ${esc(age)}</span>`;
   };
-  bar.innerHTML =
-    `<span class="fr-lead">${stale.length?`${num(stale.length)} kaynak bayat`:'Kaynaklar güncel'}</span>`
-    + sorted.map(one).join('');
+  const lead = [
+    stale.length ? `${num(stale.length)} bayat` : '',
+    unmeasured.length ? `${num(unmeasured.length)} ölçülmedi` : '',
+  ].filter(Boolean).join(' · ') || 'Hepsi güncel';
+  bar.innerHTML = `<span class="fr-lead">${esc(lead)}</span>` + sorted.map(one).join('');
 }
 
 function renderAll(){
