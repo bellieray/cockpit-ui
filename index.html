@@ -4112,7 +4112,8 @@ function drawRecon(){
     return `<div class="asr ${cls}">
       <span class="asr-dot">${dot}</span>
       <span class="asr-t">${esc(r.check_key)} <span style="color:var(--ink-3)">${esc(vals)}</span>
-        ${cls!=='ok'?`<div class="asr-d">${esc(r.description||'')}</div>`:''}</span>
+        ${r.note?`<div class="asr-d">${esc(r.note)}</div>`:''}
+        ${cls==='fail'?`<div class="asr-d">${esc(r.description||'')}</div>`:''}</span>
       <span class="asr-when">${esc(r.period_start||'')}</span></div>`;}).join('');
 }
 function drawAssertions(){
