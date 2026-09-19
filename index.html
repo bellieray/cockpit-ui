@@ -2867,7 +2867,7 @@ function drawSrc(){
     `<div class="it"><span class="dot" style="background:${srcColor(r.name)}"></span>${esc(r.name)}`
     + (srcColor(r.name)===UNMEASURED_FILL?' <span style="color:var(--ink-3)">· kaynak saptanamadı</span>':'')
     + `<b>${num(r[key])}</b></div>`).join("")
-    || `<div class="empty">Bu aralıkta kaynak verisi yok</div>`;
+    || `<div class="empty">Bu aralıkta kaynak verisi yok.${sourceWhy("asc_analytics")}</div>`;
   const T=rows.reduce((t,r)=>({imp:t.imp+r.imp,pv:t.pv+r.pv,dl:t.dl+r.dl}),{imp:0,pv:0,dl:0});
   const p1=v=>v==null?'<span style="color:var(--ink-3)">ölçülmüyor</span>':(v*100).toFixed(1);
   el('srcTable').innerHTML=
@@ -2921,7 +2921,7 @@ function drawCtry(){
     (rows.length?rows.map(r=>`<tr><td>${FLAG[r.cc]||"🏳️"} ${r.cc.toUpperCase()}</td><td class="num sec" data-l="göst.">${num(r.imp)}</td>
       <td class="num sec" data-l="sayfa">${num(r.pv)}</td><td class="num pri" data-l="indirme">${num(r.dl)}</td>
       <td class="num sec ${cr(r)>=.1?'up':(cr(r)===0?'flat':'')}" data-l="dön.%">${(cr(r)*100).toFixed(1)}</td></tr>`).join("")
-      :emptyFiltered("ctry","ülke",5))+`</tbody>`;
+      :emptyFiltered("ctry","ülke",5,"asc_analytics"))+`</tbody>`;
   el('ctryCount').textContent=`${rows.length} / ${all.length} ülke`;
   el('ctryMeta').textContent=`${all.length} ülkede ölçüm var`;
 }
@@ -3030,7 +3030,7 @@ function drawKw(){
         <td class="num sec ${dcls}" data-l="Δ">${dl==null?"–":(dl>0?"+":"")+dl}</td>
         <td class="num hide-m">${r.in_metadata?"✓":"–"}</td><td class="num hide-m">${r.measured_on||"–"}</td>
         <td class="num pri"><span class="tag ${t[0]}">${t[1]}</span></td></tr>`;
-    }).join(""):emptyFiltered("kw","terim",7))+`</tbody>`;
+    }).join(""):emptyFiltered("kw","terim",7,"asa_popularity"))+`</tbody>`;
   el('kwCount').textContent=`${rows.length} / ${all.length} terim`;
 }
 
@@ -3115,7 +3115,7 @@ function drawLb(){
           <span class="lb-sub">${bits.join(" · ")}</span>${relLine}</span>
         <span class="lb-star">${r.rating!=null?"★ "+Number(r.rating).toFixed(2):"–"}</span></div>
       <div class="lb-track"><div class="lb-fill" style="width:${barW(r).toFixed(1)}%"></div></div>
-    </div>`}).join("") : `<div class="empty">Bu uygulama için puan ölçümü yok</div>`;
+    </div>`}).join("") : `<div class="empty">Bu uygulama için puan ölçümü yok.${sourceWhy("itunes_lookup")}</div>`;
 }
 
 /* ---------- yorumlar ---------- */
@@ -3157,7 +3157,7 @@ function drawRev(){
       <div class="rev-title">${esc(r.title||"")}</div>
       <div class="rev-body">${esc((r.body||"").slice(0,320))}</div>
       <div class="rev-date">${String(r.submitted_at||"").slice(0,10)}</div></div>`;
-  }).join("") : emptyFiltered("rev","yorum");
+  }).join("") : emptyFiltered("rev","yorum",null,"asc_reviews");
   el('revCount').textContent=`${rows.length} / ${all.length}`;
   el('revMeta').textContent=reviewMetaText(all);
 }
@@ -3201,13 +3201,30 @@ const FILTER_SETS={
   ylist:{ids:['yWho','ySrc','yStar','yCountry','ySearch'],                              draw:()=>drawYList()},
   rev :{ids:['revWho','revStar','revSearch'],                                           draw:()=>drawRev()},
 };
-function emptyFiltered(key, noun, cols){
+/* Bir kaynağın BOŞ olmasının nedeni. Üç durum kuralının eksik yarısıydı:
+   "veri yok" demek yetmiyor, NEDEN yok yazılmalı. Üç sebep var ve aksiyonları
+   ayrı — konektör bozuksa düzeltilir, ölçülmediyse ölçülür, gerçekten boşsa
+   hiçbir şey yapılmaz. Bunları ayırmayan bir boş kart, bakılmayan bir kart. */
+function sourceWhy(source){
+  if(!source) return '';
+  const rows=(D.seriesFreshness||[]).filter(r=>r.source===source
+    && (r.app_slug===APP || r.app_slug==='__global__'));
+  if(!rows.length) return ` Kaynak <b>${esc(source)}</b> bu uygulama için etkin değil.`;
+  const r=rows.sort((a,b)=>(a.days_behind==null?1:0)-(b.days_behind==null?1:0))[0];
+  const blocker=(D.blockers||[]).find(b=>b.slug===APP&&b.source===source);
+  if(r.days_behind==null)
+    return ` <b>${esc(source)}</b> hiç veri üretmedi${blocker?` — ${esc(blocker.action)}`:''}.`;
+  if(r.freshness==='BAYAT')
+    return ` <b>${esc(source)}</b> ${r.days_behind} gündür veri yazmıyor — sayı eksik olabilir.`;
+  return ` Kaynak <b>${esc(source)}</b> çalışıyor ve güncel: bu gerçekten <b>boş</b>, ölçülmemiş değil.`;
+}
+function emptyFiltered(key, noun, cols, source){
   const f=FILTER_SETS[key];
   const {on}=filterState(f.ids, f.chip);
   const body = on.length
     ? `${on.length} filtre açık — ${esc(on.join(' · '))}
        <button class="pillbtn efb" data-clearf="${key}">Filtreleri temizle</button>`
-    : `Gösterilecek ${esc(noun)} yok`;
+    : `Gösterilecek ${esc(noun)} yok.${sourceWhy(source)}`;
   return cols
     ? `<tr><td colspan="${cols}" class="empty">${body}</td></tr>`
     : `<div class="empty">${body}</div>`;
@@ -4065,7 +4082,7 @@ function renderAsoSearch(){
         <td class="num sec" data-l="sayfa/gös.">${asoPct(x.pv,x.imp)}</td>
         <td class="num sec" data-l="indirme/sayfa">${asoPct(x.dl,x.pv)}</td>
         <td class="sec" data-l="o hafta">${asoWeekMarks(x.w, relByWeek, chgByWeek)}</td></tr>`).join('')
-      :`<tr><td colspan="8" class="empty">App Store analitiği henüz satır yazmadı.</td></tr>`)+`</tbody>`;
+      :`<tr><td colspan="8" class="empty">App Store analitiği henüz satır yazmadı.${sourceWhy("asc_analytics")}</td></tr>`)+`</tbody>`;
 
   const inWin=rel.filter(r=>weeks.some(x=>x.w===asoWkStart(r.day)));
   const first=weeks.length?weeks[0].w:null;
@@ -4088,7 +4105,7 @@ function renderAsoSearch(){
     `<thead><tr><th>Kaynak</th><th class="num">Gösterim</th><th class="num">Sayfa</th><th class="num">İndirme</th></tr></thead><tbody>`+
     (rows.length?rows.map(r=>`<tr><td>${esc(r.k)}</td><td class="num">${r.imp?num(r.imp):'–'}</td>
       <td class="num">${num(r.pv)}</td><td class="num pri">${num(r.dl)}</td></tr>`).join('')
-      :`<tr><td colspan="4" class="empty">Kaynak kırılımı gelmedi.</td></tr>`)+`</tbody>`;
+      :`<tr><td colspan="4" class="empty">Kaynak kırılımı gelmedi.${sourceWhy("asc_analytics")}</td></tr>`)+`</tbody>`;
 }
 
 function renderAso(){
@@ -4317,7 +4334,7 @@ function drawAKw(){
         <td class="num hide-m">${r.in_metadata?"✓":"–"}</td><td class="num hide-m">${esc(r.origin||"–")}</td>
         <td class="num hide-m">${r.measured_on||"–"}</td>
         <td class="num pri"><span class="tag ${t[0]}">${t[1]}</span></td></tr>`;
-    }).join(""):emptyFiltered("akw","terim",8))+`</tbody>`;
+    }).join(""):emptyFiltered("akw","terim",8,"asa_popularity"))+`</tbody>`;
   el('aKwCount').textContent=`${rows.length} / ${all.length} terim`;
 }
 
@@ -6058,7 +6075,7 @@ function drawYList(){
            yokluğu "cevapsız" değil "bilinmiyor" demek. -->
       <div class="rev-date">${String(r.submitted_at||"").slice(0,10)}${
         self&&r.responded_at?' · <span class="tag cov">cevaplandı</span>':''}</div></div>`;
-  }).join(""):emptyFiltered("ylist","yorum");
+  }).join(""):emptyFiltered("ylist","yorum",null,"itunes_rss_review");
   el('yCount').textContent=`${rows.length} / ${all.length}`;
   el('yMeta').textContent=reviewMetaText(all);   /* bkz. reviewMetaText: sayı stats'ten, dizi kırpılı */
 }
