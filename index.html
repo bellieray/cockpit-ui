@@ -512,6 +512,11 @@
     background:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
   .fresh:not(.fresh-all) .fr.ok{display:none}
 
+  /* Kaç kurala bakıldığı HER ZAMAN yazılır — boş ekranda da, dolu ekranda da.
+     "Sorun yok" ile "kural koşmadı" ancak böyle ayrılır. */
+  .sig-checked{font-size:11px;color:var(--ink-3);padding-top:10px;margin-top:2px;
+    border-top:1px solid var(--hair)}
+
   .tw-more{display:block;width:100%;margin-top:10px;padding:10px 12px;border:0;
     background:var(--canvas);color:var(--ink-2);font:inherit;font-size:12.5px;
     font-weight:600;border-radius:var(--r-md);cursor:pointer}
@@ -4759,6 +4764,15 @@ function adAgg(rows){
 const SIG={
   RED:'var(--down)', AMBER:'var(--amber)', INFO:'var(--ink-3)',
 };
+/* Eşikler `panel.threshold`tan; kodda sabit yok (git-and-cicd.md §5 magic
+   number'ı yasaklıyor). Satır yoksa güvenli varsayılana düşülüyor — eşiğin
+   olmaması kuralın sessizce kapanması anlamına gelmemeli. */
+const thr=(key,fallback)=>{
+  const r=(D.thresholds||[]).find(x=>x.key===key);
+  return r&&r.value_num!=null ? Number(r.value_num) : fallback;
+};
+const SIG_MIX_SHIFT_PTS = () => thr('signal.traffic_mix_shift_pts',10);
+const SIG_MIN_SOURCE_IMP = () => thr('signal.traffic_mix_min_impressions',100);
 /* "Nereye bak"ın üçüncü ekseni: hangi sürümden sonra.
 
    Panel SEBEP önermiyor ve önermemeli — dönüşümün neden düştüğünü bilmiyor
@@ -4773,6 +4787,18 @@ function sinceVersion(app){
     .sort((a,b)=>a.day<b.day?1:-1);
   return rel.length ? ` Mağazadaki son sürüm ${rel[0].v} (${rel[0].day}) — değişim onunla aynı döneme denk geliyor olabilir.` : '';
 }
+/* Kural kütüğü. NEDEN veri olarak: boş ekran "kaç kurala bakıldı" diyecek ve o
+   sayının koddan SAPMAMASI gerek. Elle yazılmış bir "6 kural" cümlesi, yedinci
+   kural eklendiği gün sessizce yalan olurdu. */
+const SIG_RULES=[
+  {k:'ad_show_rate',      t:'reklam envanteri basılmıyor'},
+  {k:'country_pageview',  t:'gösterim var, ürün sayfası yok'},
+  {k:'pay_conversion',    t:'ödemeye dönüşüm sıfır'},
+  {k:'connector_health',  t:'konektör sağlığı'},
+  {k:'wau_drop',          t:'haftalık aktif kullanıcı düşüşü'},
+  {k:'rating_recent',     t:'son 30 günün puanı ömür boyu puanın altında'},
+  {k:'traffic_mix_shift', t:'trafik kaynağı payı kaydı'},
+];
 function signalsFor(app=APP){
   const out=[];
   // `tier` ŞART: sıralama tek bir sayı olamaz çünkü sinyaller FARKLI
@@ -4895,6 +4921,36 @@ function signalsFor(app=APP){
     }
   }
 
+  /* --- 7. Trafik kaynağı payı kaydı --------------------------------- */
+  /* Apple'ın dağıtımı değişti mi? Arama payı düşüp göz atma payı çıkıyorsa
+     (ya da tersi) huninin karakteri değişmiştir — aynı dönüşüm oranı artık
+     aynı şeyi anlatmaz.
+
+     MUTLAK TABAN ŞART: pay bir orandır ve küçük hacimde tek başına yalan
+     söyler — 3 gösterimden 1'i arama ise pay %33'tür ve ertesi gün %0 olur,
+     "33 puan kaydı" diye bağırır. Kural yalnız kaynağın KENDİ gösterimi
+     eşiği geçerse tetikleniyor. */
+  if(app===APP){
+    const nowS=sourceRows(rangeDays()), prevS=sourceRows(prevRangeDays());
+    const tot=a=>a.reduce((x,r)=>x+(r.imp||0),0);
+    const tN=tot(nowS), tP=tot(prevS);
+    if(tN>0 && tP>0){
+      const pm=new Map(prevS.map(r=>[r.name,r]));
+      nowS.forEach(r=>{
+        const p=pm.get(r.name)||{imp:0};
+        const shiftPts=(r.imp/tN - p.imp/tP)*100;
+        if(r.imp < SIG_MIN_SOURCE_IMP()) return;              // mutlak taban
+        if(Math.abs(shiftPts) < SIG_MIX_SHIFT_PTS()) return;  // pay eşiği
+        add(2, shiftPts<0?SIG.AMBER:SIG.INFO, Math.abs(shiftPts),
+          `${r.name}: trafik payı ${shiftPts>0?'+':'−'}${Math.abs(shiftPts).toFixed(0)} puan`,
+          `Kaynağın payı %${(p.imp/tP*100).toFixed(0)} → %${(r.imp/tN*100).toFixed(0)} (${num(r.imp)} gösterim). `
+          +`Huninin karakteri değişmiş olabilir: aynı dönüşüm oranı artık aynı kitleyi anlatmıyor. `
+          +`Apple dağıtımı ya da ASO değişikliği bu dönemle çakışıyor mu, kırılıma bak.`,
+          `${shiftPts>0?'+':'−'}${Math.abs(shiftPts).toFixed(0)} puan`);
+      });
+    }
+  }
+
   /* --- 6. Son 30 günün yorum puanı, ömür boyu puanın altında -------- */
   const rr=(D.reviewRecent||[]).find(r=>r.slug===app&&r.subject==='self');
   const life=stockValue('store_rating_avg', app);
@@ -4989,7 +5045,8 @@ function renderPortfoy(){
 function renderSignals(){
   const host=el('sigList'); if(!host) return;
   const sigs=signalsFor();
-  host.innerHTML = sigs.length
+  const checked=`<div class="sig-checked">${num(SIG_RULES.length)} kural kontrol edildi</div>`;
+  host.innerHTML = (sigs.length
     ? sigs.map(s=>`<div class="sig">
         <span class="dot" style="background:${s.sev}"></span>
         <span class="txt"><span class="hd">${esc(s.hd)}</span><div class="bd">${esc(s.bd)}</div></span>
@@ -4999,7 +5056,7 @@ function renderSignals(){
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8.5v.5M12 11.5v4"/></svg>
         <span>${isPrelaunch()
           ? 'Uygulama henüz yayında değil — ölçülecek trafik, gelir ve kullanıcı <b>yok</b>. Yayına çıkınca kurallar kendiliğinden işlemeye başlar.'
-          : 'İşaretlenecek bir şey yok. Bu <b>"sorun yok" demek değil</b>: kurallar ya hacim eşiğinin altında kaldı ya hiçbiri tetiklenmedi — ikisi ayrı şey ve hangisi olduğu tek tek kuralda yazılı.'}</span></div>`;
+          : 'İşaretlenecek bir şey yok. Bu <b>"sorun yok" demek değil</b>: kurallar ya hacim eşiğinin altında kaldı ya hiçbiri tetiklenmedi — ikisi ayrı şey ve hangisi olduğu tek tek kuralda yazılı.'}</span></div>`) + checked;
 }
 
 /* Günlük gelir çubukları + kümülatif çizgi.
