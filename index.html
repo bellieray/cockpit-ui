@@ -441,6 +441,58 @@
   }
   /* Düğme her genişlikte var ama yalnız mobilde ANLAMLI: masaüstünde kutu
      zaten kaydırılıyor, orada capTables() hiç eklemiyor. */
+  /* === metrik detay yüzeyi === */
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.30);z-index:60;
+    animation:scrimIn .18s ease-out}
+  @keyframes scrimIn{from{opacity:0}to{opacity:1}}
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:61;
+    max-height:85vh;display:flex;flex-direction:column;
+    background:var(--card);border-radius:var(--r-xl) var(--r-xl) 0 0;
+    box-shadow:0 2px 4px rgba(0,0,0,.05),0 16px 40px -16px rgba(0,0,0,.16);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    animation:sheetIn .28s cubic-bezier(.2,.8,.2,1)}
+  @keyframes sheetIn{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+  .sheet-grab{width:36px;height:4px;border-radius:999px;background:var(--hair);
+    margin:8px auto 2px;flex:none}
+  .sheet-head{display:flex;align-items:center;gap:10px;padding:6px 16px 10px;flex:none}
+  .sheet-title{font-size:17px;font-weight:700;color:var(--ink);flex:1;min-width:0}
+  .sheet-body{overflow:auto;-webkit-overflow-scrolling:touch;padding:0 16px 20px}
+  .sh-val{font-size:34px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+  .sh-sub{font-size:12.5px;color:var(--ink-3);margin-top:6px;line-height:1.45}
+  .sh-sec{font-size:11px;font-weight:600;color:var(--ink-3);
+    margin:20px 0 8px;letter-spacing:.02em}
+  .sh-chips{display:flex;gap:8px;flex-wrap:wrap}
+  .sh-row{display:block;width:100%;text-align:left;border:0;background:0;font:inherit;
+    padding:11px 2px;border-bottom:1px solid var(--hair);cursor:pointer}
+  .sh-row:last-of-type{border-bottom:0}
+  .sh-row-top{display:flex;align-items:baseline;gap:8px}
+  .sh-cc{font-weight:600;flex:1;min-width:0}
+  .sh-now{font-variant-numeric:tabular-nums;font-weight:600}
+  .sh-row-sub{font-size:11.5px;color:var(--ink-3);margin-top:3px;
+    font-variant-numeric:tabular-nums}
+  /* Güven işareti ÜÇ kademeli: dolu = gürültü üstü, yarım = bant sınırında,
+     boş = gürültü. İki kademe "az değişmiş" ile "ölçülemeyecek kadar
+     belirsiz"i aynı kutuya koyuyordu. Şekil taşıyor, renk değil. */
+  .sh-dot{font-size:10px;opacity:.8}
+  .sh-open{padding:10px 2px 14px;border-bottom:1px solid var(--hair)}
+  .sh-bars{display:flex;align-items:flex-end;gap:2px;height:38px;margin:8px 0}
+  .sh-bars i{flex:1;background:var(--accent);border-radius:2px 2px 0 0;min-height:1px;opacity:.75}
+  .sh-ev{font-size:11.5px;color:var(--ink-2);margin-top:2px}
+  .sh-ev b{font-weight:600}
+  .sh-def{font-size:12.5px;color:var(--ink-2);line-height:1.5}
+  .sh-act{font-size:12.5px;color:var(--accent-text,var(--ink));font-weight:600;
+    background:var(--canvas);padding:11px 13px;border-radius:var(--r-md);margin-top:8px}
+  .kpi-tap{cursor:pointer}
+  .kpi-tap .kpi-val{text-decoration:underline;text-decoration-color:var(--hair);
+    text-underline-offset:4px;text-decoration-thickness:2px}
+  @media (prefers-reduced-motion: reduce){
+    .sheet,.scrim{animation-duration:.01ms}
+  }
+  @media (min-width:680px){
+    .sheet{left:auto;right:24px;bottom:24px;width:460px;border-radius:var(--r-xl);
+      max-height:min(80vh,720px)}
+  }
+
   /* === kaynak tazelik şeridi === */
   .fresh{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;
     padding:8px 16px;margin:0;font-size:11.5px;color:var(--ink-3);
@@ -866,6 +918,23 @@
          yazılı — yanlış, iki doğru sayıyı yan yana koyma anında doğuyor.
          Veri: vw_series_freshness (koşuyu değil, AKAN VERİYİ ölçer). -->
     <div class="fresh" id="freshBar" hidden></div>
+
+    <!-- Metrik detay yüzeyi. Panelin bugüne kadar HİÇ yapamadığı şey: bir
+         sayıdan kırılımına, kırılımdan olası nedene inmek. Durumu URL
+         hash'inde (`#m=<metrik>`) — ikinci bir yüzey AÇILMIYOR, kırılım satırı
+         aynı sheet içinde akordeon olarak genişliyor; üst üste modal iOS'ta
+         kırılgan (ui-and-motion.md §4) ve geri dönüş maliyetini ikiye katlar. -->
+    <div class="scrim" id="scrim" hidden></div>
+    <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="shTitle">
+      <div class="sheet-grab"></div>
+      <div class="sheet-head">
+        <div class="sheet-title" id="shTitle">–</div>
+        <button class="circbtn" id="shClose" aria-label="kapat">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="sheet-body" id="shBody"></div>
+    </div>
 
     <div class="view" id="v-ozet">
     <div class="grid">
@@ -3231,6 +3300,181 @@ function capTables(){
   });
 }
 
+/* ---------- metrik detay yüzeyi ----------
+   İlk dilim: mağaza hunisinin dört metriği. Bunlar seçildi çünkü kırılım
+   verisi (`byCountryDaily`, `countryBySource`) yalnız bunlar için var ve
+   sahibinin gerçek sorusu ("dönüşüm neden düştü") tam burada.
+
+   TEK YÜZEY: ülke satırına dokunmak ikinci bir sheet açmıyor, satırın altını
+   genişletiyor. Yığılmış modal iOS'ta kırılgan ve geri dönüşü ikiye katlar. */
+const SHEET_METRICS={
+  store_impression:    {t:'Gösterim',     k:'imp', src:'App Store · gösterim'},
+  store_page_view:     {t:'Ürün sayfası', k:'pv',  src:'App Store · sayfa görüntüleme'},
+  downloads_first_time:{t:'İndirme',      k:'dl',  src:'App Store · ilk kez indirme'},
+  conversion:          {t:'Dönüşüm',      k:null,  num:'dl', den:'imp', ratio:true,
+                        src:'türetilmiş: indirme / gösterim'},
+};
+let SH_OPEN=null;   /* açık kırılım satırı (ülke kodu) */
+
+/* Wilson güven aralığı. NEDEN oranlarda `ortalama/√n` DEĞİL: o formül sayım
+   verisi için; bir oranın belirsizliği paydaya VE oranın kendisine bağlı
+   (p=0,5'te en geniş, uçlarda dar). metrics.md §8 oranlarda Wilson istiyor:
+   iki dönemin aralıkları çakışmıyorsa fark gerçek, çakışıyorsa susulur. */
+function wilson(k,n,z=1.96){
+  if(!n) return null;
+  const p=k/n, d=1+z*z/n;
+  const c=(p+z*z/(2*n))/d;
+  const m=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n))/d;
+  return [Math.max(0,c-m),Math.min(1,c+m)];
+}
+/* Üç kademeli güven: ● ayrık · ◐ sınırda · ○ çakışık.
+   "Sınırda" ayrı bir durum — ikiye indirgemek "az değişmiş" ile "ölçülemeyecek
+   kadar belirsiz"i aynı göstermek olurdu. */
+function confRatio(kNow,nNow,kPrev,nPrev){
+  const a=wilson(kNow,nNow), b=wilson(kPrev,nPrev);
+  if(!a||!b) return {dot:'○',label:'ölçülemedi'};
+  const ayrik = a[1]<b[0] || b[1]<a[0];
+  if(ayrik) return {dot:'●',label:'gürültü üstü'};
+  const wide=Math.max(a[1]-a[0],b[1]-b[0]);
+  const overlap=Math.min(a[1],b[1])-Math.max(a[0],b[0]);
+  return overlap<wide*0.25 ? {dot:'◐',label:'sınırda'} : {dot:'○',label:'gürültü'};
+}
+function confCount(cur,prev){
+  if(prev==null) return {dot:'○',label:'önceki dönem yok'};
+  const d=Math.abs(cur-prev), se=Math.sqrt(cur+prev);   /* iki sayımın farkının varyansı cur+prev */
+  if(!se) return {dot:'○',label:'gürültü'};
+  if(d>2*se) return {dot:'●',label:'gürültü üstü'};
+  if(d>se)   return {dot:'◐',label:'sınırda'};
+  return {dot:'○',label:'gürültü'};
+}
+
+function sheetOpen(metric){ location.hash='m='+encodeURIComponent(metric); }
+function sheetClose(){ if(location.hash) history.back(); else drawSheet(); }
+
+/* Kırılım satırları: şimdi + önceki dönem, ülke bazında.
+   SIRALAMA en büyük NEGATİF katkıya göre — "bu düşüşü hangisi yaptı" sorusunun
+   doğrudan cevabı. Hacme ya da alfabeye göre sıralamak onu gizler. */
+function sheetRows(mk){
+  const now=countryRows(rangeDays()), prev=countryRows(prevRangeDays());
+  const pm=new Map(prev.map(r=>[r.cc,r]));
+  return now.map(r=>{
+    const p=pm.get(r.cc)||{imp:0,pv:0,tap:0,dl:0};
+    if(mk.ratio){
+      const nNow=r[mk.den], nPrev=p[mk.den];
+      const vNow=nNow?r[mk.num]/nNow:null, vPrev=nPrev?p[mk.num]/nPrev:null;
+      return {cc:r.cc, now:vNow, prev:vPrev, n:nNow,
+              delta:(vNow!=null&&vPrev!=null)?(vNow-vPrev)*100:null,
+              contrib:(r[mk.num]||0)-(p[mk.num]||0),
+              conf:confRatio(r[mk.num],nNow,p[mk.num],nPrev)};
+    }
+    const vNow=r[mk.k], vPrev=p[mk.k];
+    return {cc:r.cc, now:vNow, prev:vPrev, n:vNow,
+            delta:pctDelta(vNow,vPrev), contrib:vNow-vPrev,
+            conf:confCount(vNow,vPrev)};
+  }).filter(r=>r.now!=null||r.prev)
+    .sort((a,b)=>a.contrib-b.contrib);
+}
+
+/* Bir ülkede o dönem NE OLDU: listeleme değişiklikleri (o dilin) + sürümler.
+   Panel NEDEN demiyor, "birlikte değişti" diyor — n bu ölçekte nedensellik
+   taşımaz (CLAUDE.md, 12. ilke ve ölçek notu). */
+function sheetEvents(cc){
+  const days=rangeDays(); if(!days.length) return [];
+  const from=days[0], to=days[days.length-1];
+  const locales=new Set((D.countryLang||[]).filter(r=>r.country===cc).map(r=>r.locale));
+  const out=[];
+  (D.listingChanges||[]).filter(r=>r.slug===APP&&r.noticed_on>=from&&r.noticed_on<=to)
+    .filter(r=>!locales.size||locales.has(r.locale))
+    .forEach(r=>out.push({d:r.noticed_on,t:`listeleme: ${r.field} (${r.locale})`}));
+  (D.releaseEffect||[]).filter(r=>r.app_slug===APP&&r.released_on>=from&&r.released_on<=to)
+    .forEach(r=>out.push({d:r.released_on,t:`sürüm ${r.version} yayında`}));
+  return out.sort((a,b)=>a.d<b.d?1:-1);
+}
+
+function sheetDaily(cc,mk){
+  const set=new Set(rangeDays()), by=new Map();
+  (D.byCountryDaily||[]).filter(r=>r.slug===APP&&r.country===cc&&set.has(r.day)).forEach(r=>{
+    const o=by.get(r.day)||{imp:0,pv:0,dl:0}; by.set(r.day,o);
+    if(r.metric==='store_impression') o.imp+=Number(r.v||0);
+    else if(r.metric==='store_page_view') o.pv+=Number(r.v||0);
+    else if(r.metric==='downloads_first_time') o.dl+=Number(r.v||0);
+  });
+  return rangeDays().map(d=>{
+    const o=by.get(d)||{imp:0,pv:0,dl:0};
+    return {d, v: mk.ratio ? (o[mk.den]?o[mk.num]/o[mk.den]:0) : o[mk.k]};
+  });
+}
+
+function drawSheet(){
+  const m=/(?:^|&)m=([^&]+)/.exec(location.hash.replace(/^#/,''));
+  const key=m?decodeURIComponent(m[1]):null;
+  const mk=key&&SHEET_METRICS[key];
+  const sheet=el('sheet'), scrim=el('scrim');
+  if(!mk){ sheet.hidden=true; scrim.hidden=true; SH_OPEN=null; return; }
+  sheet.hidden=false; scrim.hidden=false;
+  const def=(D.dict||[]).find(x=>x.metric===key);
+  el('shTitle').textContent=def?.title||mk.t;
+
+  const now=countryRows(rangeDays()), prev=countryRows(prevRangeDays());
+  const sum=(rows,k)=>rows.reduce((a,r)=>a+(r[k]||0),0);
+  let head;
+  if(mk.ratio){
+    const nN=sum(now,mk.den), nP=sum(prev,mk.den);
+    const vN=nN?sum(now,mk.num)/nN:null, vP=nP?sum(prev,mk.num)/nP:null;
+    const c=confRatio(sum(now,mk.num),nN,sum(prev,mk.num),nP);
+    head={val:vN==null?'–':pct1(vN), prev:vP==null?null:pct1(vP), n:nN,
+          delta:(vN!=null&&vP!=null)?`${vN>=vP?'+':'−'}${Math.abs((vN-vP)*100).toFixed(1)} puan`:null, conf:c};
+  }else{
+    const vN=sum(now,mk.k), vP=sum(prev,mk.k);
+    const c=confCount(vN,vP);
+    head={val:num(vN), prev:prev.length?num(vP):null, n:vN,
+          delta:vP?`${vN>=vP?'+':'−'}${num(Math.abs(vN-vP))}`:null, conf:c};
+  }
+  const rows=sheetRows(mk);
+  const fmt=r=>mk.ratio?(r.now==null?'–':pct1(r.now)):num(r.now);
+  const fmtPrev=r=>mk.ratio?(r.prev==null?'–':pct1(r.prev)):num(r.prev);
+
+  el('shBody').innerHTML=`
+    <div class="sh-val tnum">${esc(head.val)}</div>
+    <div class="sh-sub">
+      ${head.prev!=null?`önceki dönem ${esc(head.prev)}${head.delta?` · <b>${esc(head.delta)}</b>`:''}<br>`:''}
+      n=${num(head.n)} · <span class="sh-dot">${head.conf.dot}</span> ${esc(head.conf.label)}
+      · ${esc(LAST_SPAN)}
+    </div>
+
+    <div class="sh-sec">KIRILIM · ÜLKE ${rows.length?`(${num(rows.length)})`:''}</div>
+    ${rows.length?rows.map(r=>`
+      <button class="sh-row" data-cc="${esc(r.cc)}" type="button">
+        <span class="sh-row-top">
+          <span class="sh-cc">${esc((r.cc||'').toUpperCase())}</span>
+          <span class="sh-now tnum">${esc(fmt(r))}</span>
+          <span class="sh-dot">${r.conf.dot}</span>
+        </span>
+        <span class="sh-row-sub">önceki ${esc(fmtPrev(r))}${r.delta!=null?` · ${r.delta>=0?'+':'−'}${Math.abs(r.delta).toFixed(mk.ratio?1:0)}${mk.ratio?' puan':'%'}`:''} · n=${num(r.n)} · ${esc(r.conf.label)}</span>
+      </button>
+      ${SH_OPEN===r.cc?`<div class="sh-open">
+        <div class="sh-bars">${(()=>{const pts=sheetDaily(r.cc,mk);
+          const mx=Math.max(...pts.map(x=>x.v),0.0001);
+          return pts.map(p=>`<i style="height:${Math.max(1,Math.round(p.v/mx*38))}px" title="${esc(p.d)} · ${esc(mk.ratio?pct1(p.v):num(p.v))}"></i>`).join('');})()}</div>
+        ${(()=>{const ev=sheetEvents(r.cc);
+          return ev.length
+            ? `<div class="sh-ev">Aynı dönemde: ${ev.map(e=>`<b>${esc(dShort(e.d))}</b> ${esc(e.t)}`).join(' · ')}</div>
+               <div class="sh-ev" style="color:var(--ink-3);margin-top:6px">Panel neden demiyor — birlikte değişti diyor. Bu örneklemde nedensellik kurulamaz.</div>`
+            : `<div class="sh-ev" style="color:var(--ink-3)">Bu dönemde kayıtlı sürüm ya da listeleme değişikliği yok.</div>`;})()}
+      </div>`:''}
+    `).join(''):`<div class="empty">Bu aralıkta ülke kırılımı yok</div>`}
+
+    <div class="sh-sec">TANIM</div>
+    <div class="sh-def">${esc(def?.definition||'Sözlük kaydı yok — metrik eksik sayılır (1. ilke).')}</div>
+    <div class="sh-def" style="color:var(--ink-3);margin-top:6px">Kaynak: ${esc(mk.src)}</div>
+    ${def?.action_note?`<div class="sh-act">→ ${esc(def.action_note)}</div>`:''}
+  `;
+  el('shBody').querySelectorAll('.sh-row').forEach(b=>{
+    b.addEventListener('click',()=>{ SH_OPEN = SH_OPEN===b.dataset.cc ? null : b.dataset.cc; drawSheet(); });
+  });
+}
+addEventListener('hashchange',()=>{ SH_OPEN=null; drawSheet(); });
+
 /* Kaynak tazelik şeridi.
    `days_behind` konektörün koştuğu anı değil, en yeni VERİ periyodunu ölçüyor:
    boş ama başarılı bir çekim "koştu" der, "veri geldi" demez. BAYAT olanlar
@@ -3314,6 +3558,9 @@ function renderAll(){
   // sekme değişmeden çıpa şeridi bayat kalmasın diye burada da yeniden kurulur.
   buildAnchors();
   capTables();
+  // Açık yüzey de tazelenir: aralık ya da uygulama değişince sheet'teki
+  // sayılar sessizce eski dönemi göstermeye devam ederdi.
+  if(!el('sheet').hidden) drawSheet();
 }
 
 /* ---------- mobil sabit şerit ---------- */
@@ -3354,6 +3601,21 @@ function bindAnchors(){
 
 /* ---------- olaylar ---------- */
 function bind(){
+  /* KPI kartlarını detay yüzeyine bağla. Kart DIŞ kabına bağlanıyor (sayının
+     kendisine değil): 44pt dokunma hedefi kuralı, küçük bir sayıya dokundurmayı
+     yasaklıyor. `.kpi-tap` yalnız bağlanabilen kartlara ekleniyor — altı çizili
+     görünüp hiçbir şey açmayan bir sayı, olmayan bir yol vaat eder. */
+  Object.entries({kImp:'store_impression',kPv:'store_page_view',
+                  kDl:'downloads_first_time',kConv:'conversion'}).forEach(([id,metric])=>{
+    const card=el(id)?.closest('.card'); if(!card) return;
+    card.classList.add('kpi-tap');
+    card.addEventListener('click',()=>sheetOpen(metric));
+  });
+  el('shClose').addEventListener('click',sheetClose);
+  el('scrim').addEventListener('click',sheetClose);
+  addEventListener('keydown',e=>{ if(e.key==='Escape'&&!el('sheet').hidden) sheetClose(); });
+  drawSheet();   /* sayfa hash ile açıldıysa yüzey de açılır — paylaşılan bağlantı çalışsın */
+
   el('chartLegend').addEventListener('click',e=>{
     const li=e.target.closest('.li'); if(!li) return;
     seriesOn[li.dataset.s]=!seriesOn[li.dataset.s];
