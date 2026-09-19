@@ -3207,13 +3207,18 @@ const FILTER_SETS={
    hiçbir şey yapılmaz. Bunları ayırmayan bir boş kart, bakılmayan bir kart. */
 function sourceWhy(source){
   if(!source) return '';
+  const blk=(D.blockers||[]).find(b=>b.slug===APP&&b.source===source);
   const rows=(D.seriesFreshness||[]).filter(r=>r.source===source
     && (r.app_slug===APP || r.app_slug==='__global__'));
-  if(!rows.length) return ` Kaynak <b>${esc(source)}</b> bu uygulama için etkin değil.`;
+  // `vw_series_freshness` yalnız ETKİN konektörleri döndürüyor; elle ölçülen
+  // kaynaklar (asa_popularity) orada hiç görünmüyor. Blocker'a bakmadan
+  // "etkin değil" demek yanlış olurdu — kaynak çalışıyor, elle çalışıyor.
+  if(!rows.length) return blk
+    ? ` <b>${esc(source)}</b>: ${esc(blk.action)}`
+    : ` Kaynak <b>${esc(source)}</b> bu uygulama için etkin değil.`;
   const r=rows.sort((a,b)=>(a.days_behind==null?1:0)-(b.days_behind==null?1:0))[0];
-  const blocker=(D.blockers||[]).find(b=>b.slug===APP&&b.source===source);
   if(r.days_behind==null)
-    return ` <b>${esc(source)}</b> hiç veri üretmedi${blocker?` — ${esc(blocker.action)}`:''}.`;
+    return ` <b>${esc(source)}</b> hiç veri üretmedi${blk?` — ${esc(blk.action)}`:''}.`;
   if(r.freshness==='BAYAT')
     return ` <b>${esc(source)}</b> ${r.days_behind} gündür veri yazmıyor — sayı eksik olabilir.`;
   return ` Kaynak <b>${esc(source)}</b> çalışıyor ve güncel: bu gerçekten <b>boş</b>, ölçülmemiş değil.`;
