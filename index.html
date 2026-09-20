@@ -6351,12 +6351,31 @@ function sparkline(metric, empty){
   if(!pts.length && empty) return `<div class="spark-note">${esc(empty)}</div>`;
   if(pts.length<3) return `<div class="spark-note">geçmiş birikiyor · ${pts.length} gün ölçüldü</div>`;
   const vals=pts.map(p=>p.v), min=Math.min(...vals), max=Math.max(...vals), w=100, h=26;
-  const path=pts.map((p,i)=>{
-    const x=i/(pts.length-1)*w, y=max>min?h-((p.v-min)/(max-min))*h:h/2;
-    return `${i===0?'M':'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
+  /* X ekseni ZAMAN, dizi indeksi DEĞİL. Eskiden `i/(n-1)` kullanılıyordu: bir
+     gün ile yirmi gün arasındaki segment, bir gün ile iki gün arasıyla aynı
+     genişlikte çiziliyordu — yani 18 günlük bir ölçüm sessizliği pürüzsüz bir
+     trend gibi görünüyordu. Ölçülen: `rc_active_customers_7d` 99 günlük bir
+     aralıkta 15 nokta, 14 eşit segment olarak.
+     Kadans boşluğu da ÇİZGİYİ KESİYOR (ui-and-motion.md §5: eksik gün boşluk
+     olarak çizilir, son değer taşınmaz) ve son nokta işaretleniyor — okuyanın
+     hangi ucun "şimdi" olduğunu bilmesi gerekiyor. */
+  const ms=p=>new Date(p.day+'T00:00:00Z').getTime();
+  const t0=ms(pts[0]), t1=ms(pts[pts.length-1]), span=Math.max(1,t1-t0);
+  // Tipik aralığın 2,5 katından büyük boşluk = seri kesiliyor.
+  const gaps=pts.slice(1).map((p,i)=>ms(p)-ms(pts[i])).sort((a,b)=>a-b);
+  const typical=gaps[Math.floor(gaps.length/2)]||864e5;
+  const xy=p=>[ (ms(p)-t0)/span*w, max>min ? h-((p.v-min)/(max-min))*h : h/2 ];
+  let d='', prev=null;
+  pts.forEach(p=>{
+    const [x,y]=xy(p);
+    const brk = prev!==null && (ms(p)-prev) > typical*2.5;
+    d += `${(prev===null||brk)?'M':'L'}${x.toFixed(1)},${y.toFixed(1)} `;
+    prev=ms(p);
+  });
+  const [lx,ly]=xy(pts[pts.length-1]);
   return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-    <path d="${path}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    <path d="${d.trim()}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="2.2" fill="currentColor"/></svg>`;
 }
 /* ---------- PARA ----------
    Reklam küpünü okuyup format ve ülke kırılımını basar.
