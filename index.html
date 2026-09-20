@@ -1427,8 +1427,11 @@
         <div class="gauge-foot"><span>Sayfaya düşen <b id="gaugeF1">–</b></span><span>Sayfadan indiren <b id="gaugeF2">–</b></span></div>
       </div>
 
-      <!-- huni -->
-      <div class="card c8" data-store-only>
+      <!-- huni — Karne'nin Edinim ve Aktivasyon halkaları aynı zinciri pay/payda +
+           referans + HAMLE ile zaten veriyor; burada ikinci kez çizmek kararı
+           değiştirmiyor, yalnız karar yüzeyini ~600px uzatıyordu. Büyüme'ye
+           taşındı, silinmedi. -->
+      <div class="card c8" data-store-only data-move-to="pazar">
         <div class="card-head">
           <div><div class="card-title">Huni</div><div class="card-sub">Adım adım kayıp — mağaza ve ürün bir arada</div></div>
         </div>
@@ -1439,8 +1442,10 @@
              iki yerde yazmak, biri güncellenmediğinde çelişki üretir. -->
       </div>
 
-      <!-- kaynak segment -->
-      <div class="card c4" data-store-only>
+      <!-- kaynak segment — Büyüme'deki "Nereden geliyor, ne yapmalı?" kartı aynı
+           satırları BAĞIMLILIK ve KÖR NOKTA cümleleriyle veriyor; buradaki kopya
+           aksiyonsuzdu. -->
+      <div class="card c4" data-store-only data-move-to="pazar">
         <div class="card-head">
           <div><div class="card-title">Kaynak kırılımı</div><div class="card-sub">Gösterim ve indirme nereden</div></div>
           <select id="srcSort" style="font:inherit;font-size:13px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
@@ -1508,8 +1513,9 @@
         <div class="tw tw-cards"><table class="dt dt-cards" id="kwTable"></table></div>
       </div>
 
-      <!-- kelime donut -->
-      <div class="card c4">
+      <!-- kelime donut — tek başına bir cümle kurmuyor (fırsat/kapsanan/ölü
+           dağılımı); ASO'da aynı veri tabloyla ve filtreyle duruyor. -->
+      <div class="card c4" data-move-to="aso">
         <div class="card-head">
           <div><div class="card-title">Kelime dağılımı</div><div class="card-sub" id="ringMeta"></div></div>
         </div>
