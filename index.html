@@ -683,6 +683,21 @@
   .fun-bar{height:6px;border-radius:999px;background:var(--card-2);margin:5px 0 3px;overflow:hidden}
   .fun-bar i{display:block;height:100%;border-radius:999px;background:var(--s1)}
   .fun-s.fric .fun-bar i{background:var(--warn)}
+  /* Ürün sağlığı oranı. Referans çubuğun ÜSTÜNDE bir çizgi — ayrı bir çubuk
+       değil: iki çubuk "ikisi de ölçüm" diye okunur, oysa biri tahmin. */
+    .rat{padding:9px 0;border-top:1px solid var(--hair)}
+    .rat:first-of-type{border-top:0}
+    .rat-t{display:flex;justify-content:space-between;gap:8px;align-items:baseline;
+      font-size:12.5px;font-weight:600;line-height:1.35}
+    .rat-t b{font-weight:700;white-space:nowrap;font-size:14px}
+    .rat.weak .rat-t b{color:var(--crit-ink)}
+    .rat.miss .rat-t b{font-size:11px;font-weight:700;color:var(--ink-3)}
+    .rat-bar{position:relative;height:6px;border-radius:999px;background:var(--card-2);margin:6px 0 4px}
+    .rat-bar i{display:block;height:100%;border-radius:999px;background:var(--s3)}
+    .rat.weak .rat-bar i{background:var(--crit)}
+    .rat-bar u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink-3);
+      border-radius:999px;opacity:.7}
+    .rat-n{font-size:11.5px;color:var(--ink-3);line-height:1.45;font-variant-numeric:tabular-nums}
   /* Ölçüm borcu. Şerit rengi ETKİYE göre; kapanan satır soluk ve yeşil. */
   .debt{position:relative;padding:10px 0 10px 12px;border-top:1px solid var(--hair)}
   .debt:first-of-type{border-top:0}
@@ -1281,6 +1296,14 @@
       <div class="c12 region-label" id="sigLabel">Sinyaller</div>
       <div class="card c12" id="sigCard">
         <div class="siglist" id="sigList"></div>
+      </div>
+
+      <!-- Ürün sağlığı oranları. Beyan `panel.ratio_metric`de, hesap SQL'de.
+           Oran SAKLANMIYOR, her seferinde çiftten hesaplanıyor; karşılaştırma
+           da önceki günün ÇİFTİNDEN (metrics.md §3). n < 30 ise oran yerine n. -->
+      <div class="c12 region-label" id="ratLabel">Ürün sağlığı</div>
+      <div class="card c12" id="ratCard">
+        <div id="ratBody"></div>
       </div>
 
       <!-- Ölçüm borcu. Panelin beş ayrı yerde söylediği "ölçülmüyor"un tek
@@ -5014,7 +5037,47 @@ function funBreakdown(s){
     ${b.parts_omitted?`<div class="fun-n">+${num(b.parts_omitted)} kırılım daha</div>`:''}</div>`;
 }
 
-/* Ölçüm borcu.
+/* Ürün sağlığı oranları.
+   Referans çizgisi çubuğun üstünde. Referans ÖLÇÜLEN DEĞİL, kaba sektör
+   ortancası — etiket bunu her satırda söylüyor, yoksa bir hedef gibi okunur.
+   n < 30 olan satırda oran HİÇ çizilmiyor, n yazıyor (12. ilke). */
+function drawRatios(){
+  const host=el('ratBody'); if(!host) return;
+  const row=(D.digest||[]).find(x=>x.app_slug===APP);
+  const rows=row&&Array.isArray(row.ratios)?row.ratios:[];
+  if(!rows.length){
+    host.innerHTML='<div class="ai-off"><b>Oran beyan edilmemiş.</b> '
+      +'Hangi payın hangi paydaya bölüneceği panel.ratio_metric tablosunda '
+      +'yazılı değil — bu "sağlıklı" demek değil, "bakılmadı" demek.</div>';
+    return;
+  }
+  host.innerHTML=rows.map(r=>{
+    const pct=r.ratio_pct, ref=r.reference_pct;
+    if(pct==null&&!r.n_too_small)
+      return `<div class="rat miss"><div class="rat-t">${esc(r.label)}<b>${esc(r.state)}</b></div>
+        ${r.note?`<div class="rat-n">${esc(r.note)}</div>`:''}</div>`;
+    /* Ölçek: değer ile referansın ikisini de kapsayan üst sınır. Sabit %100
+       kullanmak %1,3'lük bir oranı görünmez bir çizgiye indirirdi. */
+    const max=Math.max((ref||0)*2, (pct||0)*1.15, 1);
+    const w=pct==null?0:Math.min(100, pct/max*100);
+    const refL=ref==null?null:Math.min(100, ref/max*100);
+    const zayif=(pct!=null&&ref!=null&&pct<ref*80/100);
+    return `<div class="rat${zayif?' weak':''}">
+      <div class="rat-t">${esc(r.label)}<b class="tnum">${pct==null
+        ? `n=${num(r.n)} · yetersiz` : `%${String(pct).replace('.',',')}`}</b></div>
+      <div class="rat-bar"><i style="width:${w.toFixed(1)}%"></i>${refL!=null
+        ? `<u style="left:${refL.toFixed(1)}%"></u>`:''}</div>
+      <div class="rat-n">${[
+        `n=${num(r.n)}`,
+        r.prev_ratio_pct!=null?`7 gün önce %${String(r.prev_ratio_pct).replace('.',',')}`:'',
+        ref!=null?`referans %${String(ref).replace('.',',')} (ölçülen değil)`:'',
+        r.stale_days>1?`${num(r.stale_days)} gün bayat`:''
+      ].filter(Boolean).map(esc).join(' · ')}</div>
+      ${r.note?`<div class="rat-n">${esc(r.note)}</div>`:''}
+    </div>`;}).join('');
+}
+
+  /* Ölçüm borcu.
    Sıra ETKİYE göre (para → aktivasyon → teknik → büyüme), kapananlar sonda
    ama listede: bir borcun kapandığını görmek, sessiz günlerde panele bakmayı
    sürdüren sinyallerden biri (metrics.md §8 Sınıf 3). */
@@ -5323,7 +5386,7 @@ function renderAll(){
   const pre=isPrelaunch();
   el('v-ozet').classList.toggle('pre',pre);
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
-  drawCrumb(span); drawFresh(); drawDebt(); drawFunnels(); drawAlarms(); drawAi(); drawCoverage(); drawWeekly(); drawAssertions(); drawRecon(); drawDifferential();
+  drawCrumb(span); drawFresh(); drawRatios(); drawDebt(); drawFunnels(); drawAlarms(); drawAi(); drawCoverage(); drawWeekly(); drawAssertions(); drawRecon(); drawDifferential();
   fillSelects(); drawSyncLabel(); renderSignals(); drawPrelaunch(); drawRevenue(); drawRetentionKpi(); drawKpis(); drawKarne(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   visibleViews().forEach(k=>RENDERERS[k]?.());
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
