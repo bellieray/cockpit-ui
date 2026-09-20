@@ -2198,6 +2198,13 @@
         <div class="card c12" id="wkUnmeasured"></div>
         <div class="c12 region-label">Doğruluk</div>
         <div class="card c12" id="wkTrustCard"></div>
+        <div class="c12 region-label">Denetim kartı</div>
+        <!-- testing.md Katman 4: "haftalık özette bir denetim kartı: rastgele bir
+             sayı, formülü ve ham kaynak değeri yan yana. 10 saniyelik göz;
+             sessiz yanlışlığın son şansı." Katman 4'ün tamamı boş bir tabloydu
+             (`panel.spot_check`, 0 satır, yazan yok). Sayıyı elle doğrulamak
+             sende — kartın işi o adımı 10 saniyeye indirmek. -->
+        <div class="card c12" id="wkSpot"></div>
         <div class="c12 region-label">Not defteri</div>
         <div class="card c12" id="wkNotes">
           <div id="wkPrevNote"></div>
@@ -4771,6 +4778,50 @@ function weeklyText(){
   if(w.prevNote) L.push('',`GEÇEN NOT: "${w.prevNote}"`);
   return L.join('\n');
 }
+/* DENETİM KARTI — Katman 4'ün on saniyelik hâli.
+   Panelin doğruluğuna dair sahip olabileceğin tek DIŞSAL kanıt, bir sayıyı
+   kendi kaynağında elle saymak. O adımı kimse yapmıyor çünkü "hangi sayı,
+   nereden, hangi formülle" sorusunu her seferinde yeniden kurmak gerekiyor.
+   Kart onu kuruyor: haftaya sabitlenmiş rastgele bir ölçüm + formülü +
+   otoritesi + arşiv izi.
+
+   HAFTAYA SABİT, her çizimde değil: her yenilemede başka bir sayı gösteren
+   kart, "bunu geçen hafta yapmıştım" duygusunu imkânsız kılar. Tohum hafta
+   numarası — aynı hafta hep aynı sayı. */
+function drawSpotCheck(){
+  const host=el('wkSpot'); if(!host) return;
+  const days=allDays();
+  if(!days.length){ host.innerHTML='<div class="wk-empty">Ölçüm yok.</div>'; return; }
+  const dict=(D.dict||[]).filter(d=>d.formula);
+  const rows=(D.series||[]).filter(r=>r.slug===APP && Number(r.v||0)>0
+    && dict.some(d=>d.metric===r.metric));
+  if(!rows.length){
+    host.innerHTML='<div class="wk-empty">Formülü yazılı bir ölçüm bu uygulamada yok — '
+      +'metric_def.formula alanı 66 metrikten 10 tanesinde dolu; denetim kartı yalnız onları seçebiliyor.</div>';
+    return;
+  }
+  // Hafta tohumu: yılın kaçıncı günü / 7. Aynı hafta aynı satır.
+  const son=days[days.length-1];
+  const seed=Math.floor(new Date(son+'T00:00:00Z').getTime()/(7*864e5));
+  const r=rows[seed % rows.length];
+  const d=dict.find(x=>x.metric===r.metric)||{};
+  const src=(D.syncRecent||[]).find(x=>x.app_slug===APP && x.source===(d.authority_source||''));
+  host.innerHTML=`
+    <div class="wk-hero-w">${esc(dShort(r.day))} · bu haftanın denetim satırı</div>
+    <div class="wk-hero-h">${esc(d.title||r.metric)} = ${num(Number(r.v))}</div>
+    <div class="wkc-sec"><b>FORMÜL</b><div class="wkc-li">${esc(d.formula)}</div></div>
+    ${d.authority_source?`<div class="wkc-sec"><b>OTORİTE</b><div class="wkc-li">${esc(d.authority_source)}${src?` · son koşu ${esc(agoText(new Date(src.finished_at||src.started_at)))}`:''}</div></div>`:''}
+    <div class="wkc-sec"><b>NASIL DOĞRULARSIN</b><div class="wkc-li">
+      Kaynağın kendi arayüzünde ${esc(dShort(r.day))} gününe bak ve sayıyı karşılaştır.
+      Ham yanıt arşivde: <code>raw/${esc(APP)}/${esc(d.authority_source||'&lt;kaynak&gt;')}/${esc(String(r.day).replace(/-/g,'/'))}/</code>
+      <small>Eşleşmezse fark ya ölçüm penceresi ya da formülün iki ucundan biri —
+      ikisi de bu kartta yazılı, yani nereye bakacağın belli.</small></div></div>
+    <div class="wkc-sec"><b>SONUCU KAYDET</b><div class="wkc-li">
+      Not defterine tek satır: <code>spot ${esc(dShort(r.day))} ${esc(r.metric)} ${num(Number(r.v))} = ?</code>
+      <small>Panelin kendi tablosuna (<code>panel.spot_check</code>) yazmak yeni bir yazma
+      yüzeyi açardı; bugün not defteri bu işi görüyor ve gelecek hafta karşına çıkıyor.</small></div></div>`;
+}
+
 function drawWeekly(){
   const w=weeklyReview();
   /* Bugün kartı: başlık + dört ana sayı + ne oldu + öncelikli iş + eylemler. */
@@ -4822,6 +4873,7 @@ function drawWeekly(){
     : `<div class="wk-empty">Tetiklenen bir iş yok. Bu "sorun yok" demek değil: kurallar eşiğin altında kaldı.</div>`;
   el('wkPrevNote').innerHTML=w.prevNote?`<div class="wk-prev"><b>GEÇEN NOTUN</b>${esc(w.prevNote)}</div>`:'';
   el('wkTrust').textContent=w.trust;
+  drawSpotCheck();
   el('wkUnmeasured').innerHTML=w.unm.length
     ? w.unm.map((x,i)=>`<div class="wk-li"><i>${i+1}</i><div>${esc(x.t)}<small>${esc(x.s)}</small></div></div>`).join('')
     : `<div class="wk-empty">Yok — tüm etkin kaynaklar kendi bütçesi içinde.</div>`;
