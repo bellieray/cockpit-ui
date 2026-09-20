@@ -3902,11 +3902,11 @@ function drawCrumb(span){
   const pf = visibleViews().includes('portfoy');
   el('crumb').innerHTML = pf
     ? `${num((D.apps||[]).length)} uygulama · her biri kendi ölçülen geçmişiyle`
-    : `${esc(a?.name||APP)} · App Store · ${LAST_SPAN}${versionChip()}`;
-  document.querySelectorAll('.seg').forEach(n=>{ n.style.display = pf ? 'none' : ''; });
+    : `${esc(a?.name||APP)} · App Store · ${VIEW==='hafta'?'hep son 7 gün · önceki 7 gün ile':LAST_SPAN}${versionChip()}`;
+  document.querySelectorAll('.seg').forEach(n=>{ n.style.display = (pf||VIEW==='hafta') ? 'none' : ''; });
   const rl=el('rangeLabel');
   if(rl){
-    rl.style.display = pf ? 'none' : '';
+    rl.style.display = (pf||VIEW==='hafta') ? 'none' : '';
     const txt={1:'Son 1 gün',7:'Son 7 gün',30:'Son 30 gün',0:'Tüm ölçülen geçmiş'}[RANGE];
     el('rangeLabelText').textContent = txt || `Son ${RANGE} gün`;
   }
@@ -4284,6 +4284,30 @@ addEventListener('hashchange',()=>{ SH_OPEN=null; drawSheet(); });
    haftanın notunu geri getiriyor — karar → sonuç → yeni karar halkasının tek
    veri bağı; onsuz panel karar defteri değil, sayı panosu kalır. */
 const WK_NOTE_KEY=()=>'wknote_'+APP;
+/* Not takvim HAFTASINA bağlı (pazartesi başlangıcı), kayan 7 günlük pencereye değil:
+   pencere her gün kayıyor, "bu haftanın notu" her sabah yeni bir kutu olurdu. Yeni
+   hafta başlayınca kayıtlı not "geçen not" olur ve kutu boşalır — karar → sonuç →
+   yeni karar halkasının tek veri bağı bu. Eski düz-metin kayıt (sürümden önceki) bu
+   haftanın notu sayılır. */
+function wkNoteWeek(){ const a=allDays(); return a.length?asoWkStart(a[a.length-1]):''; }
+function wkNoteLoad(){
+  let raw=null; try{ raw=JSON.parse(localStorage.getItem(WK_NOTE_KEY())||'null'); }catch{}
+  if(typeof raw==='string'||raw==null){
+    let t=''; try{ t=localStorage.getItem(WK_NOTE_KEY())||''; }catch{}
+    raw={cur:t?{wk:wkNoteWeek(),text:t}:null,prev:null};
+  }
+  const wk=wkNoteWeek();
+  if(raw.cur && raw.cur.wk!==wk) return {cur:'',prev:raw.cur.text||''};
+  return {cur:raw.cur?raw.cur.text:'',prev:raw.prev?raw.prev.text:''};
+}
+function wkNoteSave(text){
+  const wk=wkNoteWeek(); let raw=null;
+  try{ raw=JSON.parse(localStorage.getItem(WK_NOTE_KEY())||'null'); }catch{}
+  if(typeof raw==='string'||raw==null) raw={cur:null,prev:null};
+  if(raw.cur && raw.cur.wk!==wk) raw.prev=raw.cur;
+  raw.cur={wk,text};
+  try{ localStorage.setItem(WK_NOTE_KEY(),JSON.stringify(raw)); }catch{}
+}
 /* HAFTALIK DEĞERLENDİRME.
    Eski hâli ==== çizgili düz metindi ve içeriği süreçle doluydu ("8 kural kontrol
    edildi", "ölçülmüyorlar", "geçen not"); haftanın PERFORMANSINI söylemiyordu.
@@ -4423,7 +4447,7 @@ function weeklyReview(){
       +(dfc.length?` · kritik ${num(dfc.length)} sayı iki yoldan hesaplandı${dfcBad?`, ${num(dfcBad)} ayrışıyor`:', hepsi aynı'}`:'')
       +' · ayrıntı Veri sekmesinde.';
 
-    let prevNote=''; try{ prevNote=localStorage.getItem(WK_NOTE_KEY())||''; }catch{}
+    const nt=wkNoteLoad(), prevNote=nt.prev;
     return {name:a?.name||APP,win:days.length?`${dShort(days[0])} – ${dShort(days[days.length-1])}`:'–',
       prevWin:prev.length?`${dShort(prev[0])} – ${dShort(prev[prev.length-1])}`:null,
       storeWin:storeWindowNote(),headline,growth,weak,rows,happened,next,trust,prevNote,okPrev};
@@ -4491,9 +4515,7 @@ function drawWeekly(){
   el('wkPrevNote').innerHTML=w.prevNote?`<div class="wk-prev"><b>GEÇEN NOTUN</b>${esc(w.prevNote)}</div>`:'';
   el('wkTrust').textContent=w.trust;
   const inp=el('wkNote');
-  if(inp && document.activeElement!==inp){
-    try{ inp.value=localStorage.getItem(WK_NOTE_KEY())||''; }catch{}
-  }
+  if(inp && document.activeElement!==inp) inp.value=wkNoteLoad().cur;
 }
 
 /* Değişmezler. Üç durum burada da geçerli: geçti / kaldı / HİÇ KOŞMADI.
@@ -4742,7 +4764,7 @@ function bind(){
     setTimeout(()=>{ b.textContent='Raporu kopyala'; },2200);
   });
   el('wkNote')?.addEventListener('change',e=>{
-    try{ localStorage.setItem(WK_NOTE_KEY(), e.target.value.trim()); }catch{}
+    wkNoteSave(e.target.value.trim());
     drawWeekly();
   });
   el('shClose').addEventListener('click',sheetClose);
@@ -5327,7 +5349,7 @@ function renderAsoChanges(){
       const arrow=(a,b)=>b===0?'':(a>b?'▲':a<b?'▼':'≈')+' '+(a>=b?'+':'−')+Math.abs(Math.round((a-b)/b*100))+'%';
       result=`<div class="lc-result"><b>${ripe?'Sonuç':'İlk okuma — kesin değil'}</b> · günlük ortalama, ${num(before.length)} gün önce / ${num(after.length)} gün sonra
         <div class="lc-num"><span>Arama gösterimi</span><b>${num(Math.round(bi))} → ${num(Math.round(ai))}</b><em>${arrow(ai,bi)} · ${ci.dot} ${ci.label}</em></div>
-        <div class="lc-num"><span>Arama indirmesi</span><b>${bd.toFixed(1).replace('.',',')} → ${ad.toFixed(1).replace('.',',')}</b><em>${arrow(ad,bd)} · ${cd.dot} ${cd.label}</em></div></div>`;
+        <div class="lc-num"><span>Arama indirmesi</span><b>${bd.toFixed(1).replace('.',',')} → ${ad.toFixed(1).replace('.',',')}</b><em>${arrow(ad,bd)} · ${cd.dot} ${cd.label}</em></div><div class="lc-caveat" style="color:var(--ink-3);margin-top:8px">Kontrol grubu yok: aynı dönemde genel trafik, mevsim ve sürüm de değişir. Bu bir sinyal, nedensellik kanıtı değil.</div></div>`;
     } else {
       result=`<div class="lc-result"><b>Sonuç okunamıyor:</b> ${before.length<3?`öncesinde yalnız ${num(before.length)} gün mağaza ölçümü var`:`sonrasında yalnız ${num(after.length)} gün mağaza ölçümü var (Apple ~2 gün geriden)`} — en az 3 gün gerekir. Bu "işe yaramadı" değil, "henüz bilinmiyor".</div>`;
     }
