@@ -71,6 +71,13 @@
     --shadow:var(--sh-card);
     --shadow-lift:0 2px 6px rgba(20,18,14,.07), 0 18px 40px -20px rgba(20,18,14,.38);
     --r-app:22px; --r-card:16px; --r-inner:12px; --r-pill:999px; --gap:18px;
+    /* ui-and-motion.md §1 ölçeği: sm 8 · md 12 · lg 16 · xl 20 · pill 999.
+       `--r-md` ve `--r-xl` KULLANILIYORDU ama tanımlı değildi: tanımsız bir
+       özelliğe bakan `var()` bildirimi computed-value anında GEÇERSİZ yapar ve
+       `border-radius` başlangıç değerine (0) düşer. Yani alt sayfanın üst
+       köşeleri — panelin tek detay yüzeyi — köşeliydi. tsc/lint/test bunu
+       göremez: geçersiz CSS sessizce sıfırlanır, hata vermez. */
+    --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:20px;
   }
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
     --page:#0F1210; --app:#151915; --canvas:#151915; --card:#1C201B;
@@ -397,7 +404,7 @@
 
   /* nowrap ŞART: pill'in içinde satır atlayan metin hap görüntüsünü bozuyor,
      mobilde 2 kolonlu KPI kartında üç satıra kadar çıkıyordu. */
-  .chip{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill);white-space:nowrap}
+  .chip{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill);white-space:nowrap;font-variant-numeric:tabular-nums}
   /* Δ açıklaması: masaüstünde çipin yanında, mobilde gizli — dar kartta
      "önceki döneme göre" çipin kendisinden çok yer kaplıyordu. */
   .dsuf{color:var(--ink-3);margin-left:6px}
@@ -641,7 +648,7 @@
   .wkc-t{padding:10px 12px;border-radius:12px;background:var(--card-2)}
   .wkc-t .n{font-size:11.5px;color:var(--ink-2);font-weight:600}
   .wkc-t .v{font:700 20px/1.1 Manrope,sans-serif;font-variant-numeric:tabular-nums;margin:4px 0 6px}
-  .wkc-t .d{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:11px;color:var(--ink-3)}
+  .wkc-t .d{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
   .wkc-sec{margin-top:14px}
   .wkc-sec>b{display:block;font-size:11px;color:var(--ink-3);font-weight:700;margin-bottom:6px}
   .wkc-li{font-size:12.5px;line-height:1.5;padding:6px 0;border-top:1px solid var(--hair)}
