@@ -1600,7 +1600,7 @@
             <span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
             </span>
-            <span class="kpi-name">Haftalık aktif<br><span class="card-sub">tekilleştirilmiş</span></span>
+            <span class="kpi-name">Haftalık aktif<br><span class="card-sub" id="upWauSub">tekilleştirilmiş</span></span>
           </div>
           <div class="kpi-val tnum" id="upWau">–</div>
           <div id="upWauSpark"></div>
@@ -6526,6 +6526,17 @@ function renderUrun(){
   el('upDau').textContent=dauPts.length?num(dauPts[dauPts.length-1].v):'–';
   el('upDauSpark').innerHTML=sparkline('rc_active_customers_1d',pending);
   el('upWau').textContent=wauPts.length?num(wauPts[wauPts.length-1].v):'–';
+  /* Haftalık aktif HAFTALIK bir nokta (RevenueCat haftanın başını damgalıyor): kartın
+     büyük sayısı "şimdi" gibi okunuyor ama 14 gün önceki haftayı anlatabiliyor.
+     Ölçüm tarihi zorunlu (2. ilke) ve 7 günden eskiyse soluk (%55). */
+  (function(){
+    const sub=el('upWauSub'), val=el('upWau'); if(!sub||!val) return;
+    const last=wauPts.length?wauPts[wauPts.length-1]:null;
+    if(!last){ sub.textContent='tekilleştirilmiş'; val.style.opacity=''; return; }
+    const age=Math.round((Date.now()-new Date(last.day+'T00:00:00Z').getTime())/864e5);
+    sub.textContent=`tekilleştirilmiş · ${dShort(last.day)} haftası`+(age>7?` · ${num(age)} gün önce`:'');
+    val.style.opacity = age>7 ? '.55' : '';
+  })();
   el('upWauSpark').innerHTML=sparkline('rc_active_customers_7d',pending);
 
   const mau=stockValue('rc_active_users_28d'), newCust=stockValue('rc_new_customers_28d');
