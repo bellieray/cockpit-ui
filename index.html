@@ -6012,7 +6012,19 @@ function renderPazarPre(){
    · Yorum cümleleri eşik kapılı: küçük hacimden içgörü üretilmez. */
 function drawGrowthMove(){
   const card=el('growthMoveCard'); if(!card) return;
-  if(isPrelaunch()){ card.hidden=true; return; }
+  /* 11. İlke İSTİSNA A: gizleme koşulu "veri yok VE konektör sağlıklı".
+     Burada koşulsuz gizleniyordu — mağaza konektörü ölse kart sessizce yok
+     olurdu, yani "boru kırıldı → veri gelmedi → ekran gizlendi → fark
+     edilmedi" zinciri. Durum bilinmiyorsa kart KALIR ve nedenini yazar. */
+  const stStat=storeStatus();
+  if(stStat==='pre'){ card.hidden=true; return; }
+  if(stStat==='bilinmiyor'){
+    card.hidden=false;
+    el('gmSub').textContent='kurulum tamamlanmadı';
+    el('gmBody').innerHTML=`<div class="unmeasured"><span>Mağaza izleyicisi kurulu değil ya da hiç koşmadı — `
+      + `bu kart <b>ölçülmedi</b> durumunda, "kanal yok" demek değil. Bekleyenler: Veri → Senin yapman gereken.</span></div>`;
+    return;
+  }
   const days=storeDays(), prev=storePrevDays(), minN=thr('alarm.min_sample',30);
   const cur=sourceRows(days), old=new Map(sourceRows(prev).map(r=>[r.name,r]));
   const okPrev=prev.length>0 && prev.length===days.length;
@@ -6461,7 +6473,20 @@ const SIG_RULES=[
   {k:'rating_recent',     t:'son 30 günün puanı ömür boyu puanın altında'},
   {k:'traffic_mix_shift', t:'trafik kaynağı payı kaydı'},
   {k:'panel_integrity',   t:'panelin kendi doğruluğu (değişmez + uzlaştırma)'},
+  {k:'setup_incomplete',  t:'panel bu uygulama hakkında hiçbir şey ölçemiyor'},
 ];
+/* MAĞAZA DURUMU ÜÇ HALDE. `isPrelaunch()` iki hal biliyor (pre / değil) ve
+   izleyici konektör yoksa ya da hiç koşmadıysa FALSE dönüyor — yani "bilmiyorum"
+   hali "yayında" sayılıyordu. Sonuç: yeni bir uygulamanın ilk günü panel
+   YAYINDAKİ düzeni çiziyor (mağaza kartları, Karne'nin beş halkası, huni,
+   dönüşüm) ve hepsi boş. Gün-1 ekranı bir kurulum ekranıdır, boş bir panel
+   değil. `isPrelaunch`'un sözleşmesi DEĞİŞMİYOR (yedi çağıranı boolean
+   bekliyor); ayrım burada. */
+function storeStatus(app=APP){
+  const w=storeWatcher(app);
+  if(!w||!w.enabled||w.never_measured) return 'bilinmiyor';
+  return isPrelaunch(app) ? 'pre' : 'live';
+}
 function signalsFor(app=APP){
   const out=[];
   // `tier` ŞART: sıralama tek bir sayı olamaz çünkü sinyaller FARKLI
@@ -6586,6 +6611,23 @@ function signalsFor(app=APP){
           '%0');
       }
     }
+  }
+
+  /* --- 3b. Kurulum tamamlanmamış (gün-1) ---------------------------- */
+  // Bu kural en üstte durmalı: kimlik girilmeden hiçbir sayı gelmez, yani
+  // diğer bütün kuralların susması bir bulgu değil, bir sonuçtur.
+  if(storeStatus(app)==='bilinmiyor'){
+    const blk=(D.blockers||[]).filter(b=>b.slug===app);
+    const todo=blk.filter(b=>b.urgency==='yapilacak');
+    add(1, SIG.RED, 2e6,
+      `Panel bu uygulama hakkında hiçbir şey ölçemiyor`,
+      `Mağaza izleyicisi ya kurulu değil ya hiç koşmadı, bu yüzden "yayında mı, değil mi" bile bilinmiyor `
+      + `— ekrandaki boşluk "her şey yolunda" demek DEĞİL, "henüz bakılmadı" demek.`
+      + (blk.length
+          ? ` Bekleyen kimlik/kurulum: ${blk.slice(0,6).map(b=>b.source).join(', ')}${blk.length>6?` (+${num(blk.length-6)})`:''}.`
+          + (todo.length?` Bunlardan ${num(todo.length)} tanesi senin yapman gereken bir adım.`:'')
+          : ` Kaynak kataloğunda bu uygulama için tanımlı bir engel de yok — konektör hiç eklenmemiş olabilir.`),
+      blk.length?`${num(blk.length)} kurulum`:null);
   }
 
   /* --- 4. Konektör sağlığı ------------------------------------------ */
