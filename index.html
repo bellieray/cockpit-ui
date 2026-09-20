@@ -683,6 +683,21 @@
   .fun-bar{height:6px;border-radius:999px;background:var(--card-2);margin:5px 0 3px;overflow:hidden}
   .fun-bar i{display:block;height:100%;border-radius:999px;background:var(--s1)}
   .fun-s.fric .fun-bar i{background:var(--warn)}
+  /* Ölçüm borcu. Şerit rengi ETKİYE göre; kapanan satır soluk ve yeşil. */
+  .debt{position:relative;padding:10px 0 10px 12px;border-top:1px solid var(--hair)}
+  .debt:first-of-type{border-top:0}
+  .debt::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;
+    border-radius:999px;background:var(--ink-3)}
+  .debt.i1::before{background:var(--crit)}
+  .debt.i2::before{background:var(--warn)}
+  .debt.done{opacity:.55}
+  .debt.done::before{background:var(--ok)}
+  .debt-t{font-size:13px;font-weight:700;line-height:1.35;display:flex;gap:8px;
+    justify-content:space-between;align-items:baseline}
+  .debt-t span{font-size:10.5px;font-weight:700;color:var(--ink-3);white-space:nowrap}
+  .debt-b{font-size:12.5px;line-height:1.5;color:var(--ink-2);margin-top:4px}
+  .debt-a{font-size:12px;line-height:1.5;color:var(--ink-3);margin-top:4px}
+  .debt-a b{font-size:11px;font-weight:700}
   .asr.info .asr-dot{color:var(--ink-3)}
   .fun-bd{margin-top:6px;padding-left:2px}
   .fun-bd-r{display:grid;grid-template-columns:minmax(0,1fr) 34% auto;gap:6px;align-items:center;
@@ -1266,6 +1281,20 @@
       <div class="c12 region-label" id="sigLabel">Sinyaller</div>
       <div class="card c12" id="sigCard">
         <div class="siglist" id="sigList"></div>
+      </div>
+
+      <!-- Ölçüm borcu. Panelin beş ayrı yerde söylediği "ölçülmüyor"un tek
+           listesi; her satır TIKADIĞI SORUYLA birlikte. Dağınık bir eksik
+           listesi eyleme dönmez — sahibi panele günde iki dakika bakıyor.
+           3. ilke: geri doldurulamayan ölçüm önce toplanır, yani her açık
+           satır kalıcı olarak kaybedilen bir gün demek. -->
+      <div class="c12 region-label" id="debtLabel">Ölçüm borcu</div>
+      <div class="card c12" id="debtCard">
+        <div class="card-head">
+          <div><div class="card-title">Uygulamaya eklenecek ölçümler</div>
+               <div class="card-sub" id="debtSub">—</div></div>
+        </div>
+        <div id="debtList"></div>
       </div>
 
       <!-- Olay hunileri. Beyan `panel.event_funnel`de, hesap SQL'de, burada
@@ -4985,6 +5014,31 @@ function funBreakdown(s){
     ${b.parts_omitted?`<div class="fun-n">+${num(b.parts_omitted)} kırılım daha</div>`:''}</div>`;
 }
 
+/* Ölçüm borcu.
+   Sıra ETKİYE göre (para → aktivasyon → teknik → büyüme), kapananlar sonda
+   ama listede: bir borcun kapandığını görmek, sessiz günlerde panele bakmayı
+   sürdüren sinyallerden biri (metrics.md §8 Sınıf 3). */
+function drawDebt(){
+  const host=el('debtList'); if(!host) return;
+  const sub=el('debtSub');
+  const row=(D.digest||[]).find(x=>x.app_slug===APP);
+  const d=row&&row.debt?row.debt:null;
+  if(!d||!Array.isArray(d.items)||!d.items.length){
+    host.innerHTML='<div class="empty">Ölçüm borcu beyan edilmemiş — bu "eksik yok" demek değil, "bakılmadı" demek.</div>';
+    if(sub) sub.textContent='—'; return;
+  }
+  const IMP={1:'para',2:'aktivasyon',3:'teknik',4:'büyüme'};
+  if(sub) sub.textContent =
+    `${num(d.open_count)} açık`+(d.resolved_count?` · ${num(d.resolved_count)} kapandı`:'');
+  host.innerHTML=d.items.map(i=>{
+    const open=i.state==='açık';
+    return `<div class="debt${open?'':' done'} i${i.impact}">
+      <div class="debt-t">${open?'':'✓ '}${esc(i.title)}<span>${esc(IMP[i.impact]||'')}</span></div>
+      <div class="debt-b">${esc(i.blocks)}</div>
+      ${i.action&&open?`<div class="debt-a"><b>YAPILACAK</b> ${esc(i.action)}</div>`:''}
+    </div>`;}).join('');
+}
+
 /* Olay hunileri.
    Çubuk uzunluğu ilk adıma göre — adımlar arası oran değil, huninin BÜTÜNÜ
    içindeki pay. Adımlar arası oran ayrıca yazıyor; ikisi farklı sorular:
@@ -5269,7 +5323,7 @@ function renderAll(){
   const pre=isPrelaunch();
   el('v-ozet').classList.toggle('pre',pre);
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
-  drawCrumb(span); drawFresh(); drawFunnels(); drawAlarms(); drawAi(); drawCoverage(); drawWeekly(); drawAssertions(); drawRecon(); drawDifferential();
+  drawCrumb(span); drawFresh(); drawDebt(); drawFunnels(); drawAlarms(); drawAi(); drawCoverage(); drawWeekly(); drawAssertions(); drawRecon(); drawDifferential();
   fillSelects(); drawSyncLabel(); renderSignals(); drawPrelaunch(); drawRevenue(); drawRetentionKpi(); drawKpis(); drawKarne(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   visibleViews().forEach(k=>RENDERERS[k]?.());
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
