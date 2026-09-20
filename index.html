@@ -3178,7 +3178,7 @@ function karneStages(days, prev){
     if(x.key==='tutma'){
       const per100=Math.max(0,Math.round((x.ref-x.pct)*100));
       x.move=`İlk oturumda değer anını öne çek (ilk işlem ilk dakikada) ve ilk gün akşamı tek bir hatırlatıcı gönder`
-        +(push100!=null?` — bugün push alabilen kullanıcı payı ${pcTr(push100)} (${num(push)}/${num(total)}); hatırlatıcı en fazla bu kadarına ulaşır`:'')
+        +(push100!=null?` — bugün push alabilen kullanıcı payı ${pcTr(push100)} (${num(push)}/${num(pushTotal)}, tüm kayıtlı); hatırlatıcı en fazla bu kadarına ulaşır`:'')
         +`. Yeni kullanıcı aramak yerine bu daha ucuz.`;
       x.gain=`Referansa (${pcTr(x.ref)}) çıkarsa: her 100 yeni kullanıcıda +${per100} dönen`
         +(newUsers!=null&&newUsers>0?` · ${winLbl}de ${num(newUsers)} yeni kullanıcı ≈ +${num(Math.round((x.ref-x.pct)*newUsers))} kişi`:'')+'.';
