@@ -943,7 +943,7 @@
   <main class="main">
     <div class="page-head">
       <div>
-        <h1 id="pageTitle">Özet</h1>
+        <h1 id="pageTitle">Bugün</h1>
         <div class="crumb" id="crumb">…</div>
       </div>
       <div class="head-actions">
@@ -1982,6 +1982,14 @@
          belirlediği görünmez olur ve doğrulanamaz. -->
     <div class="view" id="v-pazar" style="display:none">
       <div class="grid">
+        <!-- BÜYÜME HAMLESİ — pazarlamacının iki sorusu: indirme NEREDEN geliyor
+             (bağımlılık, izlenemeyen pay, en verimli kanal) ve hangi kelimeyi
+             sonraki sürüme koymalı. Aşağıdaki tablolar bunun ham hâli. -->
+        <div class="card c12" id="growthMoveCard" hidden>
+          <div class="card-head"><div><div class="card-title">Nereden geliyor, ne yapmalı?</div>
+            <div class="card-sub" id="gmSub">–</div></div></div>
+          <div id="gmBody"></div>
+        </div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s1) 15%,transparent);color:var(--s1)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
           <span class="kpi-name" id="pzK1">Ölçülen ülke<br><span class="card-sub" id="pzWin">–</span></span></div>
@@ -5353,7 +5361,65 @@ function renderPazarPre(){
       :`<tr><td colspan="4" class="empty">Ölçülen hiçbir terim tabanın üstünde değil — bu mağazalarda ölçtüğümüz kelimelerde talep yok</td></tr>`)+`</tbody>`;
 }
 
+/* BÜYÜME HAMLESİ. Kural tabanlı, yalnız ölçülmüş girdiden:
+   · Pay = kaynağın indirmesi / TÜM kaynakların indirmesi (aynı evren).
+   · Dönüşüm = sayfa→indirme (her kaynakta ölçülüyor); gösterim→indirme
+     kaynaklar arasında karşılaştırılamaz (Apple gösterimi yalnız arama ve
+     gezinmede sayıyor) — burada KULLANILMIYOR.
+   · Delta yalnız önceki pencere aynı uzunluktaysa; değilse "önceki dönem
+     eksik" (kısa pencereyle kıyas yalan söyler).
+   · Yorum cümleleri eşik kapılı: küçük hacimden içgörü üretilmez. */
+function drawGrowthMove(){
+  const card=el('growthMoveCard'); if(!card) return;
+  if(isPrelaunch()){ card.hidden=true; return; }
+  const days=storeDays(), prev=storePrevDays(), minN=thr('alarm.min_sample',30);
+  const cur=sourceRows(days), old=new Map(sourceRows(prev).map(r=>[r.name,r]));
+  const okPrev=prev.length>0 && prev.length===days.length;
+  const totDl=cur.reduce((t,r)=>t+r.dl,0), totPv=cur.reduce((t,r)=>t+r.pv,0);
+  if(!totDl){ card.hidden=false; el('gmSub').textContent=storeWindowNote()||'seçili pencere';
+    el('gmBody').innerHTML=`<div class="unmeasured"><span>Bu pencerede kaynak bazlı indirme <b>ölçülmedi</b> — sıfır demek değil.</span></div>`; return; }
+  card.hidden=false;
+  el('gmSub').textContent=`${num(totDl)} indirme · ${dShort(days[0])} – ${dShort(days[days.length-1])} · tüm kaynaklar`;
+  const rows=[...cur].sort((a,b)=>b.dl-a.dl).filter(r=>r.dl>0||r.pv>0).slice(0,5);
+  const line=rows.map(r=>{
+    const share=r.dl/totDl, o=old.get(r.name);
+    let d='';
+    if(okPrev){
+      const pd=o?o.dl:0, diff=r.dl-pd;
+      d = pd===0&&r.dl===0 ? '' : ` <span class="chip ${diff>0?'up':diff<0?'down':'flat'}" style="margin-left:6px">${diff>0?'▲ +':diff<0?'▼ ':''}${num(diff)}</span>`;
+    }
+    const cr = r.pv>=minN ? ` · sayfayı görenin ${pcTr(r.dl/r.pv)}'i indiriyor` : '';
+    return `<div class="kr-row"><div class="kr-top"><span class="kr-name">${esc(r.name)}${d}</span><span class="kr-val">${num(r.dl)}</span></div>
+      <div class="kr-bar"><i style="width:${(share*100).toFixed(1)}%;background:${srcColor(r.name)}"></i></div>
+      <div class="kr-sub">indirmenin ${pcTr(share)}'i${cr}</div></div>`;
+  }).join('');
+  /* Yorumlar */
+  const say=[];
+  const top=rows[0];
+  if(top && top.dl/totDl>=0.4 && totDl>=minN)
+    say.push(`<b>Bağımlılık:</b> indirmenin ${pcTr(top.dl/totDl)}'i tek kanaldan (${esc(top.name)}). O kanal daralırsa büyüme aynı oranda daralır — ikinci bir kanal geliştirmek bu haftanın işi olabilir.`);
+  const unk=cur.find(r=>/unavailable/i.test(r.name));
+  if(unk && totPv>=minN && unk.pv/totPv>=0.3)
+    say.push(`<b>Kör nokta:</b> ürün sayfası görüntülemenin ${pcTr(unk.pv/totPv)}'i kaynağı belirsiz ("${esc(unk.name)}") ve bunlardan ${num(unk.dl)} indirme geldi. Bu kısım için kanal kararı verilemez.`);
+  const best=[...cur].filter(r=>r.pv>=minN).sort((a,b)=>b.dl/b.pv-a.dl/a.pv)[0];
+  if(best && top && best.name!==top.name)
+    say.push(`<b>En verimli kanal:</b> ${esc(best.name)} — sayfayı görenin ${pcTr(best.dl/best.pv)}'i indiriyor (en büyük kanal ${esc(top.name)}: ${pcTr(top.dl/Math.max(1,top.pv))}). Hacmi küçükse büyütülebilir; büyüyüp büyümediği ancak denenince bilinir.`);
+  /* Kelime hamlesi: talebi ölçülmüş, metadata'da olmayan en yüksek talepli 5 terim. */
+  const gaps=gapsFor().filter(g=>g.verdict==='GAP'&&g.demand!=null&&Number(g.demand)>ASA_FLOOR);
+  const byTerm=new Map();
+  gaps.forEach(g=>{ const o=byTerm.get(g.term)||{term:g.term,max:0,cc:[]}; o.max=Math.max(o.max,Number(g.demand)); o.cc.push(g.country); byTerm.set(g.term,o); });
+  const topTerms=[...byTerm.values()].sort((a,b)=>b.max-a.max).slice(0,5);
+  const kw = topTerms.length
+    ? `<div class="kr-sub" style="margin-top:12px"><b>Sonraki sürümün kelime alanına:</b> talebi ölçülmüş, listelemede olmayan en yüksek 5 terim (ASA popülerliği, ölçüm ${esc(gaps.map(g=>g.measured_on).filter(Boolean).sort().pop()||'–')}):<br>`
+      +topTerms.map(t=>`${esc(t.term)} <b>${num(t.max)}</b> ${[...new Set(t.cc)].slice(0,3).map(c=>FLAG[c]||c.toUpperCase()).join('')}`).join(' · ')
+      +`<br><span style="color:var(--ink-3)">Talep yüksek ≠ kazanılır: rakip yoğunluğu bu sayıda yok. Önce en az rekabetli olanla dene, sonra dönüşüme bak.</span></div>`
+    : `<div class="kr-sub" style="margin-top:12px"><b>Kelime:</b> talebi ölçülmüş fırsat terim yok — ya listeleme kapsamlı ya talep ölçümü eski (Büyüme › Tüm terimler).</div>`;
+  el('gmBody').innerHTML=line
+    +(say.length?`<div class="kr-verdict" style="border:0;padding:8px 0 0;margin:0">${say.map(t=>`<div class="kr-move" style="margin-top:8px">${t}</div>`).join('')}</div>`:'')
+    +kw;
+}
 function renderPazar(){
+  drawGrowthMove();
   /* Yayında olan / olmayan AYRIMI tek yerde: `isPrelaunch` zaten paneldeki
      diğer ön-lansman kurallarını da sürüyor, ikinci bir bayrak icat etmek
      ikisinin ayrışması demekti. */
