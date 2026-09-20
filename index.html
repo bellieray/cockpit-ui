@@ -1233,6 +1233,18 @@
         <div class="siglist" id="sigList"></div>
       </div>
 
+      <!-- İstatistiksiz kurallar. AI'dan BAĞIMSIZ: anahtar olmasa da dolu.
+           Kuralın üç durumu ayrı çiziliyor — "ölçülemedi" yeşil değil gri,
+           çünkü çalışamayan bir kural "temiz" değildir. -->
+      <div class="c12 region-label" id="alrLabel">Kurallar</div>
+      <div class="card c12" id="alrCard">
+        <div class="card-head">
+          <div><div class="card-title">Kırık boru kontrolleri</div>
+               <div class="card-sub" id="alrSub">—</div></div>
+        </div>
+        <div id="alrList"></div>
+      </div>
+
       <!-- Günlük analiz. Tespit SQL'de (panel.fn_daily_digest), anlatım modelde
            (ADR-0033). Kart üç durumu AYRI gösterir: analiz var · analiz
            reddedildi (kanıt denetimi düştü) · analist kapalı (anahtar yok).
@@ -4804,6 +4816,41 @@ function drawRecon(){
         ${cls==='fail'?`<div class="asr-d">${esc(r.description||'')}</div>`:''}</span>
       <span class="asr-when">${esc(r.period_start||'')}</span></div>`;}).join('');
 }
+/* Kırık boru kuralları.
+   ÜÇ DURUM ayrı çiziliyor. "ölçülemedi"yi yeşile boyamak, panelin var olma
+   sebebi olan sessiz onayı panelin kendi içinde üretmek olurdu: çalışamayan
+   bir kural "sorun yok" demez, "bakamadım" der. */
+function drawAlarms(){
+  const host=el('alrList'); if(!host) return;
+  const sub=el('alrSub');
+  const row=(D.digest||[]).find(x=>x.app_slug===APP);
+  if(!row){
+    host.innerHTML='<div class="empty">Günlük özet henüz hesaplanmadı — kurallar ÇALIŞMADI, "temiz" değil.</div>';
+    if(sub) sub.textContent='—';
+    return;
+  }
+  const rows=Array.isArray(row.alarms)?row.alarms:[];
+  const hit=rows.filter(r=>r.state==='tetiklendi');
+  const blind=rows.filter(r=>r.state==='ölçülemedi');
+  const cut=rows.filter(r=>r.state==='kırpıldı');
+  if(sub) sub.textContent =
+    `${esc(row.day||'—')} · `
+    + (hit.length?`${num(hit.length)} tetiklendi`:'tetiklenen yok')
+    + (blind.length?` · ${num(blind.length)} ölçülemedi`:'')
+    + (cut.length?` · kırpıldı`:'');
+  const rank=r=>r.state==='tetiklendi'?0:(r.state==='ölçülemedi'?1:(r.state==='kırpıldı'?2:3));
+  host.innerHTML=[...rows].sort((a,b)=>rank(a)-rank(b))
+    .map(r=>{
+      const cls=r.state==='tetiklendi'?'fail':(r.state==='ölçülemedi'?'none':(r.state==='kırpıldı'?'warn':'ok'));
+      const dot=cls==='fail'?'✕':cls==='none'?'○':cls==='warn'?'▲':'●';
+      return `<div class="asr ${cls}">
+        <span class="asr-dot">${dot}</span>
+        <span class="asr-t">${esc(r.detail||r.rule)}
+          <div class="asr-d">${esc(r.rule)} · ${esc(r.state)}</div></span>
+      </div>`;
+    }).join('');
+}
+
 /* Günlük analiz kartı.
    ÜÇ DURUM, iki değil (CLAUDE.md §3): analiz var · analiz REDDEDİLDİ · analist
    kapalı. Reddedilen bir analizin yerine boş kart koymak, "bugün sakin" diye
@@ -4996,7 +5043,7 @@ function renderAll(){
   const pre=isPrelaunch();
   el('v-ozet').classList.toggle('pre',pre);
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
-  drawCrumb(span); drawFresh(); drawAi(); drawCoverage(); drawWeekly(); drawAssertions(); drawRecon(); drawDifferential();
+  drawCrumb(span); drawFresh(); drawAlarms(); drawAi(); drawCoverage(); drawWeekly(); drawAssertions(); drawRecon(); drawDifferential();
   fillSelects(); drawSyncLabel(); renderSignals(); drawPrelaunch(); drawRevenue(); drawRetentionKpi(); drawKpis(); drawKarne(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   visibleViews().forEach(k=>RENDERERS[k]?.());
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
