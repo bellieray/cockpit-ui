@@ -3267,7 +3267,17 @@ function karneStages(days, prev){
   (function(){
     const rol=(rows,r)=>rows.filter(x=>x.slug===APP&&x.metric==='app_export_x_households_members_by_role'
         &&(x.dims||{}).rol===r).reduce((a,x)=>a+Number(x.value||0),0);
+    /* PENCERE BURADA SABİT ve bu YAZILMALI. `catalogNow`/`catalogPrev` API'de
+       "en yeni kesit" ve "en az 6 gün öncesinin en yeni kesiti" olarak sabit;
+       aralık seçicisini DİNLEMİYORLAR. İlk yazımda bu halkaya `winLbl`
+       veriyordum, yani 1A seçilince "son 24 günde" yazıp 6 günlük iki kesitin
+       farkını basıyordu — dört halkadan kaldırdığım yalanın aynısını, onu
+       kaldıran commit'in içinde yeniden üretmişim. Kendi gerçek penceresini
+       yazıyor; aralık seçicisiyle değişmediğini de söylüyor. */
     const now=D.catalogNow||[], prv=D.catalogPrev||[];
+    const gunNow=[...new Set(now.filter(r=>r.slug===APP).map(r=>r.day))].sort().pop();
+    const gunPrv=[...new Set(prv.filter(r=>r.slug===APP).map(r=>r.day))].sort().pop();
+    const pencere = (gunPrv&&gunNow) ? `${dShort(gunPrv)} → ${dShort(gunNow)}` : 'sabit kesit';
     const davetliNow=rol(now,'editor')+rol(now,'viewer'), sahipNow=rol(now,'owner');
     const davetliPrv=rol(prv,'editor')+rol(prv,'viewer'), sahipPrv=rol(prv,'owner');
     const k=davetliNow-davetliPrv, n=sahipNow-sahipPrv;
@@ -3280,13 +3290,13 @@ function karneStages(days, prev){
       /* Pencerede yeni hane sahibi yoksa oran tanımsız; tüm-zamanlar değerini
          pencere etiketiyle basmak tam da az önce düzelttiğim yalandı. */
       st.push({key:'yayilma',name:'Yayılma',q:'kullanıcı başkasını getiriyor mu?',state:'none',valTxt:'–',
-        sub:`${winLbl}de yeni hane sahibi yok — oran bu pencere için tanımsız. `
+        sub:`${pencere} arasında yeni hane sahibi yok — oran tanımsız. `
            +`Tüm zamanlar: ${num(davetliNow)} davetli üye / ${num(sahipNow)} hane sahibi.`});
       return;
     }
     st.push(ratioStage({key:'yayilma',name:'Yayılma',q:'kullanıcı başkasını getiriyor mu?',
       n:k,d:n,ref:thr('karne.spread_ref',0.2),
-      what:`${winLbl}de yeni hane sahibi başına davet edilen üye`,
+      what:`${pencere} arasında yeni hane sahibi başına davet edilen üye (bu halka aralık seçicisini dinlemiyor — kesitler sabit)`,
       noData:'Hane üyeliği ölçümü gelmedi.'}));
   })();
 
