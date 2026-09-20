@@ -683,6 +683,7 @@
   .fun-bar{height:6px;border-radius:999px;background:var(--card-2);margin:5px 0 3px;overflow:hidden}
   .fun-bar i{display:block;height:100%;border-radius:999px;background:var(--s1)}
   .fun-s.fric .fun-bar i{background:var(--warn)}
+  .asr.info .asr-dot{color:var(--ink-3)}
   .fun-bd{margin-top:6px;padding-left:2px}
   .fun-bd-r{display:grid;grid-template-columns:minmax(0,1fr) 34% auto;gap:6px;align-items:center;
     font-size:11.5px;color:var(--ink-3);padding:2px 0;font-variant-numeric:tabular-nums}
@@ -5048,16 +5049,26 @@ function drawAlarms(){
   const hit=rows.filter(r=>r.state==='tetiklendi');
   const blind=rows.filter(r=>r.state==='ölçülemedi');
   const cut=rows.filter(r=>r.state==='kırpıldı');
+  // "ölçülmüyor" ve "ölçülemedi" AYNI kovada sayılır: ikisi de "kural bir şey
+  // söyleyemedi" demek ve ikisi de "temiz" DEĞİL.
+  const unmeasured=rows.filter(r=>r.state==='ölçülemedi'||r.state==='ölçülmüyor');
   if(sub) sub.textContent =
     `${esc(row.day||'—')} · `
     + (hit.length?`${num(hit.length)} tetiklendi`:'tetiklenen yok')
-    + (blind.length?` · ${num(blind.length)} ölçülemedi`:'')
+    + (unmeasured.length?` · ${num(unmeasured.length)} ölçülmedi`:'')
     + (cut.length?` · kırpıldı`:'');
-  const rank=r=>r.state==='tetiklendi'?0:(r.state==='ölçülemedi'?1:(r.state==='kırpıldı'?2:3));
-  host.innerHTML=[...rows].sort((a,b)=>rank(a)-rank(b))
+  // DURUM → SINIF tek yerde. Bilinmeyen bir durum YEŞİLE düşemez: yeni bir
+  // kural eklendiğinde (ölçülmüyor, bilgi...) varsayılanı "temiz" yapmak,
+  // panelin engellemek için var olduğu sessiz onayı üretirdi.
+  const CLS={'tetiklendi':'fail','ölçülemedi':'none','ölçülmüyor':'none',
+             'kırpıldı':'warn','bilgi':'info','temiz':'ok'};
+  const DOT={fail:'✕',none:'○',warn:'▲',info:'·',ok:'●'};
+  const RANK={fail:0,none:1,info:2,warn:3,ok:4};
+  host.innerHTML=[...rows]
+    .sort((a,b)=>(RANK[CLS[a.state]??'none'])-(RANK[CLS[b.state]??'none']))
     .map(r=>{
-      const cls=r.state==='tetiklendi'?'fail':(r.state==='ölçülemedi'?'none':(r.state==='kırpıldı'?'warn':'ok'));
-      const dot=cls==='fail'?'✕':cls==='none'?'○':cls==='warn'?'▲':'●';
+      const cls=CLS[r.state]??'none';
+      const dot=DOT[cls];
       return `<div class="asr ${cls}">
         <span class="asr-dot">${dot}</span>
         <span class="asr-t">${esc(r.detail||r.rule)}
