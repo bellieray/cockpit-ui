@@ -291,6 +291,7 @@
   .sig .bd{font-size:12px;color:var(--ink-2);margin-top:3px;line-height:1.45}
   .sig .amt{font:600 13px/1 Manrope,sans-serif;white-space:nowrap;margin-left:auto;padding-left:10px}
   /* karne — bkz. drawKarne() */
+  .kr-w{font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;padding-bottom:6px}
   .kr-verdict{padding:2px 2px 12px;border-bottom:1px solid var(--hair);margin-bottom:4px}
   .kr-verdict .kr-h{font:700 15px/1.35 Manrope,sans-serif}
   .kr-verdict .kr-move{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--brand-soft);
@@ -3019,20 +3020,41 @@ function drawRetentionKpi(){
    · "İlk kopan halka": yolculuk sırasında ilk zayıf halka. Üstteki halka
      delikken alttakini düzeltmek boşa çaba — daha az kişi oraya ulaşır. */
 const pcTr=(v,d=0)=>'%'+(v*100).toFixed(d).replace('.',',');
-function karneStages(){
+/* PENCERE ARGÜMANI ZORUNLU — eskiden yoktu ve kart YALAN SÖYLÜYORDU.
+   Ölçüldü: beş halkadan yalnız Edinim aralık seçicisini dinliyordu
+   (%3,1 / %4,4 / %4,8 diye değişiyor); Aktivasyon, Tutma ve Gelir dört aralıkta
+   da BAYT BAYT aynıydı. Sebep: ikisi `stockValue()` ile ömür boyu kümülatif
+   sayaç okuyordu, Gelir ise API'nin döndürdüğü HER kohort gününü topluyordu.
+   Yani "Bu hafta ilk kopan halka" cümlesi hafta hakkında değildi ve haftadan
+   haftaya neredeyse değişemiyordu — `metrics.md §8`'in "panelin ölüm nedeni
+   her gün aynı kırmızıyı göstermektir" dediği şey, manşetin kendisinde.
+
+   Kümülatif sayaçta doğru olan ARTIŞI almak (`stockAgo` farkı), kohortta ise
+   pencereye SÜZMEK. Penceresi çıkarılamayan halka sayı basmaz: "ölçülemedi"
+   der ve nedenini yazar (3. bölüm: var / yok / ölçülmedi). */
+function karneStages(days, prev){
   const minN=thr('alarm.min_sample',30);
   const weakR=thr('karne.weak_ratio',0.8);
-  const days=storeDays(), prev=storePrevDays();
+  days = days || storeDays(); prev = prev || storePrevDays();
   const sf=storeFunnel(days), sfp=storeFunnel(prev);
-  const nuWin = RANGE===1?'1d':RANGE===30?'30d':'7d';
-  const newUsers=stockValue('app_export_new_users_'+nuWin);
-  const total=stockValue('app_export_total_users'), act=stockValue('app_export_activated_users');
-  const ret=stockValue('app_export_retention_next_day_retained'), elig=stockValue('app_export_retention_next_day_eligible');
-  const push=stockValue('app_export_push_reachable_users');
+  const winDays = days.length || 7;
+  const winLbl = `son ${num(winDays)} gün`;
+  /* Kümülatif sayaç → pencere artışı. `stockAgo` ölçülmüş son güne göre geriye
+     bakıyor, takvime göre değil; pencere kadar geçmiş yoksa null döner. */
+  const delta=(metric)=>{ const a=stockAgo(metric,winDays); return (a.now!=null&&a.before!=null)?a.now-a.before:null; };
+  const newUsers=delta('app_export_total_users');
+  const total=delta('app_export_total_users'), act=delta('app_export_activated_users');
+  const ret=delta('app_export_retention_next_day_retained'), elig=delta('app_export_retention_next_day_eligible');
+  const push=stockValue('app_export_push_reachable_users');      /* erişilebilirlik: anlık doğru */
+  const pushTotal=stockValue('app_export_total_users');
   const subs=stockValue('rc_active_subscriptions'), mrr=stockValue('rc_mrr');
-  const cv=(D.stockSeries||[]).filter(r=>r.slug===APP&&r.metric==='rc_initial_conversion');
+  /* Kohortlar pencereye SÜZÜLÜYOR. `day` kohortun kendi günü; `days` mağaza
+     penceresi olduğu için kohort penceresi ondan kısa olabilir — kaç kohort
+     kaldığı alt satırda yazılıyor, sessizce daralmıyor. */
+  const winSet=new Set(days);
+  const cvAll=(D.stockSeries||[]).filter(r=>r.slug===APP&&r.metric==='rc_initial_conversion');
+  const cv=cvAll.filter(r=>winSet.has(r.day));
   const pn=cv.reduce((a,r)=>a+Number(r.num||0),0), pd=cv.reduce((a,r)=>a+Number(r.den||0),0);
-  const winLbl = RANGE===1?'son 1 gün':RANGE===30?'son 30 gün':'son 7 gün';
 
   const ci=(k,n)=>{ const w=wilson(k,n); return w?` · %95 aralık ${pcTr(w[0])}–${pcTr(w[1])}`:''; };
   /* Ortak oran halkası: pay/payda + referans → durum. */
@@ -3066,16 +3088,18 @@ function karneStages(){
   })();
   /* 2 · AKTİVASYON */
   st.push(ratioStage({key:'aktivasyon',name:'Aktivasyon',q:'kayıt olan ürünü kullanıyor mu?',
-    n:act,d:total,ref:thr('karne.activation_ref',0.5),what:'kayıtlı en az 1 işlem ekledi',
-    noData:'Kendi backend verisinden aktivasyon gelmedi.'}));
+    n:act,d:total,ref:thr('karne.activation_ref',0.5),what:`${winLbl}de kaydolan, en az 1 işlem ekledi`,
+    noData:`${winLbl} için aktivasyon ölçülemedi — kümülatif sayaçta o kadar geçmiş yok.`}));
   /* 3 · TUTMA */
   st.push(ratioStage({key:'tutma',name:'Tutma',q:'ertesi gün geri dönüyor mu?',
-    n:ret,d:elig,ref:thr('karne.retention_d1_ref',0.25),what:'ertesi gün döndü',
-    noData:'Kendi backend verisinden tutma gelmedi.'}));
+    n:ret,d:elig,ref:thr('karne.retention_d1_ref',0.25),what:`${winLbl}ün kohortunda ertesi gün döndü`,
+    noData:`${winLbl} için tutma ölçülemedi — kümülatif sayaçta o kadar geçmiş yok.`}));
   /* 4 · GELİR */
   st.push(ratioStage({key:'gelir',name:'Gelir',q:'yeni müşteri ödüyor mu?',
-    n:pn,d:pd,ref:thr('karne.paid_conv_ref',0.01),what:'yeni müşteri ödedi',
-    noData:'RevenueCat dönüşüm verisi gelmedi.'}));
+    n:pn,d:pd,ref:thr('karne.paid_conv_ref',0.01),
+    what:`${winLbl}de olgunlaşan ${num(cv.length)} kohortta ödedi`,
+    noData: cvAll.length ? `Bu pencereye düşen olgunlaşmış kohort yok (ölçüm ~8 gün geriden).`
+                         : 'RevenueCat dönüşüm verisi gelmedi.'}));
   const g=st[st.length-1];
   const lag=payCohortLag();
   if(g.pct!=null){
@@ -3092,7 +3116,7 @@ function karneStages(){
 
   /* İlk kopan halka + hamle. Referanslı halkalar arasında yolculuk sırasıyla. */
   const first=st.find(x=>x.state==='weak')||null;
-  const push100=(push!=null&&total)? push/total : null;
+  const push100=(push!=null&&pushTotal)? push/pushTotal : null;
   st.forEach(x=>{
     if(x.state!=='weak' && x.state!=='edge') return;
     const gapUsers = (x.d&&x.ref) ? Math.max(0,Math.round((x.ref-x.pct)*x.d)) : null;
@@ -3121,11 +3145,11 @@ function karneStages(){
     }
     void gapUsers;
   });
-  return {stages:st,first};
+  return {stages:st,first,win: days.length?`${dShort(days[0])} – ${dShort(days[days.length-1])} · ${num(days.length)} gün`:'pencere ölçülemedi'};
 }
 function drawKarne(){
   const host=el('karneBody'); if(!host) return;
-  const {stages,first}=karneStages();
+  const kn=karneStages(); const {stages,first}=kn; stages.win=kn.win;
   const badge={weak:'⚠ zayıf',edge:'◐ sınırda',good:'✓ referansta',info:'· referanssız',none:'○ ölçülmedi',few:'○ yetersiz veri'};
   /* Üst özet: ilk kopan halka + hamle. Hiç zayıf yoksa bunu, ölçülmeyen halka
      varsa onu AÇIKÇA söyler — "her şey yolunda" demek ölçülmemiş halkayı
@@ -3158,7 +3182,7 @@ function drawKarne(){
       })()}
     </div>`;
   }).join('');
-  host.innerHTML=`<div class="kr-verdict">${verdict}</div>${rows}
+  host.innerHTML=`<div class="kr-w">${esc(stages.win||'')}</div><div class="kr-verdict">${verdict}</div>${rows}
     <div class="kr-note">Çubuktaki çizgi referans. Referans ölçülmüş değil, kabaca sektör ortancası (ayar: panel.threshold · karne.*). Halkalar yolculuk sırasında; üstteki halka delikken alttakini düzeltmek az kişiye ulaşır.</div>`;
 }
 
