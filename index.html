@@ -2330,31 +2330,38 @@ const inRange=(day,set)=>set.has(day);
    kalıyor — ikisini aynı pencereye zorlamak reklamın 2 günlük tazeliğini
    çöpe atardı. Mağaza verisi hiç yoksa (lansman öncesi) takvim penceresine
    düşülüyor. */
-const _lastStoreCache={};
-function lastStoreIdx(all,app=APP){
+const _storeSpanCache={};
+/* Mağaza verisinin [ilk, son] gün indeksi. İKİ UÇ da ölçülmemiş olabilir:
+   SON uç Apple'ın 2 günlük gecikmesi, İLK uç mağaza analitiğinin başlamamış
+   olması (bu uygulamada 26 Ağustos; reklam geçmişi 30 Temmuz'dan).
+   Baştaki verisiz günler grafikte 0,0,0,0,0,0,0,39,44,83 diye çiziliyor ve
+   çizgi sıfırdan BÜYÜYOR gibi görünüyordu — gerçek bir lansman eğrisi değil,
+   ölçümün başlamamış olması. */
+function storeSpan(all,app=APP){
   const key=(D.generatedAt||'')+'|'+app;
-  if(_lastStoreCache[key]!==undefined) return _lastStoreCache[key];
+  if(_storeSpanCache[key]!==undefined) return _storeSpanCache[key];
   const has=new Set();
   (D.byCountryDaily||[]).forEach(r=>{ if(r.slug===app && Number(r.v||0)>0) has.add(r.day); });
-  let idx=-1;
-  for(let i=all.length-1;i>=0;i--){ if(has.has(all[i])){ idx=i; break; } }
-  return (_lastStoreCache[key]=idx);
+  let first=-1,last=-1;
+  for(let i=0;i<all.length;i++){ if(has.has(all[i])){ if(first<0) first=i; last=i; } }
+  return (_storeSpanCache[key]=[first,last]);
 }
 function storeDays(){
   const all=allDays(); if(!all.length) return [];
-  const idx=lastStoreIdx(all);
-  if(idx<0) return rangeDays();
-  const upto=all.slice(0,idx+1);
+  const [f,l]=storeSpan(all);
+  if(l<0) return rangeDays();
+  const upto=all.slice(f,l+1);
   return RANGE===0 ? upto : upto.slice(-RANGE);
 }
 function storePrevDays(){
   const all=allDays(); if(!all.length) return [];
-  const idx=lastStoreIdx(all);
-  if(idx<0) return prevRangeDays();
-  const upto=all.slice(0,idx+1);
+  const [f,l]=storeSpan(all);
+  if(l<0) return prevRangeDays();
+  const upto=all.slice(f,l+1);
   if(RANGE===0||upto.length<=RANGE) return [];
   return upto.slice(Math.max(0,upto.length-RANGE*2), upto.length-RANGE);
 }
+
 /* REKLAM PENCERESİ — bugünün verisi KISMİ.
    AdMob bugünü sabah 07:25'te çekiyor: günün ilk yedi saati. Ölçülen: günlük
    reklam isteği 600-1.000 iken 19 Eylül = 175, ve o satır 19 Eylül 07:25'te
