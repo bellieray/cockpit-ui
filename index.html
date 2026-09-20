@@ -6707,6 +6707,7 @@ const SIG_RULES=[
   {k:'traffic_mix_shift', t:'trafik kaynağı payı kaydı'},
   {k:'panel_integrity',   t:'panelin kendi doğruluğu (değişmez + uzlaştırma)'},
   {k:'setup_incomplete',  t:'panel bu uygulama hakkında hiçbir şey ölçemiyor'},
+  {k:'backup_missing',    t:'yedek alınmıyor (geri doldurulamayan veri risk altında)'},
 ];
 /* MAĞAZA DURUMU ÜÇ HALDE. `isPrelaunch()` iki hal biliyor (pre / değil) ve
    izleyici konektör yoksa ya da hiç koşmadıysa FALSE dönüyor — yani "bilmiyorum"
@@ -6848,6 +6849,27 @@ function signalsFor(app=APP){
           + ` Paywall gösterimi ölçülmüyor, bu yüzden "görülmüyor mu, görülüp reddediliyor mu" ayrımı yapılamıyor.`,
           '%0');
       }
+    }
+  }
+
+  /* --- 3a. Yedek yok ------------------------------------------------ */
+  // Bu bir VERİ KALİTESİ uyarısı değil, senden beklenen bir KURULUM adımı —
+  // CLAUDE.md §2 bu sınıfın adıyla görünmesini istiyor. Güven listesinde bir
+  // `warn` olarak kalırsa okunmaz; kaybolan veri ise telafisiz.
+  // Portföy satırlarında tekrarlanmasın diye yalnız seçili uygulamada.
+  if(app===APP){
+    const bk=(D.assertions||[]).find(r=>r.key==='backup_fresh');
+    if(bk && bk.passed===false){
+      const son=(bk.observed||{}).son_yedek;
+      add(1, SIG.RED, 5e6,
+        son?`Yedek ${agoText(new Date(son))} alınmış — 8 günden eski`:`Yedek hiç alınmamış`,
+        `Geri doldurulamayan veri tek bir ücretsiz projede duruyor: ASA popülerliği, keyword `
+        +`sıralaması, chart pozisyonu, rakip metadata. Proje askıya alınırsa bunlar yeniden `
+        +`ÇEKİLEMEZ (3. ilke). Haftalık yedek işi GitHub Actions'ta hazır ve tek bir şey bekliyor: `
+        +`Supabase → Project Settings → Database → Connection string (URI) değerini depoya `
+        +`PANEL_DB_URL sırrı olarak ekle. Eklenene kadar bu iş bilerek kırmızı kalıyor — `
+        +`"yedek alınıyor sanmak", yedek almamaktan kötüdür.`,
+        'senden');
     }
   }
 
