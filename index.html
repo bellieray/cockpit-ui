@@ -635,6 +635,22 @@
   .wk-copy{display:block;width:100%;margin-top:12px;min-height:44px;border:0;border-radius:12px;cursor:pointer;
     background:var(--accent-btn-bg);color:var(--accent-btn-ink);font:700 14px/1 Manrope,sans-serif}
   .wk-trust{margin-top:12px;font-size:11.5px;color:var(--ink-3);line-height:1.5}
+  .wkc-w{font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+  .wkc-h{font:700 17px/1.3 Manrope,sans-serif;margin:4px 0 12px}
+  .wkc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .wkc-t{padding:10px 12px;border-radius:12px;background:var(--card-2)}
+  .wkc-t .n{font-size:11.5px;color:var(--ink-2);font-weight:600}
+  .wkc-t .v{font:700 20px/1.1 Manrope,sans-serif;font-variant-numeric:tabular-nums;margin:4px 0 6px}
+  .wkc-t .d{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:11px;color:var(--ink-3)}
+  .wkc-sec{margin-top:14px}
+  .wkc-sec>b{display:block;font-size:11px;color:var(--ink-3);font-weight:700;margin-bottom:6px}
+  .wkc-li{font-size:12.5px;line-height:1.5;padding:6px 0;border-top:1px solid var(--hair)}
+  .wkc-li:first-of-type{border-top:0}
+  .wkc-li small{display:block;color:var(--ink-3);font-size:11.5px}
+  .wkc-act{display:flex;gap:8px;margin-top:14px}
+  .wkc-act button{flex:1;min-height:44px;border-radius:12px;border:0;cursor:pointer;font:700 13px/1 Manrope,sans-serif}
+  .wkc-act .pri{background:var(--accent-btn-bg);color:var(--accent-btn-ink)}
+  .wkc-act .sec{background:var(--card-2);color:var(--ink)}
   .wk-pre{margin:12px 0 0;white-space:pre-wrap;word-break:break-word;
     font:inherit;font-size:12.5px;line-height:1.55;color:var(--ink-2);
     font-variant-numeric:tabular-nums}
@@ -1157,15 +1173,13 @@
         <div class="siglist" id="sigList"></div>
       </div>
 
-      <!-- Haftalık değerlendirme artık kendi sekmesinde (Hafta). Burada tek satır:
-           "önceki hafta ne durumdaydı, şimdi ne durumda" sorusunun cevabı bir dokunuş
-           uzakta, ama Bugün'ü uzatmıyor. -->
+      <!-- Haftalık özet. Sahibi haftada bir derin bakış yapıyor ve o bakışın çıktısı
+           panelde KALMAMALI. Bugün'deki kart özetin kendisi (başlık + dört ana sayı +
+           ne oldu + öncelikli iş + kopyala); tam rapor Hafta sekmesinde ve AYNI nesneden
+           (`weeklyReview`) üretiliyor — iki yüz ayrışamaz. Kart KALDIRILMADI. -->
+      <div class="c12 region-label" id="wkLabel">Bu hafta</div>
       <div class="card c12" id="wkCard">
-        <div class="card-head">
-          <div><div class="card-title">Bu hafta</div>
-            <div class="card-sub" id="wkSub">–</div></div>
-          <button class="viewall" data-jump="hafta" type="button">Haftalık rapor →</button>
-        </div>
+        <div id="wkCardBody"></div>
       </div>
 
       <div class="c12 region-label" data-store-only>Gelir</div>
@@ -1548,13 +1562,13 @@
              alanın değiştiğini söylemez. Apple metin için A/B vermediği (PPO yalnız
              ikon/ekran görüntüsü/önizleme) için okunabilir tek şey bu eşleşmedir. -->
         <div class="card c12">
-          <div class="card-head"><div><div class="card-title">Listeleme denemeleri</div>
-            <div class="card-sub">ne değiştirdin · eklediğin kelimelerin talebi var mı · işe yaradı mı</div></div></div>
-          <div id="aChanges"></div>
-          <details class="sig-more"><summary>Bu tarihler nasıl okunur</summary>
-            <div class="funnel-note" style="margin-top:0">Tarih panelin FARK ETTİĞİ gün, Apple'ın yayın günü değil.
-            Aynı gün birçok dil birden değişmiş görünüyorsa değişen şey metin değil, canlı sürüm olabilir —
-            konektör canlı sürümün dillerini okuyor. Açıklama ve promo metni izlenmiyor (bilerek).</div></details>
+          <div class="card-head"><div><div class="card-title">Listelemede fark edilen değişiklikler</div>
+            <div class="card-sub">ad · altyazı · anahtar kelime — haftalık tablodaki sürüm sütunu bunları sayıyor · her değişiklik için: kaç terim, talebi var mı, işe yaradı mı</div></div></div>
+          <div id="aChanges" style="max-height:640px;overflow:auto"></div>
+          <div class="funnel-note">Tarih panelin FARK ETTİĞİ gün, Apple'ın yayın günü değil.
+            Aynı gün birçok dil birden değişmiş görünüyorsa değişen şey metin değil,
+            canlı sürüm olabilir — konektör canlı sürümün dillerini okuyor. Açıklama ve
+            promo metni bu listede yok (konektör onları bilerek çekmiyor).</div>
         </div>
       </div>
     </div>
@@ -2030,14 +2044,20 @@
         <div class="card c12" id="wkNums"></div>
         <div class="c12 region-label">Bu hafta ne oldu</div>
         <div class="card c12" id="wkHappened"></div>
+        <div class="c12 region-label">Sinyaller</div>
+        <div class="card c12" id="wkAllSignals"></div>
         <div class="c12 region-label">Gelecek hafta</div>
         <div class="card c12" id="wkNext"></div>
+        <div class="c12 region-label">Ölçülmeyenler</div>
+        <div class="card c12" id="wkUnmeasured"></div>
+        <div class="c12 region-label">Doğruluk</div>
+        <div class="card c12" id="wkTrustCard"></div>
         <div class="c12 region-label">Not defteri</div>
         <div class="card c12" id="wkNotes">
           <div id="wkPrevNote"></div>
           <input class="wk-note" id="wkNote" type="text" maxlength="160"
                  placeholder="Bu haftanın notu — tek satır, gelecek hafta karşına çıkar">
-          <button class="wk-copy" id="wkCopy" type="button">Raporu kopyala</button>
+          <button class="wk-copy" id="wkCopy" data-wk-copy type="button">Raporu kopyala</button>
           <div class="wk-trust" id="wkTrust"></div>
         </div>
       </div>
@@ -4437,6 +4457,21 @@ function weeklyReview(){
     (D.blockers||[]).filter(b=>b.slug===APP&&b.urgency==='yapilacak').slice(0,2)
       .forEach(b=>next.push({t:`Senden: ${b.source} — ${b.action}`,s:'bu ölçü gelmeden ilgili karar kör'}));
 
+    /* ÖLÇÜLMEYENLER — bu haftanın kararına giremeyenler. Eski özetin 4. bloğu; kaldırılmadı.
+       Panel "göremiyorum" demez, "şu nedenle göremiyorum" der. */
+    const unm=[];
+    (D.blockers||[]).filter(b=>b.slug===APP&&b.urgency==='yapilacak').forEach(b=>unm.push({t:`${b.source}: ${b.action}`,s:'senden bekleniyor'}));
+    (D.seriesFreshness||[]).filter(r=>r.app_slug===APP&&r.freshness==='BAYAT')
+      .forEach(r=>unm.push({t:`${r.source}: veri ${r.days_behind} gündür akmıyor`,s:'bayat — bu kaynağın beslediği kartlar eski'}));
+    (D.assertions||[]).filter(r=>r.passed==null).forEach(r=>unm.push({t:`${r.title||r.key}: hiç koşmadı`,s:'ölçülmemiş doğruluk, sorun yok demek değil'}));
+    /* DOĞRULUK ayrıntısı: hangi kontrol kırık/uyarı, iki yol ayrışıyor mu. */
+    const trustRows=[];
+    const dfcAll=(D.differential||[]).filter(r=>r.metric.endsWith(':'+APP));
+    dfcAll.forEach(r=>{ const bad=Number(r.diff_pct)>0.5; trustRows.push({k:bad?'fail':'ok',t:`${r.metric.split(':')[0]}: ${bad?`iki yol ayrışıyor (%${Number(r.diff_pct).toFixed(2)})`:'iki yoldan hesaplandı, aynı'}`}); });
+    (D.assertions||[]).filter(r=>r.passed===false&&r.severity!=='warn').forEach(r=>trustRows.push({k:'fail',t:`${r.title||r.key}: KIRIK`}));
+    (D.assertions||[]).filter(r=>r.passed===false&&r.severity==='warn').forEach(r=>trustRows.push({k:'warn',t:`${r.title||r.key} (kaynağın doğası, izleniyor)`}));
+    const allSignals=signalsFor();
+
     /* Veri güveni: tek satır. */
     const A=D.assertions||[];
     const fail=A.filter(r=>r.passed===false&&r.severity!=='warn').length, warn=A.filter(r=>r.passed===false&&r.severity==='warn').length;
@@ -4450,7 +4485,7 @@ function weeklyReview(){
     const nt=wkNoteLoad(), prevNote=nt.prev;
     return {name:a?.name||APP,win:days.length?`${dShort(days[0])} – ${dShort(days[days.length-1])}`:'–',
       prevWin:prev.length?`${dShort(prev[0])} – ${dShort(prev[prev.length-1])}`:null,
-      storeWin:storeWindowNote(),headline,growth,weak,rows,happened,next,trust,prevNote,okPrev};
+      storeWin:storeWindowNote(),headline,growth,weak,rows,happened,next,trust,prevNote,okPrev,unm,trustRows,allSignals};
   });
 }
 function wkRowDelta(r){
@@ -4485,14 +4520,40 @@ function weeklyText(){
   L.push('','GELECEK HAFTA');
   if(w.next.length) w.next.forEach((x,i)=>L.push(`${i+1}. ${x.t}${x.s?` (${x.s})`:''}`));
   else L.push('• Tetiklenen bir iş yok — bu "sorun yok" demek değil, kurallar eşiğin altında kaldı.');
+  L.push('',`SİNYALLER (${SIG_RULES.length} kural kontrol edildi)`);
+  if(w.allSignals.length) w.allSignals.slice(0,5).forEach(x=>L.push(`• ${x.hd}${x.amt?` — ${x.amt}`:''}`));
+  else L.push('• Tetiklenen eşik yok. "Sorun yok" demek değil: kurallar ya hacim eşiğinin altında kaldı ya hiçbiri tetiklenmedi.');
+  L.push('','ÖLÇÜLMEYENLER — bu haftanın kararına giremeyenler');
+  if(w.unm.length) w.unm.forEach(x=>L.push(`• ${x.t}`)); else L.push('• Yok — tüm etkin kaynaklar kendi bütçesi içinde.');
+  L.push('','DOĞRULUK');
+  if(w.trustRows.length) w.trustRows.forEach(x=>L.push(`${x.k==='fail'?'✕':x.k==='warn'?'▲':'✓'} ${x.t}`));
+  L.push(w.trust);
   if(w.prevNote) L.push('',`GEÇEN NOT: "${w.prevNote}"`);
-  L.push('',w.trust);
   return L.join('\n');
 }
 function drawWeekly(){
   const w=weeklyReview();
-  /* Bugün'deki tek satırlık kart */
-  const sub=el('wkSub'); if(sub) sub.textContent=`${w.headline} · ${w.win}`;
+  /* Bugün kartı: başlık + dört ana sayı + ne oldu + öncelikli iş + eylemler. */
+  const card=el('wkCardBody');
+  if(card){
+    const pick=['dl','conv','nu','mrr'].map(k=>w.rows.find(r=>r.key===k)).filter(Boolean);
+    const tile=r=>{ const d=wkRowDelta(r);
+      return `<div class="wkc-t"><div class="n">${esc(r.name.replace(' (tüm kaynaklar)',''))}</div>
+        <div class="v">${r.c==null?'–':esc(r.fmt(r.c))}</div>
+        <div class="d">${d.chip}${d.was?`<span>önceki ${esc(d.was)}</span>`:''}</div></div>`; };
+    const first=t=>String(t||'').split(/ — |\. /)[0];
+    card.innerHTML=`<div class="wkc-w">${esc(w.win)}${w.prevWin?` · önceki: ${esc(w.prevWin)}`:''}</div>
+      <div class="wkc-h">${esc(w.headline)}</div>
+      <div class="wkc-grid">${pick.map(tile).join('')}</div>
+      <div class="wkc-sec"><b>NE OLDU</b>${w.happened.length
+        ? w.happened.slice(0,2).map(x=>`<div class="wkc-li">${esc(x.t)}<small>${esc(x.s)}</small></div>`).join('')
+        : '<div class="wkc-li">Gürültü tabanını aşan hareket yok — ölçek küçük, beklenen.</div>'}</div>
+      <div class="wkc-sec"><b>ÖNCELİKLİ İŞ</b>${w.next.length
+        ? `<div class="wkc-li">${esc(first(w.next[0].t))}${w.next[0].s?`<small>${esc(w.next[0].s)}</small>`:''}</div>`
+        : '<div class="wkc-li">Tetiklenen bir iş yok — bu "sorun yok" demek değil.</div>'}</div>
+      <div class="wkc-act"><button class="pri" data-jump="hafta" type="button">Tam rapor →</button>
+        <button class="sec" data-wk-copy type="button">Kopyala</button></div>`;
+  }
   const hero=el('wkHero'); if(!hero) return;
   const dl=w.rows.find(r=>r.key==='dl');
   const dlLine = dl && dl.state==='ok' ? `İndirme ${num(dl.o)} → ${num(dl.c)}` : '';
@@ -4514,6 +4575,15 @@ function drawWeekly(){
     : `<div class="wk-empty">Tetiklenen bir iş yok. Bu "sorun yok" demek değil: kurallar eşiğin altında kaldı.</div>`;
   el('wkPrevNote').innerHTML=w.prevNote?`<div class="wk-prev"><b>GEÇEN NOTUN</b>${esc(w.prevNote)}</div>`:'';
   el('wkTrust').textContent=w.trust;
+  el('wkUnmeasured').innerHTML=w.unm.length
+    ? w.unm.map((x,i)=>`<div class="wk-li"><i>${i+1}</i><div>${esc(x.t)}<small>${esc(x.s)}</small></div></div>`).join('')
+    : `<div class="wk-empty">Yok — tüm etkin kaynaklar kendi bütçesi içinde.</div>`;
+  el('wkTrustCard').innerHTML=(w.trustRows.length
+    ? w.trustRows.map(x=>`<div class="wk-li"><i style="background:${x.k==='fail'?'var(--down-soft)':x.k==='warn'?'var(--amber-soft)':'var(--up-soft)'};color:${x.k==='fail'?'var(--down)':x.k==='warn'?'var(--amber)':'var(--up)'}">${x.k==='fail'?'✕':x.k==='warn'?'▲':'✓'}</i><div>${esc(x.t)}</div></div>`).join('')
+    : '')+`<div class="wk-empty" style="margin-top:6px">${esc(w.trust)}</div>`;
+  const sigHost=el('wkAllSignals'); if(sigHost) sigHost.innerHTML=w.allSignals.length
+    ? w.allSignals.map(x=>`<div class="wk-li"><i style="background:${x.sev==='var(--up)'?'var(--up-soft)':x.sev===SIG.RED?'var(--down-soft)':'var(--amber-soft)'};color:${x.sev}">●</i><div>${esc(x.hd)}${x.amt?`<small>${esc(x.amt)}</small>`:''}</div></div>`).join('')
+    : `<div class="wk-empty">Tetiklenen eşik yok. "Sorun yok" demek değil: kurallar ya hacim eşiğinin altında kaldı ya hiçbiri tetiklenmedi (${num(SIG_RULES.length)} kural kontrol edildi).</div>`;
   const inp=el('wkNote');
   if(inp && document.activeElement!==inp) inp.value=wkNoteLoad().cur;
 }
@@ -4757,11 +4827,14 @@ function bind(){
      ilk sekme gezintisinden sonra 8,1'e iniyordu. Görülen ilk ekran en çok
      önem verilen ekrandır. */
   relocateCards();
-  el('wkCopy')?.addEventListener('click',async()=>{
-    const b=el('wkCopy');
+  /* Kopyala düğmesi hem Bugün kartında hem Hafta sekmesinde: kart yeniden çizilince
+     düğme yenileniyor, bu yüzden dinleyici belgeye bağlı (olay devri). */
+  document.addEventListener('click',async e=>{
+    const b=e.target.closest&&e.target.closest('[data-wk-copy]'); if(!b) return;
+    const was=b.textContent;
     try{ await navigator.clipboard.writeText(weeklyText()); b.textContent='Kopyalandı'; }
-    catch{ b.textContent='kopyalanamadı — metni seçip kopyala'; }
-    setTimeout(()=>{ b.textContent='Raporu kopyala'; },2200);
+    catch{ b.textContent='Kopyalanamadı'; }
+    setTimeout(()=>{ b.textContent=was; },2200);
   });
   el('wkNote')?.addEventListener('change',e=>{
     wkNoteSave(e.target.value.trim());
@@ -5359,6 +5432,7 @@ function renderAsoChanges(){
     /* Terim listesi: ilk 5 satır görünür, kalanı açılır. */
     const row=x=>`<div class="lc-term"><b>+${esc(x.t)}</b><span>${x.n} dil</span><em class="${x.d.cls}">${esc(x.d.txt)}</em></div>`;
     const remList=[...remCount.entries()].sort((a,b)=>b[1]-a[1]);
+    const remList2=remList;
     const terms = isKw && added.length
       ? `<div class="lc-terms">${added.slice(0,5).map(row).join('')}</div>`
         +(added.length>5?`<details class="sig-more"><summary>diğer ${num(added.length-5)} terim</summary><div class="lc-terms">${added.slice(5).map(row).join('')}</div></details>`:'')
@@ -5371,6 +5445,9 @@ function renderAsoChanges(){
         <span class="tag ${ripe?'cov':'st-warn'}">${ripe?'olgun':`${days}/${LC_RIPE_DAYS} gün`}</span></div>
       <div class="kr-bar"><i style="width:${pct.toFixed(0)}%;background:${ripe?'var(--up)':'var(--amber)'}"></i></div>
       ${demandLine}${terms}${result}${relTxt}
+      ${isKw&&(addCount.size||remList2.length)?`<details class="sig-more"><summary>tüm terimler (rozet)</summary><div style="display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 8px">${
+        [...addCount.entries()].sort((a,b)=>b[1]-a[1]||(a[0]<b[0]?-1:1)).map(([t,n])=>`<span class="chip up">+${esc(t)}${n>1?` <span class="lb-sub">${n}</span>`:''}</span>`)
+        .concat(remList2.map(([t,n])=>`<span class="chip down">−${esc(t)}${n>1?` <span class="lb-sub">${n}</span>`:''}</span>`)).join('')}</div></details>`:''}
       <details class="sig-more"><summary>dil dil</summary><div style="display:grid;gap:3px;font-size:12px">${perLocale.map(x=>`<div>${x}</div>`).join('')}</div></details>
     </div>`;
   }).join('');
