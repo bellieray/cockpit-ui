@@ -1524,6 +1524,10 @@
     <!-- ================= ASO ================= -->
     <div class="view" id="v-aso" style="display:none">
       <div class="grid">
+        <!-- `v-aso`'da hiç bölge başlığı yoktu: çıpa çubuğu yalnız
+             `region-label` topluyor, yani 14 ASO kartı (içinde 2.021 satırlık
+             kelime tablosu) çıpasız kalıyordu. -->
+        <div class="c12 region-label">Kelime ve listeleme</div>
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s3) 15%,transparent);color:var(--s3)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v18M3 12h18"/></svg></span>
           <span class="kpi-name">Fırsat<br><span class="card-sub">talep var, bizde yok</span></span></div>
@@ -4686,9 +4690,16 @@ function drawWeekly(){
       <div class="wkc-sec"><b>NE OLDU</b>${w.happened.length
         ? w.happened.slice(0,2).map(x=>`<div class="wkc-li">${esc(x.t)}<small>${esc(x.s)}</small></div>`).join('')
         : '<div class="wkc-li">Gürültü tabanını aşan hareket yok — ölçek küçük, beklenen.</div>'}</div>
-      <div class="wkc-sec"><b>ÖNCELİKLİ İŞ</b>${w.next.length
-        ? `<div class="wkc-li">${esc(first(w.next[0].t))}${w.next[0].s?`<small>${esc(w.next[0].s)}</small>`:''}</div>`
-        : '<div class="wkc-li">Tetiklenen bir iş yok — bu "sorun yok" demek değil.</div>'}</div>
+      ${(()=>{
+        /* Karne kartı bu ekranda zaten `first.move`'u basıyor; burada onu
+           tekrar etmek pekiştirmiyor, ikinci okuyuşta "yeni bir şey mi?" diye
+           durduruyordu (~7 satır × 2). Bu yüzden ilk iş ATLANIYOR ve SIRADAKİ
+           gösteriliyor; hiç yoksa bölüm çizilmiyor. */
+        const rest=w.next.slice(1);
+        if(!rest.length) return '';
+        return `<div class="wkc-sec"><b>SIRADAKİ İŞ</b>`
+          + `<div class="wkc-li">${esc(first(rest[0].t))}${rest[0].s?`<small>${esc(rest[0].s)}</small>`:''}</div></div>`;
+      })()}
       <div class="wkc-act"><button class="pri" data-jump="hafta" type="button">Tam rapor →</button>
         <button class="sec" data-wk-copy type="button">Kopyala</button></div>`;
   }
@@ -5218,7 +5229,10 @@ function bind(){
 const TAB_GROUPS={
   bugun:  {t:'Bugün',  q:'Bugün ne yapmalıyım?',        views:['ozet']},
   hafta:  {t:'Hafta',  q:'Bu hafta geçen haftaya göre nasıl?', views:['hafta']},
-  buyume: {t:'Büyüme', q:'Kullanıcı geliyor mu, nereden?', views:['pazar','aso']},
+  /* Sıra DOM'a uyar: `v-aso` markup'ta `v-pazar`'dan ÖNCE geliyor. Ters
+     yazıldığında çıpa çubuğu sayfanın ikinci yarısını listeleyip ilk yarısını
+     hiç göstermiyordu — 14 ASO kartı çıpasız kalıyordu. */
+  buyume: {t:'Büyüme', q:'Kullanıcı geliyor mu, nereden?', views:['aso','pazar']},
   para:   {t:'Para',   q:'Para geliyor mu, nereden?',    views:['para']},
   urun:   {t:'Ürün',   q:'Kullanıcı ürünü kullanıyor mu?', views:['urun','yorum']},
   // Ham katalog ('veri') ÜRÜN'de değil VERİ'de: doğası "hangi ham sayılar
@@ -6762,10 +6776,17 @@ function renderSignals(){
   const sigs=signalsFor();
   const checked=`<div class="sig-checked">${num(SIG_RULES.length)} kural kontrol edildi</div>`;
   host.innerHTML = (sigs.length
-    ? sigs.map(s=>`<div class="sig">
+    /* İLK SİNYALİN GÖVDESİ AÇIK GELİR. Panelin "buraya bak" dediği tek yer
+       ne yapılacağını `<details>` arkasında tutuyordu; günde iki dakika bakan
+       kişi o dokunuşu yapmaz, yani en pahalı sorunun aksiyonu hiç okunmuyordu.
+       Geri kalanlar kapalı kalıyor — hepsini açmak listeyi yeniden duvara
+       çevirirdi. */
+    ? sigs.map((s,i)=>`<div class="sig">
         <span class="dot" style="background:${s.sev}"></span>
         <span class="txt"><span class="hd">${esc(s.hd)}</span>
-          <details class="sig-more"><summary>ayrıntı ve hamle</summary><div class="bd">${esc(s.bd)}</div></details></span>
+          ${i===0
+            ? `<div class="bd">${esc(s.bd)}</div>`
+            : `<details class="sig-more"><summary>ayrıntı ve hamle</summary><div class="bd">${esc(s.bd)}</div></details>`}</span>
         ${s.amt?`<span class="amt" style="color:${s.sev}">${esc(s.amt)}</span>`:''}
       </div>`).join('')
     : `<div class="unmeasured">
