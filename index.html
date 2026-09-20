@@ -4710,10 +4710,11 @@ function weeklyReview(){
     const A=D.assertions||[];
     const fail=A.filter(r=>r.passed===false&&r.severity!=='warn').length, warn=A.filter(r=>r.passed===false&&r.severity==='warn').length;
     const none=A.filter(r=>r.passed==null).length, okN=A.filter(r=>r.passed===true).length;
-    const dfc=(D.differential||[]).filter(r=>r.metric.endsWith(':'+APP)), dfcBad=dfc.filter(r=>Number(r.diff_pct)>0.5).length;
+    const dfc=(D.differential||[]).filter(r=>r.metric.endsWith(':'+APP)), dfcBad=dfc.filter(r=>Number(r.diff_pct)>0.5).length,
+          dfcNone=dfc.filter(r=>r.diff_pct==null).length;
     const trust=`Veri güveni: ${num(A.length)} kontrolden ${num(okN)} geçti`
       +(fail?`, ${num(fail)} KIRIK`:'')+(warn?`, ${num(warn)} uyarı (kaynağın doğası)`:'')+(none?`, ${num(none)} hiç koşmadı`:'')
-      +(dfc.length?` · kritik ${num(dfc.length)} sayı iki yoldan hesaplandı${dfcBad?`, ${num(dfcBad)} ayrışıyor`:', hepsi aynı'}`:'')
+      +(dfc.length?` · kritik ${num(dfc.length)} sayı iki yoldan hesaplandı${dfcBad?`, ${num(dfcBad)} ayrışıyor`:`, ${num(dfc.length-dfcNone)} uyuşuyor`}${dfcNone?`, ${num(dfcNone)} ölçülmedi`:''}`:'')
       +' · ayrıntı Veri sekmesinde.';
 
     const nt=wkNoteLoad(), prevNote=nt.prev;
@@ -4861,18 +4862,25 @@ function drawDifferential(){
   if(!rows.length){ host.innerHTML='<div class="empty">İkinci yol hiç koşmadı — bu bir "fark yok" değil, "bakılmadı" demek.</div>';
     el('dfcSub').textContent='koşmadı'; return; }
   const bad=rows.filter(r=>Number(r.diff_pct)>0.5);
+  /* ÜÇ DURUM: uyuştu / ayrıştı / ÖLÇÜLMEDİ. `diff_pct is null` artık "iki yol da
+     boş döndü" demek (bkz. 20260921_diff_unmeasured) — eskiden 0 yazılıyordu ve
+     hiç koşmamış bir kontrol DOĞRULANMIŞ görünüyordu. */
+  const olculmedi=rows.filter(r=>r.diff_pct==null);
   el('dfcSub').textContent=`${num(rows.length)} sayı iki bağımsız yoldan · `
-    + (bad.length?`${num(bad.length)} ayrışıyor`:'hepsi aynı')
+    + (bad.length?`${num(bad.length)} ayrışıyor`:`${num(rows.length-olculmedi.length)} uyuşuyor`)
+    + (olculmedi.length?` · ${num(olculmedi.length)} ölçülmedi`:'')
     + ` · ${agoText(new Date(rows[0].checked_at))}`;
   const fmt=v=>v==null?'ölçülmedi':(Math.abs(Number(v))<100?Number(v).toFixed(2):num(Number(v)));
   host.innerHTML=rows.map(r=>{
     const base=r.metric.split(':')[0];
-    const ok=!(Number(r.diff_pct)>0.5);
-    return `<div class="asr ${ok?'ok':'fail'}"><span class="asr-dot">${ok?'●':'✕'}</span>
+    const yok=r.diff_pct==null;
+    const ok=!yok && !(Number(r.diff_pct)>0.5);
+    const cls=yok?'none':ok?'ok':'fail';
+    return `<div class="asr ${cls}"><span class="asr-dot">${yok?'○':ok?'●':'✕'}</span>
       <span class="asr-t">${esc(DFC_LABEL[base]||base)}
         <span style="color:var(--ink-3)"> ${esc(fmt(r.value_sql))} ↔ ${esc(fmt(r.value_ts))}</span>
         ${ok?'':`<div class="asr-d">Fark %${Number(r.diff_pct).toFixed(2)} — is_current bayrağı en yüksek revizyonda olmayabilir.</div>`}</span>
-      <span class="asr-when">${ok?'aynı':'FARKLI'}</span></div>`;}).join('');
+      <span class="asr-when">${yok?'ölçülmedi':ok?'aynı':'FARKLI'}</span></div>`;}).join('');
 }
 function drawRecon(){
   const host=el('rcnList'); if(!host) return;
