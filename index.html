@@ -614,6 +614,27 @@
     font-variant-numeric:tabular-nums}
 
   /* === haftalık özet === */
+  .wk-hero-w{font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+  .wk-hero-h{font:700 20px/1.25 Manrope,sans-serif;margin:6px 0 8px}
+  .wk-hero-s{font-size:13px;line-height:1.5;color:var(--ink-2)}
+  .wk-row{padding:12px 0;border-top:1px solid var(--hair)}
+  .wk-row:first-child{border-top:0;padding-top:2px}
+  .wk-r1{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .wk-name{font:600 13.5px/1.3 Manrope,sans-serif}
+  .wk-val{font:700 20px/1 Manrope,sans-serif;font-variant-numeric:tabular-nums}
+  .wk-r2{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;font-size:12px;color:var(--ink-2)}
+  .wk-r2 .was{font-variant-numeric:tabular-nums}
+  .wk-li{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--hair);font-size:13px;line-height:1.5}
+  .wk-li:first-child{border-top:0;padding-top:2px}
+  .wk-li i{font-style:normal;flex:none;width:22px;height:22px;border-radius:50%;background:var(--brand-soft);color:var(--accent-text);
+    font:700 12px/22px Manrope,sans-serif;text-align:center}
+  .wk-li small{display:block;color:var(--ink-3);font-size:12px;margin-top:2px}
+  .wk-empty{font-size:12.5px;color:var(--ink-3);padding:2px 0}
+  .wk-prev{padding:10px 12px;border-radius:12px;background:var(--card-2);font-size:12.5px;line-height:1.5;margin-bottom:10px}
+  .wk-prev b{display:block;font-size:11px;color:var(--ink-3);margin-bottom:3px;font-weight:700}
+  .wk-copy{display:block;width:100%;margin-top:12px;min-height:44px;border:0;border-radius:12px;cursor:pointer;
+    background:var(--accent-btn-bg);color:var(--accent-btn-ink);font:700 14px/1 Manrope,sans-serif}
+  .wk-trust{margin-top:12px;font-size:11.5px;color:var(--ink-3);line-height:1.5}
   .wk-pre{margin:12px 0 0;white-space:pre-wrap;word-break:break-word;
     font:inherit;font-size:12.5px;line-height:1.55;color:var(--ink-2);
     font-variant-numeric:tabular-nums}
@@ -944,6 +965,7 @@
       <div class="nav-label">Menü</div>
       <div class="nav">
         <button class="on" data-view="bugun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Bugün</button>
+        <button data-view="hafta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Hafta</button>
         <button data-view="buyume"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Büyüme</button>
         <button data-view="para"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Para</button>
         <button data-view="urun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z"/></svg>Ürün</button>
@@ -1001,7 +1023,7 @@
       </div>
     </div>
 
-    <div class="tabs-wrap"><nav class="tabs"><button class="on" data-view="bugun">Bugün</button><button data-view="buyume">Büyüme</button><button data-view="para">Para</button><button data-view="urun">Ürün</button><button data-view="veri">Veri</button></nav></div>
+    <div class="tabs-wrap"><nav class="tabs"><button class="on" data-view="bugun">Bugün</button><button data-view="hafta">Hafta</button><button data-view="buyume">Büyüme</button><button data-view="para">Para</button><button data-view="urun">Ürün</button><button data-view="veri">Veri</button></nav></div>
 
     <!-- mobil sabit şerit: aralık seçici + bölge çıpaları. Masaüstünde gizli
          (aralık seçici orada başlıkta duruyor, sayfa da o kadar uzun değil).
@@ -1135,21 +1157,14 @@
         <div class="siglist" id="sigList"></div>
       </div>
 
-      <!-- Haftalık özet. Sahibi haftada bir derin bakış yapıyor ve o bakışın
-           çıktısı panelde KALMAMALI — "performans metriklerini alabilmek"
-           istediği şey buydu. Panodaki metin WhatsApp'a, e-postaya, bir nota
-           yapıştırılır; PDF yok, kütüphane yok, build yok. -->
+      <!-- Haftalık değerlendirme artık kendi sekmesinde (Hafta). Burada tek satır:
+           "önceki hafta ne durumdaydı, şimdi ne durumda" sorusunun cevabı bir dokunuş
+           uzakta, ama Bugün'ü uzatmıyor. -->
       <div class="card c12" id="wkCard">
         <div class="card-head">
-          <div><div class="card-title">Haftalık özet</div>
+          <div><div class="card-title">Bu hafta</div>
             <div class="card-sub" id="wkSub">–</div></div>
-          <button class="viewall" id="wkToggle" type="button">Aç</button>
-          <button class="viewall" id="wkCopy" type="button">Kopyala</button>
-        </div>
-        <div id="wkBody" hidden>
-          <pre class="wk-pre" id="wkText"></pre>
-          <input class="wk-note" id="wkNote" type="text" maxlength="160"
-                 placeholder="Bu haftanın notu — tek satır, gelecek hafta karşına çıkar">
+          <button class="viewall" data-jump="hafta" type="button">Haftalık rapor →</button>
         </div>
       </div>
 
@@ -2007,6 +2022,27 @@
          sağlam göstermek olurdu. Bu yüzden iki ayrı bölge.
          Bileşik "fırsat puanı" KASITLI OLARAK YOK: hangi girdinin sonucu
          belirlediği görünmez olur ve doğrulanamaz. -->
+    <!-- ================= HAFTA ================= -->
+    <div class="view" id="v-hafta" style="display:none">
+      <div class="grid">
+        <div class="card c12" id="wkHero"></div>
+        <div class="c12 region-label">Rakamlar</div>
+        <div class="card c12" id="wkNums"></div>
+        <div class="c12 region-label">Bu hafta ne oldu</div>
+        <div class="card c12" id="wkHappened"></div>
+        <div class="c12 region-label">Gelecek hafta</div>
+        <div class="card c12" id="wkNext"></div>
+        <div class="c12 region-label">Not defteri</div>
+        <div class="card c12" id="wkNotes">
+          <div id="wkPrevNote"></div>
+          <input class="wk-note" id="wkNote" type="text" maxlength="160"
+                 placeholder="Bu haftanın notu — tek satır, gelecek hafta karşına çıkar">
+          <button class="wk-copy" id="wkCopy" type="button">Raporu kopyala</button>
+          <div class="wk-trust" id="wkTrust"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="view" id="v-pazar" style="display:none">
       <div class="grid">
         <!-- BÜYÜME HAMLESİ — pazarlamacının iki sorusu: indirme NEREDEN geliyor
@@ -4235,77 +4271,191 @@ addEventListener('hashchange',()=>{ SH_OPEN=null; drawSheet(); });
    haftanın notunu geri getiriyor — karar → sonuç → yeni karar halkasının tek
    veri bağı; onsuz panel karar defteri değil, sayı panosu kalır. */
 const WK_NOTE_KEY=()=>'wknote_'+APP;
+/* HAFTALIK DEĞERLENDİRME.
+   Eski hâli ==== çizgili düz metindi ve içeriği süreçle doluydu ("8 kural kontrol
+   edildi", "ölçülmüyorlar", "geçen not"); haftanın PERFORMANSINI söylemiyordu.
+   Bir ürün/pazarlama yöneticisinin haftalık sorusu: bu hafta geçen haftaya göre
+   nasıl, ne değişti, gelecek hafta ne yapılacak. Bu yüzden:
+     · SABİT pencere: son 7 gün vs önceki 7 gün (aralık seçiciden bağımsız),
+     · tek veri nesnesi (`weeklyReview`) hem ekranı hem kopyalanan raporu üretir —
+       ikisi ayrışamaz,
+     · her satır kendi gürültü testiyle (sayımda cur+prev, oranda Wilson); testi
+       olmayan satır "test yok" der, yön iddia etmez,
+     · geçen haftayla kıyaslanamayan (önceki nokta yok) satır bunu yazar. */
+function withWeek(fn){ const r=RANGE; RANGE=7; try{ return fn(); } finally{ RANGE=r; } }
+function stockAgo(metric,daysAgo=7){
+  const pts=stockSeriesFor(metric); if(!pts.length) return {now:null,before:null};
+  const last=pts[pts.length-1];
+  const t=new Date(last.day+'T00:00:00Z').getTime()-daysAgo*864e5;
+  const b=[...pts].reverse().find(p=>new Date(p.day+'T00:00:00Z').getTime()<=t);
+  return {now:Number(last.v),nowDay:last.day,before:b?Number(b.v):null,beforeDay:b?b.day:null};
+}
+function weeklyReview(){
+  return withWeek(()=>{
+    const a=(D.apps||[]).find(x=>x.slug===APP);
+    const days=storeDays(), prev=storePrevDays(), cal=rangeDays();
+    const sf=storeFunnel(days), sfp=storeFunnel(prev);
+    const okPrev=days.length>0 && prev.length===days.length;
+    const cur={imp:sumMetric(days,'imp'),pv:sumMetric(days,'pv'),dl:sumMetric(days,'dl')};
+    const old={imp:sumMetric(prev,'imp'),pv:sumMetric(prev,'pv'),dl:sumMetric(prev,'dl')};
+    const rows=[];
+    const R=(o)=>rows.push(o);
+    const cnt=(key,name,c,o)=>R({key,name,kind:'count',c,o:okPrev?o:null,conf:okPrev?confCount(c,o):null,
+      fmt:v=>num(v),note:okPrev?'':'önceki 7 gün eksik'});
+    cnt('imp','Mağaza gösterimi',cur.imp,old.imp);
+    cnt('pv','Ürün sayfası',cur.pv,old.pv);
+    cnt('dl','İndirme (tüm kaynaklar)',cur.dl,old.dl);
+    R({key:'conv',name:'Mağaza dönüşümü',kind:'ratio',
+       c:sf.imp?sf.dl/sf.imp:null,o:okPrev&&sfp.imp?sfp.dl/sfp.imp:null,
+       conf:okPrev&&sf.imp&&sfp.imp?confRatio(sf.dl,sf.imp,sfp.dl,sfp.imp):null,
+       fmt:v=>'%'+(v*100).toFixed(1).replace('.',','),note:'gösterimden indirmeye, yalnız mağaza kaynağı'});
+    const nu=stockAgo('app_export_new_users_7d');
+    R({key:'nu',name:'Yeni kullanıcı',kind:'count',c:nu.now,o:nu.before,
+       conf:nu.before!=null&&nu.now!=null?confCount(nu.now,nu.before):null,fmt:v=>num(v),note:'7 günlük pencere, kendi backend'});
+    const done=allDays().filter(d=>d<todayUtc());
+    const adNow=sumMetric(done.slice(-7),'rev'), adOld=sumMetric(done.slice(-14,-7),'rev');
+    R({key:'ad',name:'Reklam geliri',kind:'money',c:done.length>=7?adNow:null,o:done.length>=14?adOld:null,conf:null,
+       fmt:v=>money2(v),note:'bugün kısmi, dışarıda'});
+    const mrr=stockAgo('rc_mrr'), sub=stockAgo('rc_active_subscriptions');
+    R({key:'mrr',name:'MRR',kind:'money',c:mrr.now,o:mrr.before,conf:null,fmt:v=>money2(v),note:'anlık kesit'});
+    R({key:'sub',name:'Aktif abone',kind:'count',c:sub.now,o:sub.before,conf:null,fmt:v=>num(v),note:'anlık kesit'});
+    const rn=stockAgo('app_export_retention_next_day_retained'), re=stockAgo('app_export_retention_next_day_eligible');
+    R({key:'d1',name:'Ertesi gün tutma',kind:'ratio',
+       c:rn.now!=null&&re.now?rn.now/re.now:null,o:rn.before!=null&&re.before?rn.before/re.before:null,
+       conf:rn.before!=null&&re.before?confRatio(rn.now,re.now,rn.before,re.before):null,
+       fmt:v=>'%'+(v*100).toFixed(0),note:rn.now!=null?`${num(rn.now)}/${num(re.now)} kullanıcı`:''});
+    const an=stockAgo('app_export_activated_users'), tn=stockAgo('app_export_total_users');
+    R({key:'act',name:'Aktivasyon',kind:'ratio',
+       c:an.now!=null&&tn.now?an.now/tn.now:null,o:an.before!=null&&tn.before?an.before/tn.before:null,
+       conf:an.before!=null&&tn.before?confRatio(an.now,tn.now,an.before,tn.before):null,
+       fmt:v=>'%'+(v*100).toFixed(0),note:an.now!=null?`${num(an.now)}/${num(tn.now)} kayıtlı`:''});
+    rows.forEach(r=>{
+      if(r.c==null){ r.state='none'; return; }
+      if(r.o==null){ r.state='noprev'; return; }
+      const d=r.c-r.o;
+      r.d=d; r.dir=d>0?'up':d<0?'down':'flat';
+      r.sig=r.conf?r.conf.dot:'–';                  /* ● ◐ ○ ya da test yok */
+      r.pct=r.kind==='ratio'?null:(r.o?Math.round(d/r.o*100):null);
+      r.state='ok';
+    });
+
+    /* Karne: en zayıf halka + hamle (aynı 7 günlük pencerede). */
+    const kn=karneStages();
+
+    /* Başlık: büyüme cümlesi + en zayıf halka. Test yoksa yön iddia edilmez. */
+    const dl=rows.find(r=>r.key==='dl');
+    let growth;
+    if(dl.state!=='ok') growth='İndirme karşılaştırılamadı';
+    else if(dl.sig==='●') growth= dl.d>0 ? 'İndirme arttı' : 'İndirme düştü';
+    else if(dl.sig==='◐') growth= dl.d>0 ? 'İndirme biraz arttı' : 'İndirme biraz düştü';
+    else growth='İndirme yerinde';
+    const weak=kn.first;
+    const headline=growth+(weak?`, en zayıf halka ${weak.name.toLowerCase()}.`:'.');
+
+    /* Ne oldu: kaynak ve ülke hareketleri (yalnız gürültü ÜSTÜ) + olaylar. */
+    const happened=[];
+    if(okPrev){
+      const so=new Map(sourceRows(prev).map(r=>[r.name,r]));
+      sourceRows(days).map(r=>({n:r.name,c:r.dl,o:so.get(r.name)?so.get(r.name).dl:0}))
+        .filter(x=>confCount(x.c,x.o).dot==='●')
+        .sort((x,y)=>Math.abs(y.c-y.o)-Math.abs(x.c-x.o)).slice(0,2)
+        .forEach(x=>happened.push({t:`${x.n}: indirme ${num(x.o)} → ${num(x.c)}`,s:`${x.c>x.o?'arttı':'düştü'} · kaynak bazında gürültü üstü`}));
+      const co=new Map(countryRows(prev).map(r=>[r.cc,r]));
+      countryRows(days).map(r=>({n:r.cc,c:r.dl,o:co.get(r.cc)?co.get(r.cc).dl:0}))
+        .filter(x=>confCount(x.c,x.o).dot==='●')
+        .sort((x,y)=>Math.abs(y.c-y.o)-Math.abs(x.c-x.o)).slice(0,2)
+        .forEach(x=>happened.push({t:`${FLAG[x.n]||''} ${String(x.n).toUpperCase()}: indirme ${num(x.o)} → ${num(x.c)}`.trim(),s:`${x.c>x.o?'arttı':'düştü'} · ülke bazında gürültü üstü`}));
+    }
+    const from=cal[0], to=cal[cal.length-1];
+    (D.releaseEffect||[]).filter(r=>r.app_slug===APP&&r.released_on>=from&&r.released_on<=to)
+      .forEach(r=>happened.push({t:`Sürüm ${r.version} yayına geçti`,s:dShort(r.released_on)+' · sayıdaki hareketle aynı döneme denk gelir'}));
+    const lc=(D.listingChanges||[]).filter(r=>r.slug===APP&&r.noticed_on>=from&&r.noticed_on<=to);
+    if(lc.length){ const f=[...new Set(lc.map(r=>r.field))].join(', '); happened.push({t:`Listeleme değişti: ${f}`,s:`${dShort(lc[0].noticed_on)} · ${new Set(lc.map(r=>r.locale)).size} dil — Büyüme › Listeleme denemeleri`}); }
+
+    /* Gelecek hafta: Karne hamlesi + üst sinyaller + senden beklenen. */
+    const next=[];
+    if(weak&&weak.move) next.push({t:`${weak.name}: ${weak.move}`,s:weak.gain||''});
+    signalsFor().slice(0,2).forEach(x=>{ if(!(weak&&/ödeme|ödemedi/i.test(x.hd)&&weak.key==='gelir')) next.push({t:x.hd,s:x.amt||''}); });
+    (D.blockers||[]).filter(b=>b.slug===APP&&b.urgency==='yapilacak').slice(0,2)
+      .forEach(b=>next.push({t:`Senden: ${b.source} — ${b.action}`,s:'bu ölçü gelmeden ilgili karar kör'}));
+
+    /* Veri güveni: tek satır. */
+    const A=D.assertions||[];
+    const fail=A.filter(r=>r.passed===false&&r.severity!=='warn').length, warn=A.filter(r=>r.passed===false&&r.severity==='warn').length;
+    const none=A.filter(r=>r.passed==null).length, okN=A.filter(r=>r.passed===true).length;
+    const dfc=(D.differential||[]).filter(r=>r.metric.endsWith(':'+APP)), dfcBad=dfc.filter(r=>Number(r.diff_pct)>0.5).length;
+    const trust=`Veri güveni: ${num(A.length)} kontrolden ${num(okN)} geçti`
+      +(fail?`, ${num(fail)} KIRIK`:'')+(warn?`, ${num(warn)} uyarı (kaynağın doğası)`:'')+(none?`, ${num(none)} hiç koşmadı`:'')
+      +(dfc.length?` · kritik ${num(dfc.length)} sayı iki yoldan hesaplandı${dfcBad?`, ${num(dfcBad)} ayrışıyor`:', hepsi aynı'}`:'')
+      +' · ayrıntı Veri sekmesinde.';
+
+    let prevNote=''; try{ prevNote=localStorage.getItem(WK_NOTE_KEY())||''; }catch{}
+    return {name:a?.name||APP,win:days.length?`${dShort(days[0])} – ${dShort(days[days.length-1])}`:'–',
+      prevWin:prev.length?`${dShort(prev[0])} – ${dShort(prev[prev.length-1])}`:null,
+      storeWin:storeWindowNote(),headline,growth,weak,rows,happened,next,trust,prevNote,okPrev};
+  });
+}
+function wkRowDelta(r){
+  if(r.state==='none') return {chip:'<span class="chip flat">ölçülmedi</span>',was:''};
+  if(r.state==='noprev') return {chip:'<span class="chip flat">önceki yok</span>',was:''};
+  const sign=r.d>0?'+':'−';
+  const mag = r.kind==='ratio' ? Math.abs(r.d*100).toFixed(1).replace('.',',')+' puan'
+            : r.kind==='money' ? money2(Math.abs(r.d))
+            : r.pct!=null ? '%'+Math.abs(r.pct) : num(Math.abs(r.d));
+  const arrow=r.d>0?'▲':r.d<0?'▼':'≈';
+  const noise = r.sig==='○', test = r.sig==='–';
+  const cls = noise||r.d===0 ? 'flat' : r.d>0 ? 'up' : 'down';
+  const why = test?'test yok':noise?'gürültü içinde':r.sig==='◐'?'sınırda':'gürültü üstü';
+  const chip = r.d===0 ? '<span class="chip flat">≈ aynı</span>'
+             : `<span class="chip ${cls}">${arrow} ${sign}${mag}</span>`;
+  return {chip,why,was:r.fmt(r.o)};
+}
 function weeklyText(){
-  const a=(D.apps||[]).find(x=>x.slug===APP);
-  const days=rangeDays();   /* olaylar TAKVİM penceresinde: 18 Eyl'deki bir sürüm mağaza verisi 17'ye kadar diye düşmemeli */
-  const L=[];
-  L.push(`HAFTALIK ÖZET — ${a?.name||APP}`);
-  L.push(`${LAST_SPAN} · karşılaştırma: önceki eşit dönem`);
-  const swn=storeWindowNote(); if(swn) L.push(swn);
-  L.push('='.repeat(46));
-
-  const sigs=signalsFor();
-  L.push('', `1) SİNYALLER (${SIG_RULES.length} kural kontrol edildi)`);
-  if(sigs.length) sigs.slice(0,5).forEach(x=>L.push(`   • ${x.hd}${x.amt?` — ${x.amt}`:''}`));
-  else L.push('   Tetiklenen eşik yok. "Sorun yok" demek DEĞİL: kurallar ya hacim');
-  if(!sigs.length) L.push('   eşiğinin altında kaldı ya hiçbiri tetiklenmedi.');
-
-  // 2) en büyük değişimler — yalnız gürültü ÜSTÜ olanlar
-  const now=countryRows(storeDays()), prev=countryRows(storePrevDays());
-  const sum=(r,k)=>r.reduce((x,o)=>x+(o[k]||0),0);
-  const cand=[['Gösterim','imp'],['Ürün sayfası','pv'],['İndirme','dl']]
-    .map(([t,k])=>{const c=sum(now,k),p=sum(prev,k);return {t,c,p,conf:confCount(c,p),d:c-p};})
-    .filter(x=>x.p>0 && x.conf.dot!=='○')
-    .sort((x,y)=>Math.abs(y.d)-Math.abs(x.d)).slice(0,3);
-  L.push('', '2) EN BÜYÜK DEĞİŞİMLER (gürültü filtreli)');
-  if(cand.length) cand.forEach(x=>L.push(`   • ${x.t}: ${num(x.p)} → ${num(x.c)} (${x.d>=0?'+':'−'}${num(Math.abs(x.d))}, ${x.conf.label})`));
-  else L.push('   Gürültü tabanının üstüne çıkan değişim yok — ölçek küçük, bu beklenen.');
-
-  // 3) değişiklikler
-  const from=days[0], to=days[days.length-1];
-  const ev=[];
-  (D.releaseEffect||[]).filter(r=>r.app_slug===APP&&r.released_on>=from&&r.released_on<=to)
-    .forEach(r=>ev.push(`${r.released_on} — sürüm ${r.version} yayında`));
-  const lc=(D.listingChanges||[]).filter(r=>r.slug===APP&&r.noticed_on>=from&&r.noticed_on<=to);
-  if(lc.length) ev.push(`${lc[0].noticed_on} — listeleme değişikliği (${lc.length} dil)`);
-  L.push('', '3) BU DÖNEMDEKİ DEĞİŞİKLİKLER');
-  if(ev.length) ev.forEach(x=>L.push('   • '+x)); else L.push('   Kayıtlı sürüm ya da listeleme değişikliği yok.');
-
-  // 4) ölçülmüyorlar
-  const todo=(D.blockers||[]).filter(b=>b.slug===APP&&b.urgency==='yapilacak');
-  const stale=(D.seriesFreshness||[]).filter(r=>(r.app_slug===APP)&&r.freshness==='BAYAT');
-  L.push('', '4) ÖLÇÜLMÜYORLAR — bu haftanın kararına giremeyenler');
-  todo.forEach(b=>L.push(`   • ${b.source}: ${b.action}`));
-  stale.forEach(r=>L.push(`   • ${r.source}: veri ${r.days_behind} gündür akmıyor`));
-  if(!todo.length && !stale.length) L.push('   Yok — tüm etkin kaynaklar kendi bütçesi içinde.');
-
-  // Değişmezler özete GİRER: haftalık bakışın ilk sorusu "bu sayılara
-  // güvenebilir miyim" olmalı, son sorusu değil.
-  const asrFail=(D.assertions||[]).filter(r=>r.passed===false&&r.severity!=='warn');
-  const asrNone=(D.assertions||[]).filter(r=>r.passed==null);
-  const dfc=(D.differential||[]).filter(r=>r.metric.endsWith(':'+APP));
-  const dfcBad=dfc.filter(r=>Number(r.diff_pct)>0.5);
-  L.push('', `5) DOĞRULUK (${num((D.assertions||[]).length)} değişmez · ${num(dfc.length)} sayı iki yoldan hesaplandı)`);
-  if(dfcBad.length) dfcBad.forEach(r=>L.push(`   ✕ ${r.metric.split(':')[0]}: iki yol ayrışıyor (%${Number(r.diff_pct).toFixed(2)})`));
-  else if(dfc.length) L.push('   İkinci yol hesabı: hepsi aynı.');
-  else L.push('   ○ İkinci yol hiç koşmadı.');
-  const asrWarn=(D.assertions||[]).filter(r=>r.passed===false&&r.severity==='warn');
-  if(asrFail.length) asrFail.forEach(r=>L.push(`   ✕ ${r.title||r.key}`));
-  if(asrWarn.length) asrWarn.forEach(r=>L.push(`   ▲ ${r.title||r.key} (kaynağın doğası, izleniyor)`));
-  if(asrNone.length) L.push(`   ○ ${num(asrNone.length)} değişmez hiç koşmadı`);
-  if(!asrFail.length && !asrWarn.length && !asrNone.length) L.push('   Hepsi geçti.');
-
-  // 5/6) not halkası
-  let prevNote=''; try{ prevNote=localStorage.getItem(WK_NOTE_KEY())||''; }catch{}
-  L.push('', '6) GEÇEN NOT');
-  L.push(prevNote ? `   "${prevNote}"` : '   Yok — bu haftanın notunu aşağıya yaz, gelecek hafta burada çıkar.');
+  const w=weeklyReview(), L=[];
+  L.push(`${w.name} — hafta ${w.win}${w.prevWin?` (önceki: ${w.prevWin})`:''}`);
+  L.push(w.headline);
+  L.push('','RAKAMLAR');
+  w.rows.forEach(r=>{
+    if(r.state==='none') return L.push(`• ${r.name}: ölçülmedi`);
+    if(r.state==='noprev') return L.push(`• ${r.name}: ${r.fmt(r.c)} (önceki dönem yok)`);
+    const d=wkRowDelta(r);
+    L.push(`• ${r.name}: ${r.fmt(r.o)} → ${r.fmt(r.c)} (${d.chip.replace(/<[^>]+>/g,'')}${d.why?`, ${d.why}`:''})`);
+  });
+  L.push('','BU HAFTA NE OLDU');
+  if(w.happened.length) w.happened.forEach(x=>L.push(`• ${x.t} — ${x.s}`));
+  else L.push('• Gürültü tabanını aşan hareket yok (ölçek küçük, beklenen).');
+  L.push('','GELECEK HAFTA');
+  if(w.next.length) w.next.forEach((x,i)=>L.push(`${i+1}. ${x.t}${x.s?` (${x.s})`:''}`));
+  else L.push('• Tetiklenen bir iş yok — bu "sorun yok" demek değil, kurallar eşiğin altında kaldı.');
+  if(w.prevNote) L.push('',`GEÇEN NOT: "${w.prevNote}"`);
+  L.push('',w.trust);
   return L.join('\n');
 }
 function drawWeekly(){
-  const box=el('wkText'); if(!box) return;
-  box.textContent=weeklyText();
-  const sigN=signalsFor().length;
-  el('wkSub').textContent=`${LAST_SPAN} · ${num(sigN)} sinyal · ${SIG_RULES.length} kural · panoya kopyalanabilir`;
+  const w=weeklyReview();
+  /* Bugün'deki tek satırlık kart */
+  const sub=el('wkSub'); if(sub) sub.textContent=`${w.headline} · ${w.win}`;
+  const hero=el('wkHero'); if(!hero) return;
+  const dl=w.rows.find(r=>r.key==='dl');
+  const dlLine = dl && dl.state==='ok' ? `İndirme ${num(dl.o)} → ${num(dl.c)}` : '';
+  const weakLine = w.weak ? ` · ${w.weak.name} ${w.weak.valTxt} (referans %${Math.round(w.weak.ref*100)})` : '';
+  hero.innerHTML=`<div class="wk-hero-w">${esc(w.win)}${w.prevWin?` · önceki: ${esc(w.prevWin)}`:' · önceki hafta yok'}</div>
+    <div class="wk-hero-h">${esc(w.headline)}</div>
+    <div class="wk-hero-s">${esc(dlLine+weakLine)}${w.storeWin?`<br><span style="color:var(--ink-3)">${esc(w.storeWin)}</span>`:''}</div>`;
+  el('wkNums').innerHTML=w.rows.map(r=>{
+    const d=wkRowDelta(r);
+    return `<div class="wk-row"><div class="wk-r1"><span class="wk-name">${esc(r.name)}</span><span class="wk-val">${r.c==null?'–':esc(r.fmt(r.c))}</span></div>
+      <div class="wk-r2"><span>${d.chip}${d.why?` <span style="color:var(--ink-3)">${esc(d.why)}</span>`:''}</span><span class="was">${d.was?`önceki ${esc(d.was)}`:''}</span></div>
+      ${r.note?`<div class="wk-r2" style="margin-top:2px;color:var(--ink-3)">${esc(r.note)}</div>`:''}</div>`;
+  }).join('');
+  el('wkHappened').innerHTML=w.happened.length
+    ? w.happened.map((x,i)=>`<div class="wk-li"><i>${i+1}</i><div>${esc(x.t)}<small>${esc(x.s)}</small></div></div>`).join('')
+    : `<div class="wk-empty">Gürültü tabanını aşan hareket yok — ölçek küçük, bu beklenen. "Değişmedi" demek değil, "ölçülebilir değişim yok" demek.</div>`;
+  el('wkNext').innerHTML=w.next.length
+    ? w.next.map((x,i)=>`<div class="wk-li"><i>${i+1}</i><div>${esc(x.t)}${x.s?`<small>${esc(x.s)}</small>`:''}</div></div>`).join('')
+    : `<div class="wk-empty">Tetiklenen bir iş yok. Bu "sorun yok" demek değil: kurallar eşiğin altında kaldı.</div>`;
+  el('wkPrevNote').innerHTML=w.prevNote?`<div class="wk-prev"><b>GEÇEN NOTUN</b>${esc(w.prevNote)}</div>`:'';
+  el('wkTrust').textContent=w.trust;
   const inp=el('wkNote');
   if(inp && document.activeElement!==inp){
     try{ inp.value=localStorage.getItem(WK_NOTE_KEY())||''; }catch{}
@@ -4551,15 +4701,11 @@ function bind(){
      ilk sekme gezintisinden sonra 8,1'e iniyordu. Görülen ilk ekran en çok
      önem verilen ekrandır. */
   relocateCards();
-  el('wkToggle')?.addEventListener('click',()=>{
-    const b=el('wkBody'); b.hidden=!b.hidden;
-    el('wkToggle').textContent=b.hidden?'Aç':'Kapat';
-  });
   el('wkCopy')?.addEventListener('click',async()=>{
     const b=el('wkCopy');
-    try{ await navigator.clipboard.writeText(weeklyText()); b.textContent='kopyalandı'; }
+    try{ await navigator.clipboard.writeText(weeklyText()); b.textContent='Kopyalandı'; }
     catch{ b.textContent='kopyalanamadı — metni seçip kopyala'; }
-    setTimeout(()=>{ b.textContent='Kopyala'; },2200);
+    setTimeout(()=>{ b.textContent='Raporu kopyala'; },2200);
   });
   el('wkNote')?.addEventListener('change',e=>{
     try{ localStorage.setItem(WK_NOTE_KEY(), e.target.value.trim()); }catch{}
@@ -4694,6 +4840,7 @@ function bind(){
    paneli tek seferde yeniden yazmak olurdu. */
 const TAB_GROUPS={
   bugun:  {t:'Bugün',  q:'Bugün ne yapmalıyım?',        views:['ozet']},
+  hafta:  {t:'Hafta',  q:'Bu hafta geçen haftaya göre nasıl?', views:['hafta']},
   buyume: {t:'Büyüme', q:'Kullanıcı geliyor mu, nereden?', views:['pazar','aso']},
   para:   {t:'Para',   q:'Para geliyor mu, nereden?',    views:['para']},
   urun:   {t:'Ürün',   q:'Kullanıcı ürünü kullanıyor mu?', views:['urun','yorum']},
@@ -4702,14 +4849,14 @@ const TAB_GROUPS={
   // başına 53 ekran ediyordu ve kararı gömüyordu.
   veri:   {t:'Veri',   q:'Sayılara güvenebilir miyim?',  views:['saglik','veri','portfoy']},
 };
-const ALL_VIEWS=["ozet","portfoy","para","pazar","aso","urun","veri","yorum","saglik"];
-const RENDERERS={aso:()=>renderAso(),portfoy:()=>renderPortfoy(),para:()=>renderPara(),
+const ALL_VIEWS=["ozet","hafta","portfoy","para","pazar","aso","urun","veri","yorum","saglik"];
+const RENDERERS={hafta:()=>drawWeekly(),aso:()=>renderAso(),portfoy:()=>renderPortfoy(),para:()=>renderPara(),
   pazar:()=>renderPazar(),urun:()=>renderUrun(),veri:()=>renderVeri(),
   yorum:()=>renderYorum(),saglik:()=>renderSaglik()};
 /* Aralık seçici TÜM sekmeleri etkiler — tek istisna Veri: konektör durumu
    anlıktır, portföy de kendi tüm geçmişini gösterir. Orada seçici soluklaşıp
    nedenini yazıyor; gizlemek "neden yok" sorusunu cevapsız bırakırdı. */
-const RANGE_FREE_TABS=new Set(['veri']);
+const RANGE_FREE_TABS=new Set(['veri','hafta']);
 let VIEW = "bugun";
 function visibleViews(){ return (TAB_GROUPS[VIEW]||TAB_GROUPS.bugun).views; }
 /* Özet'te tekrar eden kartlar kendi sekmelerine TAŞINIR (silinmez).
@@ -4750,7 +4897,7 @@ function showView(v){
   document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on', b.dataset.view===v));
   document.querySelectorAll('.seg,#rangeLabel').forEach(n=>{
     n.classList.toggle('range-muted', RANGE_FREE_TABS.has(v));
-    n.title = RANGE_FREE_TABS.has(v) ? 'Bu sekme aralıktan bağımsız: konektör durumu anlık, portföy kendi tüm geçmişini gösteriyor.' : '';
+    n.title = v==='hafta' ? 'Bu sekme hep son 7 gün ile önceki 7 günü karşılaştırır; aralık seçimi burada geçerli değil.' : RANGE_FREE_TABS.has(v) ? 'Bu sekme aralıktan bağımsız: konektör durumu anlık, portföy kendi tüm geçmişini gösteriyor.' : '';
   });
   drawCrumb();
   TAB_GROUPS[v].views.forEach(k=>RENDERERS[k]?.());
