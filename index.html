@@ -6506,6 +6506,11 @@ function storeStatus(app=APP){
   if(!w||!w.enabled||w.never_measured) return 'bilinmiyor';
   return isPrelaunch(app) ? 'pre' : 'live';
 }
+/* `local:true` = yalnız SEÇİLİ uygulamada koşabilen kuraldan geldi (ikisi de
+   APP'e bağlı global pencere okuyor: `storeDays()` ve panel geneli değişmezler).
+   Portföy sütunu bunları SAYMAZ — 8 kuralla puanlanmış bir satırı 6 kuralla
+   puanlanmış satırların yanına koyup sıralamak, sayıyı karşılaştırılamaz yapar
+   ve hiçbir yer bunu söylemiyordu. */
 function signalsFor(app=APP){
   const out=[];
   // `tier` ŞART: sıralama tek bir sayı olamaz çünkü sinyaller FARKLI
@@ -6523,7 +6528,7 @@ function signalsFor(app=APP){
     const a=adAgg(fmtRows.filter(r=>r.format===f));
     // Kapı: en az 50 eşleşmiş istek. Altında "show rate" istatistiksel
     // olarak anlamsız — tek bir kullanıcının davranışı oranı uçurur.
-    if(a.matched<50 || a.showRate==null || a.showRate>=0.5) return;
+    if(a.matched<thr('signal.ad_min_matched',50) || a.showRate==null || a.showRate>=thr('signal.ad_show_rate_floor',0.5)) return;
     // İKİ AYRI ARIZA, aynı orandan çıkıyor ama aksiyonları zıt — bu yüzden
     // ayrı sinyaller:
     //
@@ -6589,7 +6594,7 @@ function signalsFor(app=APP){
     // Kapı: en az 50 gösterim VE toplamın en az %5'i. İkisi birden şart —
     // yalnız mutlak eşik küçük hesapta her ülkeyi, yalnız oransal eşik
     // büyük hesapta hiçbirini yakalar.
-    if(c.imp<50 || c.imp < totImp*0.05) return;
+    if(c.imp<thr('signal.country_min_impressions',50) || c.imp < totImp*thr('signal.country_min_share',0.05)) return;
     if(c.pv===0){
       add(2, SIG.AMBER, c.imp,
         `${FLAG[cc]||'🏳️'} ${String(cc).toUpperCase()}: ${num(c.imp)} gösterim, 0 ürün sayfası`,
@@ -6607,7 +6612,7 @@ function signalsFor(app=APP){
     const n=conv.reduce((s,r)=>s+Number(r.num||0),0);
     const d=conv.reduce((s,r)=>s+Number(r.den||0),0);
     // Kapı: en az 50 yeni müşteri. Altında "%0 dönüşüm" normal.
-    if(d>=50 && n===0){
+    if(d>=thr('signal.pay_min_customers',50) && n===0){
       const lag=payCohortLag(app), subs=stockValue('rc_active_subscriptions')||0, mrr=stockValue('rc_mrr');
       if(lag&&lag.grew){
         /* Oran %0 ama abonelik ARTIYOR: bu bir "kimse ödemiyor" alarmı değil, gecikmeli
@@ -6689,6 +6694,7 @@ function signalsFor(app=APP){
      KARAR yüzeyinde yoktu — bir sayıya güvenilemeyeceğini o sayıya bakarken
      bilmen gerekir, iki sekme öteden değil. 13. ilke: panel kendi sağlığını
      ölçer; ölçüp söylememek yarısı. */
+  const _localFrom=out.length;
   if(app===APP){
     const asrFail=(D.assertions||[]).filter(r=>r.passed===false&&r.severity!=='warn');
     const asrNone=(D.assertions||[]).filter(r=>r.passed==null);
@@ -6755,6 +6761,9 @@ function signalsFor(app=APP){
       `Son ${num(rr.n30)} yazılı yorumun ortalaması genel puanın altında. Yeni bir sürüm bir şeyi bozmuş olabilir.`, null);
   }
 
+  // `_localFrom` sonrası eklenenler yalnız seçili uygulamada koşabilen
+  // kurallardan geldi; portföy onları saymasın diye işaretleniyor.
+  for(let i=_localFrom;i<out.length;i++) out[i].local=true;
   return out.sort((a,b)=> a.tier-b.tier || b.rank-a.rank);
 }
 
@@ -6777,8 +6786,12 @@ function portfolioRow(a){
     .reduce((s,r)=>s+Number(r.v||0),0);
   const dauPts=stockSeriesFor('rc_active_customers_1d',slug);
   const sig=signalsFor(slug);
+  /* Portföy KARŞILAŞTIRMALI bir tablo: sütun her satırda AYNI kural kümesinden
+     gelmeli. İki kural yalnız seçili uygulamada koşabiliyor (APP'e bağlı global
+     pencere okuyorlar), o yüzden sayımdan düşüyorlar. */
+  const portableSig=sig.filter(x=>!x.local).length;
   return {
-    slug, name:a.name,
+    slug, name:a.name, portableSig,
     pre:isPrelaunch(slug),
     rev:agg.earn, wasted,
     dl,
@@ -6793,7 +6806,7 @@ function portfolioRow(a){
 function renderPortfoy(){
   const rows=(D.apps||[]).map(portfolioRow);
   const key=el('pfSort')?.value||'wasted';
-  const val=r=>({wasted:r.wasted, rev:r.rev, dau:r.dau||0, users:r.users||0, sig:r.sig.length}[key]||0);
+  const val=r=>({wasted:r.wasted, rev:r.rev, dau:r.dau||0, users:r.users||0, sig:r.portableSig}[key]||0);
   rows.sort((x,y)=>val(y)-val(x));
 
   el('pfTable').innerHTML=
@@ -6808,7 +6821,7 @@ function renderPortfoy(){
         <td class="num sec" data-l="günlük aktif">${r.dau!=null?num(r.dau):'–'}</td>
         <td class="num sec" data-l="kullanıcı">${r.users!=null?num(r.users):'–'}</td>
         <td class="num sec" data-l="puan">${r.rating!=null?r.rating.toFixed(2):'–'}</td>
-        <td class="num sec ${r.sigMoney?'down':''}" data-l="sinyal">${r.sig.length?`${r.sig.length}${r.sigMoney?` (${r.sigMoney} para)`:''}`:'–'}</td>
+        <td class="num sec ${r.sigMoney?'down':''}" data-l="sinyal" title="Portföy sütunu YALNIZ her uygulamada koşabilen kuralları sayar; seçili uygulamanın kendi ekranında iki kural daha var.">${r.portableSig?`${r.portableSig}${r.sigMoney?` (${r.sigMoney} para)`:''}`:'–'}</td>
       </tr>`).join('')
     + `</tbody>`;
 
