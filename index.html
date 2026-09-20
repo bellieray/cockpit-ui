@@ -617,6 +617,8 @@
   .asr.warn .asr-dot{color:var(--amber)}
   .asr.none .asr-dot{color:var(--ink-3)}
   .asr-t{flex:1;min-width:0;font-size:13px}
+  .asr-obs{font-size:11.5px;color:var(--ink-2);margin-top:3px;font-variant-numeric:tabular-nums}
+  .asr-obs.muted{color:var(--ink-3);opacity:.7}
   .asr-d{font-size:11.5px;color:var(--ink-3);margin-top:3px;line-height:1.45}
   .asr-when{font-size:11px;color:var(--ink-3);white-space:nowrap;
     font-variant-numeric:tabular-nums}
@@ -678,6 +680,12 @@
   .ai-f.olumlu .ai-sev{background:var(--ok-soft);color:var(--ok-ink)}
   .ai-f-b{font-size:12.5px;line-height:1.5;color:var(--ink-2);margin-top:4px}
   .ai-f-b b{color:var(--ink-3);font-weight:700;font-size:11px}
+  /* Dokunma hedefi 44pt: `summary` varsayılanda ~18px ve telefonda ıskalanır. */
+  .ai-f-d>summary{list-style:none;cursor:pointer;font-size:11.5px;color:var(--ink-3);
+    min-height:44px;display:flex;align-items:center;gap:5px}
+  .ai-f-d>summary::-webkit-details-marker{display:none}
+  .ai-f-d>summary::before{content:"▸";font-size:10px}
+  .ai-f-d[open]>summary::before{content:"▾"}
   .ai-gap{font-size:12.5px;line-height:1.5;padding:6px 0;border-top:1px solid var(--hair)}
   .ai-gap:first-of-type{border-top:0}
   .ai-gap small{display:block;color:var(--ink-3);font-size:11.5px}
@@ -685,13 +693,18 @@
     font-size:12.5px;line-height:1.5;color:var(--ink-2)}
   .ai-off b{display:block;margin-bottom:3px;color:var(--ink)}
   /* Enstrümantasyon kapsamı — Veri sekmesi. */
-  .cov{display:flex;align-items:baseline;gap:8px;padding:7px 0;border-top:1px solid var(--hair);font-size:12.5px}
+  /* `flex-wrap` ŞART: not satırı `flex-basis:100%` ile alt satıra inmeyi
+     bekliyor, ama sarma kapalıyken dördüncü sütun oluyor ve satır 390px'i
+     aşıyor. Telefonda ölçüldü (405px), tarayıcı olmadan görünmezdi. */
+  .cov{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;padding:7px 0;
+    border-top:1px solid var(--hair);font-size:12.5px}
   .cov:first-of-type{border-top:0}
   .cov-dot{font-size:11px;width:12px;flex:0 0 12px}
   .cov.miss .cov-dot{color:var(--crit)}
   .cov.opt .cov-dot{color:var(--ink-3)}
   .cov.ok .cov-dot{color:var(--ok)}
-  .cov-n{font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px}
+  .cov-n{font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+    min-width:0;overflow-wrap:anywhere}
   .cov-s{color:var(--ink-3);font-size:11.5px;margin-left:auto;white-space:nowrap}
   .cov-note{flex-basis:100%;color:var(--ink-3);font-size:11.5px;line-height:1.45;padding-left:20px}
   .wk-pre{margin:12px 0 0;white-space:pre-wrap;word-break:break-word;
@@ -4813,9 +4826,12 @@ function drawAi(){
         <div class="ai-f ${esc(x.severity||'bilgi')}">
           <div class="ai-f-t"><span class="ai-sev">${esc(x.severity||'bilgi')}</span>${esc(x.title||'')}</div>
           <div class="ai-f-b">${esc(x.observation||'')}</div>
-          <div class="ai-f-b"><b>OLABİLİR</b> ${esc(x.hypothesis||'')}</div>
-          <div class="ai-f-b"><b>SINAMA</b> ${esc(x.verification||'')}</div>
           <div class="ai-f-b"><b>YAPILACAK</b> ${esc(x.action||'')}</div>
+          <!-- Hipotez ve sınama AYNI açılırda: hipotezi tek başına göstermek
+               onu olgu gibi okutur (ADR-0026). İkisi hiç ayrılmaz. -->
+          <details class="ai-f-d"><summary>neden olabilir · nasıl sınanır</summary>
+            <div class="ai-f-b"><b>OLABİLİR</b> ${esc(x.hypothesis||'')}</div>
+            <div class="ai-f-b"><b>SINAMA</b> ${esc(x.verification||'')}</div></details>
         </div>`).join('')}</div>`:'<div class="wkc-sec"><b>BULGULAR</b><div class="wkc-li">Rapor edilecek bulgu yok.</div></div>'}
     ${g.length?`<div class="wkc-sec"><b>CEVAPLANAMAYAN</b>${
       g.map(x=>`<div class="ai-gap">${esc(x.question||'')}<small>${esc(x.why_blocked||'')}</small></div>`).join('')}</div>`:''}`;
@@ -4871,9 +4887,20 @@ function drawAssertions(){
                 : r.passed==null ? 'none' : 'ok';
       const dot = cls==='ok'?'●':cls==='fail'?'✕':cls==='warn'?'▲':'○';
       const when = r.checked_at ? agoText(new Date(r.checked_at)) : 'hiç koşmadı';
+      /* ÖLÇÜLEN SAYI: "geçti" ile "ölçtüm ve sıfır ihlal buldum" farklı şeyler.
+         `observed` gelmiyorsa iddia yalnız true/false döndürüyor demektir ve
+         bunu söylemek, sessizce geçmiş gibi göstermekten iyidir — gövdesi
+         `select true` olan sahte bir iddia tam olarak buradan gizlenmişti. */
+      const obs = r.observed && typeof r.observed==='object'
+        ? Object.entries(r.observed).filter(([k])=>k!=='error')
+            .map(([k,v])=>`${k.replace(/_/g,' ')}: ${typeof v==='number'?num(v):String(v)}`).join(' · ')
+        : '';
+      const errTxt = r.observed && r.observed.error ? String(r.observed.error) : '';
       return `<div class="asr ${cls}">
         <span class="asr-dot">${dot}</span>
         <span class="asr-t">${esc(r.title||r.key)}
+          ${obs?`<div class="asr-obs">${esc(obs)}</div>`:(r.checked_at?`<div class="asr-obs muted">sayı döndürmüyor — yalnız geçti/kaldı</div>`:'')}
+          ${errTxt?`<div class="asr-d">${esc(errTxt)}</div>`:''}
           ${r.passed===false&&r.description?`<div class="asr-d">${esc(r.description)}</div>`:''}</span>
         <span class="asr-when">${esc(when)}</span>
       </div>`;}).join('');
