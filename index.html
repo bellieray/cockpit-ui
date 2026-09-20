@@ -3216,10 +3216,17 @@ function drawKpis(){
     if(shortPrev){ h.innerHTML=`<span class="chip flat" title="önceki dönemde yalnız ${prev.length} gün ölçüm var">önceki dönem eksik</span>`; return; }
     if(oldConv==null || conv==null){ h.innerHTML=`<span class="chip flat">karşılaştırılacak önceki pencere yok</span>`; return; }
     const d = conv - oldConv;
-    const cls = Math.abs(d)<0.05 ? 'flat' : (d>0 ? 'up' : 'down');
+    /* AYNI SAYI, AYNI EKRAN, TEK YARGI. Bu kart eskiden Wilson'sız karar
+       veriyordu: 0,05 puanı aşan her hareket renkli ok alıyordu. Aynı dönüşüm
+       birkaç santim aşağıdaki haftalık kutuda `confRatio`'dan geçip "gürültü
+       içinde" diyordu — okuyan hangisine inanacağını bilemiyordu (metrics.md §4:
+       "aynı metriğin iki ekranda farklı karşılaştırmayla gösterilmesi panelin
+       güvenilirliğini bitirir"). Artık ikisi de Wilson kullanıyor. */
+    const c=confRatio(sf.dl,sf.imp,sfPrev.dl,sfPrev.imp);
+    const cls = (c.dot==='○' || Math.abs(d)<0.05) ? 'flat' : (d>0 ? 'up' : 'down');
     const sign = d>0?'+':'';
-    h.innerHTML=`<span class="chip ${cls}">${sign}${d.toFixed(1).replace('.',',')} puan</span>`
-      +`<span class="dsuf">${esc(metricCmp('conversion')||'önceki döneme göre')} (%${oldConv.toFixed(1).replace('.',',')})</span>`;
+    h.innerHTML=`<span class="chip ${cls}">${c.dot==='○'?'≈ ':''}${sign}${d.toFixed(1).replace('.',',')} puan</span>`
+      +`<span class="dsuf">${esc(c.label)} · ${esc(metricCmp('conversion')||'önceki döneme göre')} (%${oldConv.toFixed(1).replace('.',',')})</span>`;
   })();
 
   /* HER METRİK ÜÇ ŞEY SÖYLER: sayı · ne sağlar · ne kaybettirir (kural 2).
@@ -4402,16 +4409,35 @@ function weeklyReview(){
     const mrr=stockAgo('rc_mrr'), sub=stockAgo('rc_active_subscriptions');
     R({key:'mrr',name:'MRR',kind:'money',c:mrr.now,o:mrr.before,conf:null,fmt:v=>money2(v),note:'anlık kesit'});
     R({key:'sub',name:'Aktif abone',kind:'count',c:sub.now,o:sub.before,conf:null,fmt:v=>num(v),note:'anlık kesit'});
-    const rn=stockAgo('app_export_retention_next_day_retained'), re=stockAgo('app_export_retention_next_day_eligible');
-    R({key:'d1',name:'Ertesi gün tutma',kind:'ratio',
-       c:rn.now!=null&&re.now?rn.now/re.now:null,o:rn.before!=null&&re.before?rn.before/re.before:null,
-       conf:rn.before!=null&&re.before?confRatio(rn.now,re.now,rn.before,re.before):null,
-       fmt:v=>'%'+(v*100).toFixed(0),note:rn.now!=null?`${num(rn.now)}/${num(re.now)} kullanıcı`:''});
-    const an=stockAgo('app_export_activated_users'), tn=stockAgo('app_export_total_users');
-    R({key:'act',name:'Aktivasyon',kind:'ratio',
-       c:an.now!=null&&tn.now?an.now/tn.now:null,o:an.before!=null&&tn.before?an.before/tn.before:null,
-       conf:an.before!=null&&tn.before?confRatio(an.now,tn.now,an.before,tn.before):null,
-       fmt:v=>'%'+(v*100).toFixed(0),note:an.now!=null?`${num(an.now)}/${num(tn.now)} kayıtlı`:''});
+    /* HAFTALIK ORAN = HAFTANIN KOHORTU, kümülatif toplamın oranı DEĞİL.
+       `app_export_*` sayaçları ömür boyu kümülatif. İki anlık kesitin oranını
+       alıp Wilson'a vermek İKİ SORUN üretiyordu:
+         (1) Wilson BAĞIMSIZ örneklem varsayar; burada önceki örneklem sonrakinin
+             ALT KÜMESİ (tipik olarak %90+ aynı kullanıcı), yani çakışma testi
+             ölçtüğünü iddia ettiği şeyi ölçmüyordu.
+         (2) Delta, haftanın kendi kohortu yerine tüm geçmişle SEYRELİYORDU:
+             toplam 1000→1100, aktive 500→500 iken satır "%45 ▼ −4,5 puan"
+             basıyordu; o haftanın gerçek kohortu ise %0 aktive olmuştu.
+       Doğrusu ARTIŞLARI bölmek: pay ve payda iki dönem arasında AYRIK. */
+    const weekly=(retKey,eligKey,name,noteUnit)=>{
+      const a=stockAgo(retKey), b=stockAgo(eligKey);
+      const kNow=(a.now!=null&&a.before!=null)?a.now-a.before:null;
+      const nNow=(b.now!=null&&b.before!=null)?b.now-b.before:null;
+      // Önceki haftanın kohortu için 14 gün geriye bak: (t-7 .. t) vs (t-14 .. t-7).
+      const a2=stockAgo(retKey,14), b2=stockAgo(eligKey,14);
+      const kPrev=(a.before!=null&&a2.before!=null)?a.before-a2.before:null;
+      const nPrev=(b.before!=null&&b2.before!=null)?b.before-b2.before:null;
+      const ok=kNow!=null&&nNow!=null&&nNow>0;
+      const okPrev2=kPrev!=null&&nPrev!=null&&nPrev>0;
+      R({key:retKey==='app_export_activated_users'?'act':'d1',name,kind:'ratio',
+         c:ok?kNow/nNow:null,o:okPrev2?kPrev/nPrev:null,
+         conf:ok&&okPrev2?confRatio(kNow,nNow,kPrev,nPrev):null,
+         fmt:v=>'%'+(v*100).toFixed(0),
+         note:ok?`bu haftanın kohortu ${num(kNow)}/${num(nNow)} ${noteUnit}`
+                :`haftalık kohort ölçülemedi (kümülatif sayaç artmadı)`});
+    };
+    weekly('app_export_retention_next_day_retained','app_export_retention_next_day_eligible','Ertesi gün tutma','kullanıcı');
+    weekly('app_export_activated_users','app_export_total_users','Aktivasyon','kayıt');
     rows.forEach(r=>{
       if(r.c==null){ r.state='none'; return; }
       if(r.o==null){ r.state='noprev'; return; }
@@ -4503,8 +4529,13 @@ function wkRowDelta(r){
             : r.kind==='money' ? money2(Math.abs(r.d))
             : r.pct!=null ? '%'+Math.abs(r.pct) : num(Math.abs(r.d));
   const noise = r.sig==='○', test = r.sig==='–';
-  const arrow=noise?'≈':r.d>0?'▲':r.d<0?'▼':'≈';
-  const cls = noise||r.d===0 ? 'flat' : r.d>0 ? 'up' : 'down';
+  /* `test` (gürültü testi hiç koşmadı) `noise` ile AYNI muameleyi görür: ikisinde
+     de yön iddia edilemez. Eskiden yalnız `why` metnine giriyordu, ok ve renk
+     ondan habersizdi — MRR $2→$11 satırı, istatistiksel olarak doğrulanmış
+     iyileşme için kullanılan YEŞİLLE çiziliyordu. Renk bir iddiadır. */
+  const flat = noise || test || r.d===0;
+  const arrow=flat?'≈':r.d>0?'▲':'▼';
+  const cls = flat ? 'flat' : r.d>0 ? 'up' : 'down';
   const why = test?'test yok':noise?'gürültü içinde':r.sig==='◐'?'sınırda':'gürültü üstü';
   const chip = r.d===0 ? '<span class="chip flat">≈ aynı</span>'
              : `<span class="chip ${cls}">${arrow} ${sign}${mag}</span>`;
@@ -4547,7 +4578,7 @@ function drawWeekly(){
     const tile=r=>{ const d=wkRowDelta(r);
       return `<div class="wkc-t"><div class="n">${esc(r.name.replace(' (tüm kaynaklar)',''))}</div>
         <div class="v">${r.c==null?'–':esc(r.fmt(r.c))}</div>
-        <div class="d">${d.chip}${d.was?`<span>önceki ${esc(d.was)}</span>`:''}</div></div>`; };
+        <div class="d">${d.chip}${d.why?`<span>${esc(d.why)}</span>`:''}${d.was?`<span>önceki ${esc(d.was)}</span>`:''}</div></div>`; };
     const first=t=>String(t||'').split(/ — |\. /)[0];
     card.innerHTML=`<div class="wkc-w">${esc(w.win)}${w.prevWin?` · önceki: ${esc(w.prevWin)}`:''}</div>
       <div class="wkc-h">${esc(w.headline)}</div>
