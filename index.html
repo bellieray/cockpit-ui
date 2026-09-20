@@ -5091,14 +5091,21 @@ function drawDebt(){
     if(sub) sub.textContent='—'; return;
   }
   const IMP={1:'para',2:'aktivasyon',3:'teknik',4:'büyüme'};
-  if(sub) sub.textContent =
-    `${num(d.open_count)} açık`+(d.resolved_count?` · ${num(d.resolved_count)} kapandı`:'');
+  const acik=d.open_count, takip=d.tracked_count||0;
+  if(sub) sub.textContent = `${num(acik)} açık`
+    + (acik? (takip>=acik?' · hepsi app reposunda takipte'
+              : takip? ` · ${num(takip)} takipte, ${num(acik-takip)} henüz açılmamış`
+              : ' · hiçbiri bir yerde açılmamış') : '')
+    + (d.resolved_count?` · ${num(d.resolved_count)} kapandı`:'');
   host.innerHTML=d.items.map(i=>{
     const open=i.state==='açık';
     return `<div class="debt${open?'':' done'} i${i.impact}">
       <div class="debt-t">${open?'':'✓ '}${esc(i.title)}<span>${esc(IMP[i.impact]||'')}</span></div>
       <div class="debt-b">${esc(i.blocks)}</div>
       ${i.action&&open?`<div class="debt-a"><b>YAPILACAK</b> ${esc(i.action)}</div>`:''}
+      <!-- "Biliniyor ama yapılmadı" ile "kimse haberdar değil" iki farklı
+           durum; ikisinin aksiyonu da farklı. Takip yeri yazılıyor. -->
+      ${i.tracked_at&&open?`<div class="debt-a"><b>TAKİPTE</b> ${esc(i.tracked_at)}</div>`:''}
     </div>`;}).join('');
 }
 
