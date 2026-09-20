@@ -3853,7 +3853,22 @@ function drawCrumb(span){
    oraya bakmaya değil, aramaya gidiliyor — ve orada eşik daha sıkı, çünkü
    13 kart 500-900px arasında kalıp toplamda 30 ekran ediyordu. */
 const COLLAPSE_PX=900, COLLAPSE_PX_REF=420;
+/* SAĞLAR / KAYBETTİRİR blokları dört sekmede kart başına ~250px tutuyor ve
+   karar vermek için değil öğrenmek için okunuyor. Yazan taraf sekmeye göre
+   değişiyor (dört ayrı yer `.kpi-why` dolduruyor); her birini elle sarmak yerine
+   render SONRASI tek yerde sarılır. Zaten sarılmışsa (Bugün) dokunulmaz. */
+function collapseWhy(){
+  document.querySelectorAll('.kpi-why').forEach(h=>{
+    if(h.querySelector(':scope > details.why-more')) return;
+    if(!h.querySelector(':scope > .gain, :scope > .loss')) return;
+    const d=document.createElement('details'); d.className='why-more';
+    const sm=document.createElement('summary'); sm.textContent='Neden önemli'; d.appendChild(sm);
+    while(h.firstChild) d.appendChild(h.firstChild);   /* summary d'nin içinde, h'nin çocuğu değil */
+    h.appendChild(d);
+  });
+}
 function collapseTallCards(){
+  collapseWhy();
   const ref = VIEW==='veri';
   // Masaüstünde eşik GEVŞEK: kartlar grid'de yan yana duruyor, yani sayfa
   // yüksekliği kart yüksekliklerinin toplamı değil. Dar ekranda tek kolon
