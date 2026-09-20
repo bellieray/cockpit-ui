@@ -3048,7 +3048,15 @@ function karneStages(){
     n:pn,d:pd,ref:thr('karne.paid_conv_ref',0.01),what:'yeni müşteri ödedi',
     noData:'RevenueCat dönüşüm verisi gelmedi.'}));
   const g=st[st.length-1];
-  if(g.pct!=null){ g.sub+=` · ${num(subs||0)} abone${mrr!=null?` · MRR ${money2(mrr)}`:''}`; }
+  const lag=payCohortLag();
+  if(g.pct!=null){
+    g.sub+=` · ${num(subs||0)} abone${mrr!=null?` · MRR ${money2(mrr)}`:''}`;
+    if(lag&&lag.grew&&g.state==='weak'){
+      /* Oran gecikmeli, abonelik artıyor: "zayıf" demek yanlış hikâye — "olgunlaşmıyor". */
+      g.state='edge'; g.lag=lag;
+      g.sub=`${num(g.n)}/${num(g.d)} olgunlaşmış kohortta (${dShort(lag.end)} itibarıyla, ~8 gün geriden) · o günden beri abone ${num(lag.subsEnd)} → ${num(lag.subsNow)}${lag.mrrEnd!=null&&mrr!=null?`, MRR ${money2(lag.mrrEnd)} → ${money2(mrr)}`:''}`;
+    }
+  }
   /* 5 · YAYILMA — ölçü yok; gizlemek "sorun yok" demek olurdu. */
   st.push({key:'yayilma',name:'Yayılma',q:'kullanıcı başkasını getiriyor mu?',state:'none',valTxt:'–',
     sub:'Davet/paylaşım hiç ölçülmüyor — sıfır değil, veri yok. Ölçüsü olmayan halka iyileştirilemez.'});
@@ -3071,11 +3079,16 @@ function karneStages(){
       x.move=`Kayıt olup hiç işlem eklemeyen ${num(Math.max(0,(x.d||0)-(x.n||0)))} kişinin hangi ekranda bıraktığı ölçülmüyor. Önce onboarding adımlarını ölç (docs/export-contract-additions.md), sonra en çok kaybettireni sadeleştir.`;
       x.gain=`Referansa (${pcTr(x.ref)}) çıkarsa: her 100 kayıtta +${per100} aktif kullanıcı.`;
     } else if(x.key==='gelir'){
-      const paying=Math.max(1,Math.ceil(x.ref*x.d))-x.n;
-      const arpu=(subs&&mrr)? mrr/subs : null;
-      x.move=`Paywall gösterimi ölçülmüyor: "görülmüyor mu, görülüp reddediliyor mu" ayrılamıyor. Önce paywall görme + deneme başlatma adımlarını ölç (docs/export-contract-additions.md); ölçü gelmeden fiyat/vaat oynamak kör atış.`;
-      x.gain=`Referansa (${pcTr(x.ref,0)}) çıkarsa: ${num(x.d)} yeni müşteriden ≈ ${num(paying)} ödeyen`
-        +(arpu!=null?` ≈ +${money2(paying*arpu)} MRR (mevcut abone başına ${money2(arpu)} üzerinden)`:'')+'.';
+      if(x.lag){
+        x.move=`Ödeme başladı ama dönüşüm oranı ~8 gün geriden geliyor. İlk ${num(x.lag.subsNow)} abonenin nereden geldiğini bul (hangi ekran, hangi kanal) ve tekrarlanabilir mi bak. Paywall gösterimi ölçülmüyor (docs/export-contract-additions.md): hangi adımın işe yaradığı hâlâ kör.`;
+        x.gain=`O günden beri +${num(x.lag.subsNow-x.lag.subsEnd)} abone${x.lag.mrrEnd!=null&&mrr!=null?` ≈ +${money2(mrr-x.lag.mrrEnd)} MRR`:''}.`;
+      } else {
+        const paying=Math.max(1,Math.ceil(x.ref*x.d))-x.n;
+        const arpu=(subs&&mrr)? mrr/subs : null;
+        x.move=`Paywall gösterimi ölçülmüyor: "görülmüyor mu, görülüp reddediliyor mu" ayrılamıyor. Önce paywall görme + deneme başlatma adımlarını ölç (docs/export-contract-additions.md); ölçü gelmeden fiyat/vaat oynamak kör atış.`;
+        x.gain=`Referansa (${pcTr(x.ref,0)}) çıkarsa: ${num(x.d)} yeni müşteriden ≈ ${num(paying)} ödeyen`
+          +(arpu!=null?` ≈ +${money2(paying*arpu)} MRR (mevcut abone başına ${money2(arpu)} üzerinden)`:'')+'.';
+      }
     }
     void gapUsers;
   });
@@ -4282,6 +4295,25 @@ const WK_NOTE_KEY=()=>'wknote_'+APP;
      · her satır kendi gürültü testiyle (sayımda cur+prev, oranda Wilson); testi
        olmayan satır "test yok" der, yön iddia etmez,
      · geçen haftayla kıyaslanamayan (önceki nokta yok) satır bunu yazar. */
+/* ÖDEME KOHORT GECİKMESİ. `rc_initial_conversion` 7 günlük olgunlaşma penceresiyle
+   ölçülüyor: en yeni kohort ~8 gün önce. O günden SONRA başlayan abonelikler
+   dönüşüm oranında HENÜZ görünmez. Panel eskiden "%0 dönüşüm" derken aynı ekranda
+   "4 abone" görüp "bunlar pencereden ÖNCE gelmiş" diyordu — abonelik verisi bunun
+   tersini söylüyor: 12 Eyl'e kadar 0, sonra 4. Ödeme başlamıştı, oran gecikmeliydi.
+   Kural: bir oran gecikmeli ölçülüyorsa, gecikme aralığında AYNI şeyi ölçen anlık
+   seri (abone, MRR) yanına konur; ikisi ayrışıyorsa oran "eski" diye etiketlenir. */
+function payCohortLag(app=APP){
+  const cv=(D.stockSeries||[]).filter(r=>r.slug===app&&r.metric==='rc_initial_conversion');
+  if(!cv.length) return null;
+  const end=cv.reduce((m,r)=>r.day>m?r.day:m,'');
+  const at=metric=>{
+    const pts=stockSeriesFor(metric,app), b=[...pts].reverse().find(q=>q.day<=end), last=pts[pts.length-1];
+    return {before:b?Number(b.v):null,now:last?Number(last.v):null};
+  };
+  const sb=at('rc_active_subscriptions'), mr=at('rc_mrr');
+  return {end,subsEnd:sb.before,subsNow:sb.now,mrrEnd:mr.before,mrrNow:mr.now,
+    grew: sb.before!=null && sb.now!=null && sb.now>sb.before};
+}
 function withWeek(fn){ const r=RANGE; RANGE=7; try{ return fn(); } finally{ RANGE=r; } }
 function stockAgo(metric,daysAgo=7){
   const pts=stockSeriesFor(metric); if(!pts.length) return {now:null,before:null};
@@ -4366,6 +4398,8 @@ function weeklyReview(){
         .sort((x,y)=>Math.abs(y.c-y.o)-Math.abs(x.c-x.o)).slice(0,2)
         .forEach(x=>happened.push({t:`${FLAG[x.n]||''} ${String(x.n).toUpperCase()}: indirme ${num(x.o)} → ${num(x.c)}`.trim(),s:`${x.c>x.o?'arttı':'düştü'} · ülke bazında gürültü üstü`}));
     }
+    const sRow=rows.find(r=>r.key==='sub'), mRow=rows.find(r=>r.key==='mrr');
+    if(sRow&&sRow.state==='ok'&&sRow.d>0) happened.unshift({t:`Ödeme başladı: aktif abone ${num(sRow.o)} → ${num(sRow.c)}${mRow&&mRow.state==='ok'?`, MRR ${money2(mRow.o)} → ${money2(mRow.c)}`:''}`,s:'anlık kesit; kohort dönüşüm oranı ~8 gün geriden geldiği için henüz oranda görünmez'});
     const from=cal[0], to=cal[cal.length-1];
     (D.releaseEffect||[]).filter(r=>r.app_slug===APP&&r.released_on>=from&&r.released_on<=to)
       .forEach(r=>happened.push({t:`Sürüm ${r.version} yayına geçti`,s:dShort(r.released_on)+' · sayıdaki hareketle aynı döneme denk gelir'}));
@@ -4375,7 +4409,7 @@ function weeklyReview(){
     /* Gelecek hafta: Karne hamlesi + üst sinyaller + senden beklenen. */
     const next=[];
     if(weak&&weak.move) next.push({t:`${weak.name}: ${weak.move}`,s:weak.gain||''});
-    signalsFor().slice(0,2).forEach(x=>{ if(!(weak&&/ödeme|ödemedi/i.test(x.hd)&&weak.key==='gelir')) next.push({t:x.hd,s:x.amt||''}); });
+    signalsFor().filter(x=>x.sev===SIG.RED||x.sev===SIG.AMBER).slice(0,2).forEach(x=>next.push({t:x.hd,s:x.amt||''}));
     (D.blockers||[]).filter(b=>b.slug===APP&&b.urgency==='yapilacak').slice(0,2)
       .forEach(b=>next.push({t:`Senden: ${b.source} — ${b.action}`,s:'bu ölçü gelmeden ilgili karar kör'}));
 
@@ -4402,8 +4436,8 @@ function wkRowDelta(r){
   const mag = r.kind==='ratio' ? Math.abs(r.d*100).toFixed(1).replace('.',',')+' puan'
             : r.kind==='money' ? money2(Math.abs(r.d))
             : r.pct!=null ? '%'+Math.abs(r.pct) : num(Math.abs(r.d));
-  const arrow=r.d>0?'▲':r.d<0?'▼':'≈';
   const noise = r.sig==='○', test = r.sig==='–';
+  const arrow=noise?'≈':r.d>0?'▲':r.d<0?'▼':'≈';
   const cls = noise||r.d===0 ? 'flat' : r.d>0 ? 'up' : 'down';
   const why = test?'test yok':noise?'gürültü içinde':r.sig==='◐'?'sınırda':'gürültü üstü';
   const chip = r.d===0 ? '<span class="chip flat">≈ aynı</span>'
@@ -6165,22 +6199,27 @@ function signalsFor(app=APP){
     const d=conv.reduce((s,r)=>s+Number(r.den||0),0);
     // Kapı: en az 50 yeni müşteri. Altında "%0 dönüşüm" normal.
     if(d>=50 && n===0){
-      // MEVCUT ABONE BAĞLAMI ŞART. Kart "hiçbiri ödemedi" derken aynı ekranda
-      // "4 aktif abonelik · MRR $11" yazıyordu ve bu bir ÇELİŞKİ gibi
-      // okunuyordu. İkisi de doğru: dönüşüm ÖLÇÜLEN kohortlarda sıfır,
-      // mevcut aboneler ölçüm penceresinden ÖNCE gelmiş. Panelin iki ekranı
-      // çelişirse ona güven biter ve bir daha geri gelmez (8. ilke) —
-      // çelişkiyi çözmek okuyanın işi değil, panelin işi.
-      const subs=stockValue('rc_active_subscriptions')||0;
-      const mrr=stockValue('rc_mrr');
-      add(1, SIG.RED, 1e6,
-        `${num(d)} yeni müşteriden hiçbiri ödemedi`,
-        `Ölçülen ${conv.length} kohortun tamamında ödemeye dönüşüm %0.`
-        + (subs>0
-           ? ` Paneldeki ${num(subs)} aktif abonelik${mrr?` (MRR ${money2(mrr)})`:''} bu pencereden ÖNCE gelmiş — çelişki değil: yeni gelen kimse abone olmuyor.`
-           : ' Reklam tek gelir kaynağı.')
-        + ` Paywall gösterimi ölçülmüyor, bu yüzden "görülmüyor mu, görülüp reddediliyor mu" ayrımı yapılamıyor.`,
-        '%0');
+      const lag=payCohortLag(app), subs=stockValue('rc_active_subscriptions')||0, mrr=stockValue('rc_mrr');
+      if(lag&&lag.grew){
+        /* Oran %0 ama abonelik ARTIYOR: bu bir "kimse ödemiyor" alarmı değil, gecikmeli
+           ölçümün eski kaldığı bir kilometre taşı. Kırmızı basmak yanlış hikâye olurdu. */
+        add(2, 'var(--up)', 1e5,
+          `Ödeme başladı: aktif abone ${num(lag.subsEnd)} → ${num(lag.subsNow)}`,
+          `Olgunlaşmış kohortlar (7 günlük pencere) ${dShort(lag.end)} itibarıyla ${num(n)}/${num(d)} ödeme gösteriyor — bu oran yaklaşık 8 gün GERİDEN gelir. `
+          +`O günden bu yana aktif abone ${num(lag.subsEnd)} → ${num(lag.subsNow)}${lag.mrrEnd!=null&&mrr!=null?`, MRR ${money2(lag.mrrEnd)} → ${money2(mrr)}`:''}. `
+          +`Yani dönüşüm sıfır değil, henüz görünmüyor. Hamle: ilk abonelerin nereden geldiğini bul (hangi ekran/kampanya) ve tekrarlanabilir mi bak. `
+          +`Paywall gösterimi ölçülmediği için hangi adımın işe yaradığı hâlâ kör.`,
+          `+${num(lag.subsNow-lag.subsEnd)} abone`);
+      } else {
+        add(1, SIG.RED, 1e6,
+          `${num(d)} yeni müşteriden hiçbiri ödemedi`,
+          `Ölçülen ${conv.length} kohortun tamamında ödemeye dönüşüm %0 (en yeni kohort ${lag?dShort(lag.end):'–'}, ölçüm ~8 gün geriden).`
+          + (subs>0
+             ? ` Aktif abonelik ${num(subs)}${mrr?` (MRR ${money2(mrr)})`:''} ve o günden beri artmadı.`
+             : ' Reklam tek gelir kaynağı.')
+          + ` Paywall gösterimi ölçülmüyor, bu yüzden "görülmüyor mu, görülüp reddediliyor mu" ayrımı yapılamıyor.`,
+          '%0');
+      }
     }
   }
 
