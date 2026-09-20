@@ -659,6 +659,41 @@
   .wkc-act button{flex:1;min-height:44px;border-radius:12px;border:0;cursor:pointer;font:700 13px/1 Manrope,sans-serif}
   .wkc-act .pri{background:var(--accent-btn-bg);color:var(--accent-btn-ink)}
   .wkc-act .sec{background:var(--card-2);color:var(--ink)}
+  /* Günlük analiz. Yeni bir görsel dil DEĞİL: haftalık kartın gramerini
+     kullanıyor (başlık · bölüm · satır), yalnız her bulgunun solunda 3px
+     bant şeridi var. Renk tek başına anlam taşımıyor — şeridin yanında
+     kelime de yazıyor (kritik/dikkat/olumlu/bilgi). */
+  .ai-h{font:700 15px/1.35 Manrope,sans-serif;margin:0 0 4px}
+  .ai-meta{font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;margin-bottom:12px}
+  .ai-f{position:relative;padding:10px 0 10px 12px;border-top:1px solid var(--hair)}
+  .ai-f:first-of-type{border-top:0}
+  .ai-f::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:999px;background:var(--ink-3)}
+  .ai-f.kritik::before{background:var(--crit)}
+  .ai-f.dikkat::before{background:var(--warn)}
+  .ai-f.olumlu::before{background:var(--s3)}
+  .ai-f-t{font-size:13px;font-weight:700;line-height:1.35;display:flex;gap:6px;flex-wrap:wrap;align-items:baseline}
+  .ai-sev{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:999px;background:var(--card-2);color:var(--ink-2)}
+  .ai-f.kritik .ai-sev{background:var(--crit-soft);color:var(--crit-ink)}
+  .ai-f.dikkat .ai-sev{background:var(--warn-soft);color:var(--warn-ink)}
+  .ai-f.olumlu .ai-sev{background:var(--ok-soft);color:var(--ok-ink)}
+  .ai-f-b{font-size:12.5px;line-height:1.5;color:var(--ink-2);margin-top:4px}
+  .ai-f-b b{color:var(--ink-3);font-weight:700;font-size:11px}
+  .ai-gap{font-size:12.5px;line-height:1.5;padding:6px 0;border-top:1px solid var(--hair)}
+  .ai-gap:first-of-type{border-top:0}
+  .ai-gap small{display:block;color:var(--ink-3);font-size:11.5px}
+  .ai-off{padding:12px;border-radius:12px;background:var(--unmeasured-soft);
+    font-size:12.5px;line-height:1.5;color:var(--ink-2)}
+  .ai-off b{display:block;margin-bottom:3px;color:var(--ink)}
+  /* Enstrümantasyon kapsamı — Veri sekmesi. */
+  .cov{display:flex;align-items:baseline;gap:8px;padding:7px 0;border-top:1px solid var(--hair);font-size:12.5px}
+  .cov:first-of-type{border-top:0}
+  .cov-dot{font-size:11px;width:12px;flex:0 0 12px}
+  .cov.miss .cov-dot{color:var(--crit)}
+  .cov.opt .cov-dot{color:var(--ink-3)}
+  .cov.ok .cov-dot{color:var(--ok)}
+  .cov-n{font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px}
+  .cov-s{color:var(--ink-3);font-size:11.5px;margin-left:auto;white-space:nowrap}
+  .cov-note{flex-basis:100%;color:var(--ink-3);font-size:11.5px;line-height:1.45;padding-left:20px}
   .wk-pre{margin:12px 0 0;white-space:pre-wrap;word-break:break-word;
     font:inherit;font-size:12.5px;line-height:1.55;color:var(--ink-2);
     font-variant-numeric:tabular-nums}
@@ -1179,6 +1214,15 @@
       <div class="c12 region-label" id="sigLabel">Sinyaller</div>
       <div class="card c12" id="sigCard">
         <div class="siglist" id="sigList"></div>
+      </div>
+
+      <!-- Günlük analiz. Tespit SQL'de (panel.fn_daily_digest), anlatım modelde
+           (ADR-0033). Kart üç durumu AYRI gösterir: analiz var · analiz
+           reddedildi (kanıt denetimi düştü) · analist kapalı (anahtar yok).
+           Üçünü tek boşluğa indirmek "bugün sakinmiş" diye okunurdu. -->
+      <div class="c12 region-label" id="aiLabel">Günlük analiz</div>
+      <div class="card c12" id="aiCard">
+        <div id="aiBody"></div>
       </div>
 
       <!-- Haftalık özet. Sahibi haftada bir derin bakış yapıyor ve o bakışın çıktısı
@@ -1974,6 +2018,17 @@
             <div><div class="card-title">Uygulama verisi</div>
                  <div class="card-sub" id="vrNote">Senkron ile güncellenir.</div></div>
           </div>
+        </div>
+        <!-- Enstrümantasyon kapsamı. Panelin en tehlikeli boşluğu "sayı yok"
+             ile "ölçüm yok"un aynı görünmesi. Beklenen olay listesi
+             `panel.expected_event`te; roster'da olmayan beklenen olay burada
+             ADIYLA yazar. Bu kart AI kapalıyken de doludur. -->
+        <div class="c12 card">
+          <div class="card-head">
+            <div><div class="card-title">Ölçüm kapsamı</div>
+                 <div class="card-sub" id="covSub">—</div></div>
+          </div>
+          <div id="covList"></div>
         </div>
         <div id="vrBody" class="c12"></div>
       </div>
@@ -4721,6 +4776,82 @@ function drawRecon(){
         ${cls==='fail'?`<div class="asr-d">${esc(r.description||'')}</div>`:''}</span>
       <span class="asr-when">${esc(r.period_start||'')}</span></div>`;}).join('');
 }
+/* Günlük analiz kartı.
+   ÜÇ DURUM, iki değil (CLAUDE.md §3): analiz var · analiz REDDEDİLDİ · analist
+   kapalı. Reddedilen bir analizin yerine boş kart koymak, "bugün sakin" diye
+   okunur — oysa gerçek "model uydurdu, gösterilmedi"dir ve bu bir olaydır.
+   Kanıt id'leri ekranda yazılmıyor: onlar makine denetimi için, insan için
+   değil. Denetimden geçmemiş bir cümle zaten buraya gelmiyor. */
+function drawAi(){
+  const host=el('aiBody'); if(!host) return;
+  const r=(D.aiDaily||[]).find(x=>x.app_slug===APP);
+  if(!r){
+    host.innerHTML=`<div class="ai-off"><b>Analist hiç koşmadı.</b>
+      Günlük özet veritabanında hazır; anlatıcı katman henüz bir kez bile
+      çalışmadı. Bu "sorun yok" demek değil, "bakılmadı" demek.</div>`;
+    return;
+  }
+  const when=r.created_at?agoText(new Date(r.created_at)):'—';
+  const day=r.digest_day?`${r.digest_day} günü`:'gün bilinmiyor';
+  if(r.status!=='OK'){
+    const why = r.status==='API_FAIL'
+      ? 'Model çağrılamadı.' : 'Model çıktısı denetimden geçemedi (kanıtsız iddia veya uydurulmuş sayı).';
+    host.innerHTML=`<div class="ai-off"><b>${esc(why)}</b>
+      ${esc(r.failure_detail||'ayrıntı yok')}
+      <div style="margin-top:6px;color:var(--ink-3);font-size:11.5px">${esc(day)} · ${esc(when)} · ${esc(r.status)}</div></div>`;
+    return;
+  }
+  const a=r.analysis||{};
+  const f=Array.isArray(a.findings)?a.findings:[];
+  const g=Array.isArray(a.measurement_gaps)?a.measurement_gaps:[];
+  const rank={kritik:0,dikkat:1,olumlu:2,bilgi:3};
+  const cost=r.cost!=null?` · ${moneyCents(Number(r.cost))}`:'';
+  host.innerHTML=`<div class="ai-h">${esc(a.headline||'—')}</div>
+    <div class="ai-meta">${esc(day)} · ${esc(when)} · ${esc(r.model||'')}${cost}</div>
+    ${f.length?`<div class="wkc-sec"><b>BULGULAR</b>${
+      [...f].sort((x,y)=>(rank[x.severity]??9)-(rank[y.severity]??9)).map(x=>`
+        <div class="ai-f ${esc(x.severity||'bilgi')}">
+          <div class="ai-f-t"><span class="ai-sev">${esc(x.severity||'bilgi')}</span>${esc(x.title||'')}</div>
+          <div class="ai-f-b">${esc(x.observation||'')}</div>
+          <div class="ai-f-b"><b>OLABİLİR</b> ${esc(x.hypothesis||'')}</div>
+          <div class="ai-f-b"><b>SINAMA</b> ${esc(x.verification||'')}</div>
+          <div class="ai-f-b"><b>YAPILACAK</b> ${esc(x.action||'')}</div>
+        </div>`).join('')}</div>`:'<div class="wkc-sec"><b>BULGULAR</b><div class="wkc-li">Rapor edilecek bulgu yok.</div></div>'}
+    ${g.length?`<div class="wkc-sec"><b>CEVAPLANAMAYAN</b>${
+      g.map(x=>`<div class="ai-gap">${esc(x.question||'')}<small>${esc(x.why_blocked||'')}</small></div>`).join('')}</div>`:''}`;
+}
+
+/* Ölçüm kapsamı — Veri sekmesi.
+   Sıra bilinçli: EKSİK olanlar üstte. Tam liste alfabetik olsaydı, tek önemli
+   satır ("purchase_failed gönderilmiyor") otuz yeşil satırın arasında kaybolurdu. */
+function drawCoverage(){
+  const host=el('covList'); if(!host) return;
+  const rows=(D.expectedEvents||[]).filter(r=>r.slug===APP);
+  const sub=el('covSub');
+  if(!rows.length){
+    host.innerHTML='<div class="empty">Beklenen olay tanımlı değil — kapsam ÖLÇÜLMEDİ, "tam" değil.</div>';
+    if(sub) sub.textContent='tanım yok';
+    return;
+  }
+  const miss=rows.filter(r=>!r.seen && r.required);
+  const opt =rows.filter(r=>!r.seen && !r.required);
+  if(sub) sub.textContent = `${num(rows.length)} beklenen olay · `
+    + (miss.length?`${num(miss.length)} gönderilmiyor`:'hepsi geliyor')
+    + (opt.length?` · ${num(opt.length)} isteğe bağlı eksik`:'');
+  const rank=r=>(!r.seen&&r.required)?0:(!r.seen?1:2);
+  host.innerHTML=[...rows].sort((a,b)=>rank(a)-rank(b)||a.stage.localeCompare(b.stage)
+      ||a.event_name.localeCompare(b.event_name))
+    .map(r=>{
+      const cls=!r.seen&&r.required?'miss':(!r.seen?'opt':'ok');
+      const dot=cls==='miss'?'✕':cls==='opt'?'○':'●';
+      const state=!r.seen?(r.required?'gönderilmiyor':'isteğe bağlı, yok'):'geliyor';
+      return `<div class="cov ${cls}"><span class="cov-dot">${dot}</span>
+        <span class="cov-n">${esc(r.event_name)}</span>
+        <span class="cov-s">${esc(r.stage)} · ${esc(state)}</span>
+        ${!r.seen&&r.note?`<div class="cov-note">${esc(r.note)}</div>`:''}</div>`;
+    }).join('');
+}
+
 function drawAssertions(){
   const host=el('asrList'); if(!host) return;
   const rows=(D.assertions||[]);
@@ -4823,7 +4954,7 @@ function renderAll(){
   const pre=isPrelaunch();
   el('v-ozet').classList.toggle('pre',pre);
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
-  drawCrumb(span); drawFresh(); drawWeekly(); drawAssertions(); drawRecon(); drawDifferential();
+  drawCrumb(span); drawFresh(); drawAi(); drawCoverage(); drawWeekly(); drawAssertions(); drawRecon(); drawDifferential();
   fillSelects(); drawSyncLabel(); renderSignals(); drawPrelaunch(); drawRevenue(); drawRetentionKpi(); drawKpis(); drawKarne(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   visibleViews().forEach(k=>RENDERERS[k]?.());
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
