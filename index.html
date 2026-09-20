@@ -130,7 +130,7 @@
 
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;background:var(--page)}
-  body{font-family:Manrope,-apple-system,sans-serif;color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  body{font-family:Manrope,-apple-system,sans-serif;color:var(--ink);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
   .tnum{font-variant-numeric:tabular-nums}
   /* Tek aile: display/mono ayrımı bırakıldı (referansların hiçbirinde mono yok).
      Tabular hizalama gereken GERÇEK sayı kolonlarında .tnum kalıyor. */
@@ -171,7 +171,7 @@
   .nav-label{font-size:11px;font-weight:600;color:var(--panel-ink-2);margin:0 0 8px 10px}
   .nav{display:flex;flex-direction:column;gap:2px}
   .nav button{display:flex;align-items:center;gap:11px;border:0;background:0;text-align:left;color:var(--panel-ink-2);
-    font:inherit;font-weight:600;font-size:14px;padding:10px 12px;border-radius:var(--r-inner);cursor:pointer;transition:.15s}
+    font:inherit;font-weight:600;font-size:15px;padding:10px 12px;border-radius:var(--r-inner);cursor:pointer;transition:.15s}
   .nav button svg{width:17px;height:17px;flex:none;opacity:.85}
   .nav button:hover{background:var(--panel-2);color:var(--panel-ink)}
   /* Aktif sekme: koyu panelde BEYAZ pill — en yüksek karşıtlık, tereddütsüz */
@@ -190,7 +190,7 @@
   @media (min-width:1080px){.main{padding:26px 30px 44px}}
 
   .page-head{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:22px}
-  .page-head h1{font-size:30px;font-weight:700}
+  .page-head h1{font-size:28px;font-weight:700}
   .page-head .crumb{color:var(--ink-3);font-size:13px;margin-top:3px}
   .head-actions{margin-left:auto;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
   .pillbtn{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:0;
@@ -201,7 +201,7 @@
     display:grid;place-items:center;cursor:pointer;color:var(--ink-2);box-shadow:var(--sh-card)}
 
   .seg{display:inline-flex;gap:3px;background:var(--card);border:0;padding:4px;border-radius:var(--r-pill);box-shadow:var(--sh-card)}
-  .seg button{border:0;background:0;color:var(--ink-2);font:inherit;font-weight:600;font-size:12.5px;padding:6px 13px;border-radius:var(--r-pill);cursor:pointer}
+  .seg button{border:0;background:0;color:var(--ink-2);font:inherit;font-weight:600;font-size:13px;padding:6px 13px;border-radius:var(--r-pill);cursor:pointer}
   .seg button.on{background:var(--accent-btn-bg);color:var(--accent-btn-ink)}
 
   /* Yatay kaydığı belli olmuyordu: 9 sekmenin ~5'i görünüyor ve kesilen sekme
@@ -215,7 +215,7 @@
   nav.tabs{display:flex;gap:20px;border-bottom:1px solid var(--hair);margin-bottom:18px;overflow-x:auto;
     scrollbar-width:none}
   nav.tabs::-webkit-scrollbar{display:none}
-  nav.tabs button{background:0;border:0;padding:0 0 11px;font:inherit;font-weight:600;font-size:14px;color:var(--ink-3);
+  nav.tabs button{background:0;border:0;padding:0 0 11px;font:inherit;font-weight:600;font-size:15px;color:var(--ink-3);
     border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;cursor:pointer}
   nav.tabs button.on{color:var(--ink);border-color:var(--accent)}
   @media (min-width:1080px){nav.tabs{display:none}}
@@ -287,21 +287,25 @@
   .sig:first-child{border-top:0}
   .sig .dot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:5px}
   .sig .txt{flex:1;min-width:0}
-  .sig .hd{font:600 13.5px/1.35 Manrope,sans-serif}
+  .sig .hd{font:600 13px/1.35 Manrope,sans-serif}
   .sig .bd{font-size:12px;color:var(--ink-2);margin-top:3px;line-height:1.45}
   .sig .amt{font:600 13px/1 Manrope,sans-serif;white-space:nowrap;margin-left:auto;padding-left:10px}
   /* karne — bkz. drawKarne() */
   .kr-w{font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;padding-bottom:6px}
   .kr-verdict{padding:2px 2px 12px;border-bottom:1px solid var(--hair);margin-bottom:4px}
   .kr-verdict .kr-h{font:700 15px/1.35 Manrope,sans-serif}
-  .kr-verdict .kr-move{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--brand-soft);
-    font-size:12.5px;line-height:1.5;color:var(--ink)}
+  /* Ölçülemeyen bir şey AKSİYON gibi görünmesin: `.kr-move` "bu hafta yapılacak"
+     rengini taşıyor. Kör-nokta cümleleri `.unmeasured` ile nötr zemine düşüyor
+     ve ikisi de ikon taşıyor (§1: renk tek başına anlam taşımaz). */
+  .kr-move.unmeasured{background:var(--unmeasured-soft);color:var(--ink-2)}
+  .kr-verdict .kr-move{margin-top:8px;padding:10px 12px;border-radius:var(--r-inner);background:var(--brand-soft);
+    font-size:13px;line-height:1.5;color:var(--ink)}
   .kr-verdict .kr-move b{font-weight:700}
   .kr-verdict .kr-gain{display:block;margin-top:5px;color:var(--ink-2);font-size:12px}
-  .kr-row{padding:12px 2px;border-top:1px solid var(--hair)}
+  .kr-row{padding:12px 0;border-top:1px solid var(--hair)}
   .kr-row:first-of-type{border-top:0}
   .kr-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-  .kr-name{font:600 13.5px/1.3 Manrope,sans-serif}
+  .kr-name{font:600 13px/1.3 Manrope,sans-serif}
   .kr-q{font-size:11px;color:var(--ink-3);font-weight:500;margin-left:6px}
   .kr-val{font:700 20px/1 Manrope,sans-serif;font-variant-numeric:tabular-nums}
   .kr-bar{position:relative;height:6px;border-radius:99px;background:var(--unmeasured-soft);margin:9px 0 7px}
@@ -324,24 +328,24 @@
   .sig-more>summary::after,.why-more>summary::after{content:" ›"}
   .sig-more[open]>summary::after,.why-more[open]>summary::after{content:" ⌃"}
   /* listeleme denemeleri — bkz. renderAsoChanges() */
-  .lc-ev{padding:14px 0;border-top:1px solid var(--hair)}
+  .lc-ev{padding:12px 0;border-top:1px solid var(--hair)}
   .lc-ev:first-child{border-top:0;padding-top:4px}
   .lc-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .lc-when{font:700 15px/1.2 Manrope,sans-serif}
-  .lc-what{font-size:12.5px;color:var(--ink-2);flex:1;min-width:0}
-  .lc-line{font-size:12.5px;line-height:1.5;color:var(--ink-2);margin-top:8px}
+  .lc-what{font-size:13px;color:var(--ink-2);flex:1;min-width:0}
+  .lc-line{font-size:13px;line-height:1.5;color:var(--ink-2);margin-top:8px}
   .lc-terms{display:grid;gap:0;margin-top:6px}
-  .lc-term{display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:baseline;padding:7px 0;border-top:1px solid var(--hair);font-size:12.5px}
+  .lc-term{display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--hair);font-size:13px}
   .lc-term:first-child{border-top:0}
-  .lc-term span{color:var(--ink-3);font-size:11.5px;text-align:right}
-  .lc-term em{grid-column:1/-1;font-style:normal;font-size:11.5px;color:var(--ink-3)}
+  .lc-term span{color:var(--ink-3);font-size:12px;text-align:right}
+  .lc-term em{grid-column:1/-1;font-style:normal;font-size:12px;color:var(--ink-3)}
   .lc-term em.ok{color:var(--up)} .lc-term em.low{color:var(--amber)}
-  .lc-result{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--card-2);font-size:12.5px;line-height:1.45}
+  .lc-result{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--card-2);font-size:13px;line-height:1.45}
   .lc-num{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 0 0;align-items:baseline}
   .lc-num span{color:var(--ink-2)} .lc-num b{font-variant-numeric:tabular-nums;text-align:right}
-  .lc-num em{grid-column:1/-1;font-style:normal;font-size:11.5px;color:var(--ink-3)}
+  .lc-num em{grid-column:1/-1;font-style:normal;font-size:12px;color:var(--ink-3)}
   .lc-caveat{margin-top:8px;font-size:12px;color:var(--amber);line-height:1.45}
-  .sig-none{font-size:12.5px;color:var(--ink-3);padding:6px 2px}
+  .sig-none{font-size:13px;color:var(--ink-3);padding:6px 2px}
   /* Dokunmayla açılan açıklama. Panelde bağlamın çoğu `title=` içinde:
      çipin neden gri olduğu, bölgesel rozetin hangi sayılardan geldiği,
      konektörün neden kapalı olduğu. Telefonda `title` HİÇ görünmüyor ve
@@ -350,20 +354,20 @@
      yeniden yazmak yerine. */
   #tipBar{position:fixed;left:12px;right:12px;bottom:12px;z-index:60;display:none;
     background:var(--ink);color:var(--card);border-radius:12px;padding:11px 14px;
-    font-size:12.5px;line-height:1.45;box-shadow:0 8px 28px rgba(0,0,0,.28)}
+    font-size:13px;line-height:1.45;box-shadow:0 8px 28px rgba(0,0,0,.28)}
   #tipBar.on{display:block}
   /* CAPS kaldırıldı — dil-duyarsız büyütme Türkçe'de i→I yapıyor */
   #tipBar b{display:block;font-size:11px;opacity:.72;font-weight:700;margin-bottom:3px}
 
   /* Kıl payı kenarlık kaldırıldı: yeni dilde kartı ayıran şey YÜKSEKLİK.
      Referansların beşinde de kenarlık yok, gölge var. */
-  .card{background:var(--card);border:0;border-radius:var(--r-card);padding:20px 22px;
+  .card{background:var(--card);border:0;border-radius:var(--r-card);padding:20px;
     box-shadow:var(--sh-card);min-width:0;transition:box-shadow .18s ease,transform .18s ease}
   .card:hover{box-shadow:var(--shadow-lift)}
   .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
-  .card-title{font-weight:700;font-size:15.5px;letter-spacing:-.02em}
-  .card-sub{color:var(--ink-3);font-size:12.5px;margin-top:2px}
-  .viewall{background:0;border:0;color:var(--ink-3);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+  .card-title{font-weight:700;font-size:15px;letter-spacing:-.02em}
+  .card-sub{color:var(--ink-3);font-size:13px;margin-top:2px}
+  .viewall{background:0;border:0;color:var(--ink-3);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
   .viewall:hover{color:var(--brand)}
 
   /* === KPI === */
@@ -372,17 +376,17 @@
   .kpi-ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none}
   .kpi-ic svg{width:19px;height:19px}
   .kpi-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-  .kpi-name{font-weight:600;font-size:14px;line-height:1.25}
+  .kpi-name{font-weight:600;font-size:15px;line-height:1.25}
   .kpi-val{font-family:Manrope,sans-serif;font-weight:700;font-size:34px;letter-spacing:-.025em;line-height:1}
   /* flex-wrap: dar (mobil 2 kolonlu) kartta çipin yanındaki açıklama tek
      kelimelik sütuna sıkışıp üç satıra bölünüyordu; kendi satırına insin. */
-  .kpi-foot{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--ink-3);flex-wrap:wrap}
+  .kpi-foot{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--ink-3);flex-wrap:wrap}
 
   /* === mobil kompakt KPI === <680px: 7 KPI kartı tek sütunda iki ekran
      yüksekliği ediyordu (bkz. docs/backlog.md round 5/6, B2/B3) — 2 kolona
      düşür, dolguyu/ikonu küçült, açıklama satırını gizle. */
   @media (max-width:679.98px){
-    .grid>.c3.card{grid-column:span 1;padding:14px}
+    .grid>.c3.card{grid-column:span 1;padding:16px}
     .c3.card .kpi-ic{width:28px;height:28px;border-radius:9px}
     .c3.card .kpi-ic svg{width:14px;height:14px}
     .c3.card .kpi-top{gap:8px;margin-bottom:8px}
@@ -391,7 +395,7 @@
        (birincil ekran) görünmeyen bir sınırlama, olmayan bir sınırlamadır.
        Küçük ve soluk gösterilir, yer açmak için kart başlığından kısaltılmaz. */
     .c3.card .kpi-name .card-sub{display:block;font-size:11px;line-height:1.3;color:var(--ink-3);font-weight:500;margin-top:2px}
-    .c3.card .kpi-val{font-size:22px}
+    .c3.card .kpi-val{font-size:20px}
     .c3.card .kpi-foot{margin-top:4px;font-size:11px}
   }
 
@@ -400,7 +404,7 @@
   .rev-band{display:flex;flex-wrap:wrap;gap:28px}
   .rev-item{flex:1;min-width:180px}
   @media (max-width:679.98px){.rev-band{gap:18px}.rev-item{min-width:140px}
-    .rev-item .kpi-val{font-size:22px}.rev-item .kpi-name .card-sub{display:none}
+    .rev-item .kpi-val{font-size:20px}.rev-item .kpi-name .card-sub{display:none}
     .rev-item .kpi-top{gap:8px;margin-bottom:6px}}
 
   /* nowrap ŞART: pill'in içinde satır atlayan metin hap görüntüsünü bozuyor,
@@ -416,11 +420,11 @@
 
   /* === grafik === */
   .legend{display:flex;gap:16px;flex-wrap:wrap}
-  .legend .li{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);cursor:pointer;user-select:none}
+  .legend .li{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-2);cursor:pointer;user-select:none}
   .legend .li.off{opacity:.32}
   .legend .dot{width:9px;height:9px;border-radius:50%}
   .chart svg{display:block;width:100%;height:230px;overflow:visible}
-  .xaxis{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-3);margin-top:10px}
+  .xaxis{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-3);margin-top:10px}
 
   /* === sürüm işaret bandı === İşaretler çizim alanının İÇİNE değil, eksenin
      hemen ALTINDAKİ ayrı bir şeride basılıyor (bkz. docs/backlog.md round 5,
@@ -439,7 +443,7 @@
      dışına taşar (ilk gün = %0). */
   .mk.edge-l{transform:none;align-items:flex-start}
   .mk.edge-r{transform:none;align-items:flex-end;left:auto!important;right:0}
-  .mnote{font-size:11.5px;color:var(--ink-3);margin-top:8px;min-height:18px}
+  .mnote{font-size:12px;color:var(--ink-3);margin-top:8px;min-height:18px}
   /* === büyüme sparkline'ı === app_export bugün kuruldu, geçmiş yok — bu
      yüzden <2 gün varken sahte düz çizgi yerine dürüst bir not basılıyor;
      grafik veri biriktikçe kendiliğinden dolar. */
@@ -449,7 +453,7 @@
      bkz. docs/backlog.md round 2, "değiştir → ölç → öğren" döngüsü. */
   .mdelta{margin-top:2px}
   .mdelta-title{font-size:11px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
-  .mdelta table{width:100%;border-collapse:collapse;font-size:12.5px}
+  .mdelta table{width:100%;border-collapse:collapse;font-size:13px}
   .mdelta th{font-weight:600;color:var(--ink-3);font-size:11px;text-align:right;padding:3px 6px}
   .mdelta th:first-child{text-align:left}
   .mdelta td{padding:5px 6px;border-top:1px solid var(--hair)}
@@ -457,7 +461,7 @@
 
   /* === filtreler === */
   .filters{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:14px}
-  .filters select,.filters input{font:inherit;font-size:12.5px;color:var(--ink);background:var(--canvas);
+  .filters select,.filters input{font:inherit;font-size:13px;color:var(--ink);background:var(--canvas);
     border:1px solid transparent;border-radius:var(--r-pill);padding:7px 12px;cursor:pointer;max-width:160px}
   .filters input{cursor:text;min-width:110px}
   .filters select:focus,.filters input:focus{outline:0;border-color:var(--brand)}
@@ -532,7 +536,7 @@
   .sheet-title{font-size:17px;font-weight:700;color:var(--ink);flex:1;min-width:0}
   .sheet-body{overflow:auto;-webkit-overflow-scrolling:touch;padding:0 16px 20px}
   .sh-val{font-size:34px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-  .sh-sub{font-size:12.5px;color:var(--ink-3);margin-top:6px;line-height:1.45}
+  .sh-sub{font-size:13px;color:var(--ink-3);margin-top:6px;line-height:1.45}
   .sh-sec{font-size:11px;font-weight:600;color:var(--ink-3);
     margin:20px 0 8px;letter-spacing:.02em}
   .sh-chips{display:flex;gap:8px;flex-wrap:wrap}
@@ -542,19 +546,19 @@
   .sh-row-top{display:flex;align-items:baseline;gap:8px}
   .sh-cc{font-weight:600;flex:1;min-width:0}
   .sh-now{font-variant-numeric:tabular-nums;font-weight:600}
-  .sh-row-sub{font-size:11.5px;color:var(--ink-3);margin-top:3px;
+  .sh-row-sub{font-size:12px;color:var(--ink-3);margin-top:3px;
     font-variant-numeric:tabular-nums}
   /* Güven işareti ÜÇ kademeli: dolu = gürültü üstü, yarım = bant sınırında,
      boş = gürültü. İki kademe "az değişmiş" ile "ölçülemeyecek kadar
      belirsiz"i aynı kutuya koyuyordu. Şekil taşıyor, renk değil. */
-  .sh-dot{font-size:10px;opacity:.8}
+  .sh-dot{font-size:11px;opacity:.8}
   .sh-open{padding:10px 2px 14px;border-bottom:1px solid var(--hair)}
   .sh-bars{display:flex;align-items:flex-end;gap:2px;height:38px;margin:8px 0}
   .sh-bars i{flex:1;background:var(--accent);border-radius:2px 2px 0 0;min-height:1px;opacity:.75}
-  .sh-ev{font-size:11.5px;color:var(--ink-2);margin-top:2px}
+  .sh-ev{font-size:12px;color:var(--ink-2);margin-top:2px}
   .sh-ev b{font-weight:600}
-  .sh-def{font-size:12.5px;color:var(--ink-2);line-height:1.5}
-  .sh-act{font-size:12.5px;color:var(--accent-text,var(--ink));font-weight:600;
+  .sh-def{font-size:13px;color:var(--ink-2);line-height:1.5}
+  .sh-act{font-size:13px;color:var(--accent-text,var(--ink));font-weight:600;
     background:var(--canvas);padding:11px 13px;border-radius:var(--r-md);margin-top:8px}
   .kpi-tap{cursor:pointer}
   .kpi-tap .kpi-val{text-decoration:underline;text-decoration-color:var(--hair);
@@ -569,7 +573,7 @@
 
   /* === kaynak tazelik şeridi === */
   .fresh{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;
-    padding:8px 16px;margin:0;font-size:11.5px;color:var(--ink-3);
+    padding:8px 16px;margin:0;font-size:12px;color:var(--ink-3);
     background:var(--card);border-bottom:1px solid var(--hair)}
   .fresh b{font-weight:600;color:var(--ink-2)}
   .fresh .fr{white-space:nowrap;font-variant-numeric:tabular-nums;
@@ -582,7 +586,7 @@
   .fresh .fr.unmeasured{background:var(--unmeasured-soft);color:var(--ink-3)}
   .fresh .fr.unmeasured b{color:var(--ink-2)}
   .fresh .fr-lead{font-weight:600;color:var(--ink-2)}
-  .fresh .fr-more{border:0;font:inherit;font-size:11.5px;color:var(--ink-3);
+  .fresh .fr-more{border:0;font:inherit;font-size:12px;color:var(--ink-3);
     background:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
   .fresh:not(.fresh-all) .fr.ok{display:none}
 
@@ -594,7 +598,7 @@
   /* Aralıktan bağımsız sekmede seçici soluk ve tıklanabilir kalır — gizlemek
      "neden yok" sorusunu cevapsız bırakır (üç durum kuralının aynısı). */
   .range-muted{opacity:.45}
-  .win-note{font-size:11.5px;color:var(--ink-3);line-height:1.45;margin:-6px 4px 0}
+  .win-note{font-size:12px;color:var(--ink-3);line-height:1.45;margin:-6px 4px 0}
 
   /* === katlanabilir uzun kart === */
   /* `!important` ŞART: mobil kart-tablo kuralı `.tw-cards{max-height:none
@@ -617,9 +621,9 @@
   .asr.warn .asr-dot{color:var(--amber)}
   .asr.none .asr-dot{color:var(--ink-3)}
   .asr-t{flex:1;min-width:0;font-size:13px}
-  .asr-obs{font-size:11.5px;color:var(--ink-2);margin-top:3px;font-variant-numeric:tabular-nums}
+  .asr-obs{font-size:12px;color:var(--ink-2);margin-top:3px;font-variant-numeric:tabular-nums}
   .asr-obs.muted{color:var(--ink-3);opacity:.7}
-  .asr-d{font-size:11.5px;color:var(--ink-3);margin-top:3px;line-height:1.45}
+  .asr-d{font-size:12px;color:var(--ink-3);margin-top:3px;line-height:1.45}
   .asr-when{font-size:11px;color:var(--ink-3);white-space:nowrap;
     font-variant-numeric:tabular-nums}
 
@@ -630,33 +634,33 @@
   .wk-row{padding:12px 0;border-top:1px solid var(--hair)}
   .wk-row:first-child{border-top:0;padding-top:2px}
   .wk-r1{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-  .wk-name{font:600 13.5px/1.3 Manrope,sans-serif}
+  .wk-name{font:600 13px/1.3 Manrope,sans-serif}
   .wk-val{font:700 20px/1 Manrope,sans-serif;font-variant-numeric:tabular-nums}
   .wk-r2{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;font-size:12px;color:var(--ink-2)}
   .wk-r2 .was{font-variant-numeric:tabular-nums}
-  .wk-li{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--hair);font-size:13px;line-height:1.5}
+  .wk-li{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--hair);font-size:13px;line-height:1.5}
   .wk-li:first-child{border-top:0;padding-top:2px}
   .wk-li i{font-style:normal;flex:none;width:22px;height:22px;border-radius:50%;background:var(--brand-soft);color:var(--accent-text);
     font:700 12px/22px Manrope,sans-serif;text-align:center}
   .wk-li small{display:block;color:var(--ink-3);font-size:12px;margin-top:2px}
-  .wk-empty{font-size:12.5px;color:var(--ink-3);padding:2px 0}
-  .wk-prev{padding:10px 12px;border-radius:12px;background:var(--card-2);font-size:12.5px;line-height:1.5;margin-bottom:10px}
+  .wk-empty{font-size:13px;color:var(--ink-3);padding:2px 0}
+  .wk-prev{padding:10px 12px;border-radius:12px;background:var(--card-2);font-size:13px;line-height:1.5;margin-bottom:10px}
   .wk-prev b{display:block;font-size:11px;color:var(--ink-3);margin-bottom:3px;font-weight:700}
   .wk-copy{display:block;width:100%;margin-top:12px;min-height:44px;border:0;border-radius:12px;cursor:pointer;
     background:var(--accent-btn-bg);color:var(--accent-btn-ink);font:700 14px/1 Manrope,sans-serif}
-  .wk-trust{margin-top:12px;font-size:11.5px;color:var(--ink-3);line-height:1.5}
+  .wk-trust{margin-top:12px;font-size:12px;color:var(--ink-3);line-height:1.5}
   .wkc-w{font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums}
   .wkc-h{font:700 17px/1.3 Manrope,sans-serif;margin:4px 0 12px}
   .wkc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .wkc-t{padding:10px 12px;border-radius:12px;background:var(--card-2)}
-  .wkc-t .n{font-size:11.5px;color:var(--ink-2);font-weight:600}
+  .wkc-t .n{font-size:12px;color:var(--ink-2);font-weight:600}
   .wkc-t .v{font:700 20px/1.1 Manrope,sans-serif;font-variant-numeric:tabular-nums;margin:4px 0 6px}
   .wkc-t .d{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
   .wkc-sec{margin-top:14px}
   .wkc-sec>b{display:block;font-size:11px;color:var(--ink-3);font-weight:700;margin-bottom:6px}
-  .wkc-li{font-size:12.5px;line-height:1.5;padding:6px 0;border-top:1px solid var(--hair)}
+  .wkc-li{font-size:13px;line-height:1.5;padding:8px 0;border-top:1px solid var(--hair)}
   .wkc-li:first-of-type{border-top:0}
-  .wkc-li small{display:block;color:var(--ink-3);font-size:11.5px}
+  .wkc-li small{display:block;color:var(--ink-3);font-size:12px}
   .wkc-act{display:flex;gap:8px;margin-top:14px}
   .wkc-act button{flex:1;min-height:44px;border-radius:12px;border:0;cursor:pointer;font:700 13px/1 Manrope,sans-serif}
   .wkc-act .pri{background:var(--accent-btn-bg);color:var(--accent-btn-ink)}
@@ -666,7 +670,7 @@
      bant şeridi var. Renk tek başına anlam taşımıyor — şeridin yanında
      kelime de yazıyor (kritik/dikkat/olumlu/bilgi). */
   .ai-h{font:700 15px/1.35 Manrope,sans-serif;margin:0 0 4px}
-  .ai-meta{font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;margin-bottom:12px}
+  .ai-meta{font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums;margin-bottom:12px}
   .ai-f{position:relative;padding:10px 0 10px 12px;border-top:1px solid var(--hair)}
   .ai-f:first-of-type{border-top:0}
   .ai-f::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:999px;background:var(--ink-3)}
@@ -674,49 +678,49 @@
   .ai-f.dikkat::before{background:var(--warn)}
   .ai-f.olumlu::before{background:var(--s3)}
   .ai-f-t{font-size:13px;font-weight:700;line-height:1.35;display:flex;gap:6px;flex-wrap:wrap;align-items:baseline}
-  .ai-sev{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:999px;background:var(--card-2);color:var(--ink-2)}
+  .ai-sev{font-size:11px;font-weight:700;padding:1px 6px;border-radius:999px;background:var(--card-2);color:var(--ink-2)}
   .ai-f.kritik .ai-sev{background:var(--crit-soft);color:var(--crit-ink)}
   .ai-f.dikkat .ai-sev{background:var(--warn-soft);color:var(--warn-ink)}
   .ai-f.olumlu .ai-sev{background:var(--ok-soft);color:var(--ok-ink)}
-  .ai-f-b{font-size:12.5px;line-height:1.5;color:var(--ink-2);margin-top:4px}
+  .ai-f-b{font-size:13px;line-height:1.5;color:var(--ink-2);margin-top:4px}
   .ai-f-b b{color:var(--ink-3);font-weight:700;font-size:11px}
   /* Dokunma hedefi 44pt: `summary` varsayılanda ~18px ve telefonda ıskalanır. */
-  .ai-f-d>summary{list-style:none;cursor:pointer;font-size:11.5px;color:var(--ink-3);
+  .ai-f-d>summary{list-style:none;cursor:pointer;font-size:12px;color:var(--ink-3);
     min-height:44px;display:flex;align-items:center;gap:5px}
   .ai-f-d>summary::-webkit-details-marker{display:none}
-  .ai-f-d>summary::before{content:"▸";font-size:10px}
+  .ai-f-d>summary::before{content:"▸";font-size:11px}
   .ai-f-d[open]>summary::before{content:"▾"}
-  .ai-gap{font-size:12.5px;line-height:1.5;padding:6px 0;border-top:1px solid var(--hair)}
+  .ai-gap{font-size:13px;line-height:1.5;padding:6px 0;border-top:1px solid var(--hair)}
   .ai-gap:first-of-type{border-top:0}
-  .ai-gap small{display:block;color:var(--ink-3);font-size:11.5px}
+  .ai-gap small{display:block;color:var(--ink-3);font-size:12px}
   .ai-off{padding:12px;border-radius:12px;background:var(--unmeasured-soft);
-    font-size:12.5px;line-height:1.5;color:var(--ink-2)}
+    font-size:13px;line-height:1.5;color:var(--ink-2)}
   .ai-off b{display:block;margin-bottom:3px;color:var(--ink)}
   /* Enstrümantasyon kapsamı — Veri sekmesi. */
   /* `flex-wrap` ŞART: not satırı `flex-basis:100%` ile alt satıra inmeyi
      bekliyor, ama sarma kapalıyken dördüncü sütun oluyor ve satır 390px'i
      aşıyor. Telefonda ölçüldü (405px), tarayıcı olmadan görünmezdi. */
   .cov{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;padding:7px 0;
-    border-top:1px solid var(--hair);font-size:12.5px}
+    border-top:1px solid var(--hair);font-size:13px}
   .cov:first-of-type{border-top:0}
   .cov-dot{font-size:11px;width:12px;flex:0 0 12px}
   .cov.miss .cov-dot{color:var(--crit)}
   .cov.opt .cov-dot{color:var(--ink-3)}
   .cov.ok .cov-dot{color:var(--ok)}
-  .cov-n{font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+  .cov-n{font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
     min-width:0;overflow-wrap:anywhere}
-  .cov-s{color:var(--ink-3);font-size:11.5px;margin-left:auto;white-space:nowrap}
-  .cov-note{flex-basis:100%;color:var(--ink-3);font-size:11.5px;line-height:1.45;padding-left:20px}
+  .cov-s{color:var(--ink-3);font-size:12px;margin-left:auto;white-space:nowrap}
+  .cov-note{flex-basis:100%;color:var(--ink-3);font-size:12px;line-height:1.45;padding-left:20px}
   .wk-pre{margin:12px 0 0;white-space:pre-wrap;word-break:break-word;
-    font:inherit;font-size:12.5px;line-height:1.55;color:var(--ink-2);
+    font:inherit;font-size:13px;line-height:1.55;color:var(--ink-2);
     font-variant-numeric:tabular-nums}
   .wk-note{margin-top:12px;width:100%;box-sizing:border-box;font:inherit;
-    font-size:12.5px;padding:10px 12px;border:1px solid var(--hair);
+    font-size:13px;padding:10px 12px;border:1px solid var(--hair);
     border-radius:var(--r-md);background:var(--canvas);color:var(--ink)}
   .wk-note:focus{outline:0;border-color:var(--brand)}
 
   .tw-more{display:block;width:100%;margin-top:10px;padding:10px 12px;border:0;
-    background:var(--canvas);color:var(--ink-2);font:inherit;font-size:12.5px;
+    background:var(--canvas);color:var(--ink-2);font:inherit;font-size:13px;
     font-weight:600;border-radius:var(--r-md);cursor:pointer}
   .tw-more:hover{background:var(--hair)}
   /* Masaüstünde sınır yok (kutu zaten 430px'te kaydırılıyor) — düğme de yok. */
@@ -745,7 +749,7 @@
        çalışıyor, böylece hücre sırası tablonun sütun sırasına sadık kalıyor. */
     table.dt-cards tbody tr::after{content:"";order:1;flex-basis:100%;height:0}
     /* 2. satır: ikincil ölçüler, kendi etiketleriyle */
-    table.dt-cards td.sec{order:2;font-size:11.5px;color:var(--ink-3)}
+    table.dt-cards td.sec{order:2;font-size:12px;color:var(--ink-3)}
     /* etiketi olmayan ikincil hücre de var (ör. ülke bayrağı — kendi kendini
        anlatıyor); boş data-l'de baştaki boşluğu basma */
     table.dt-cards td.sec:not([data-l=""])::before{content:attr(data-l) " ";opacity:.7}
@@ -793,9 +797,9 @@
 
   /* === gauge === */
   .gauge-wrap{display:grid;place-items:center;padding:6px 0 2px}
-  .gauge-val{font-family:Manrope,sans-serif;font-weight:700;font-size:30px;line-height:1;margin-top:-42px}
+  .gauge-val{font-family:Manrope,sans-serif;font-weight:700;font-size:28px;line-height:1;margin-top:-42px}
   .gauge-lb{font-size:12px;color:var(--ink-3);margin-top:4px}
-  .gauge-foot{display:flex;justify-content:space-between;border-top:1px solid var(--hair);margin-top:14px;padding-top:12px;font-size:12.5px;color:var(--ink-3)}
+  .gauge-foot{display:flex;justify-content:space-between;border-top:1px solid var(--hair);margin-top:14px;padding-top:12px;font-size:13px;color:var(--ink-3)}
   .gauge-foot b{color:var(--ink);font-family:Manrope,sans-serif}
 
   /* === huni === */
@@ -815,7 +819,7 @@
   .segbar{display:flex;height:10px;border-radius:var(--r-pill);overflow:hidden;gap:2px;margin:6px 0 14px}
   .segbar span{height:100%;border-radius:var(--r-pill)}
   .srcgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px}
-  .srcgrid .it{display:flex;align-items:center;gap:8px;font-size:12.5px}
+  .srcgrid .it{display:flex;align-items:center;gap:8px;font-size:13px}
   .srcgrid .it .dot{width:8px;height:8px;border-radius:50%;flex:none}
   .srcgrid .it b{margin-left:auto;font-family:Manrope,sans-serif;font-weight:600}
 
@@ -837,7 +841,7 @@
     font-family:Manrope,sans-serif;font-weight:700;font-size:12px;background:var(--canvas);color:var(--ink-2)}
   .lb-name{font-size:13px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .lb-star{font-size:13px;font-weight:700;font-family:Manrope,sans-serif}
-  .lb-sub{font-size:11.5px;color:var(--ink-3)}
+  .lb-sub{font-size:12px;color:var(--ink-3)}
   .lb-track{height:7px;border-radius:var(--r-pill);background:var(--canvas);overflow:hidden}
   .lb-fill{height:100%;border-radius:var(--r-pill);background:var(--ink-3);opacity:.35}
   .lb.self .lb-av{background:var(--accent-btn-bg);color:var(--accent-btn-ink)}
@@ -845,7 +849,7 @@
   .lb.self .lb-name,.lb.self .lb-star{color:var(--brand)}
   /* son 14 günde sürüm çıkaran özne — "rakip hareketi" sinyali ayrı bir
      karta değil, zaten baktığın satıra gömülü (bkz. round 6, A2). */
-  .lb-rel{display:block;font-size:11.5px;color:var(--ink-3);margin-top:1px}
+  .lb-rel{display:block;font-size:12px;color:var(--ink-3);margin-top:1px}
   .lb-rel.new{color:var(--amber);font-weight:700}
 
   /* === yorumlar === */
@@ -855,10 +859,10 @@
   .rev-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
   .badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:var(--r-pill);background:var(--brand-soft);color:var(--brand)}
   .badge.rival{background:var(--canvas);color:var(--ink-3)}
-  .rev-star{margin-left:auto;font-size:12.5px;color:var(--amber);font-weight:700}
-  .rev-title{font-weight:600;font-size:14px}
+  .rev-star{margin-left:auto;font-size:13px;color:var(--amber);font-weight:700}
+  .rev-title{font-weight:600;font-size:13px}
   .rev-body{color:var(--ink-2);font-size:13px;white-space:normal}
-  .rev-date{font-size:11.5px;color:var(--ink-3);margin-top:4px}
+  .rev-date{font-size:12px;color:var(--ink-3);margin-top:4px}
 
   /* === lansman öncesi mod === Mağazada henüz bulunmayan uygulamada (bkz.
      `isPrelaunch`) Özet, mağaza/gelir kartlarını gizleyip lansman öncesi
@@ -873,7 +877,7 @@
   /* Boş tablodaki "Filtreleri temizle": 44px dokunma hedefi (iOS asgarisi)
      ve metinden bir satır aşağı — aynı satırda kalınca cümlenin parçası
      gibi okunup basılabilir olduğu fark edilmiyordu. */
-  .efb{margin:10px auto 0;display:flex;font-size:12.5px;padding:0 14px;min-height:34px}
+  .efb{margin:10px auto 0;display:flex;font-size:13px;padding:0 14px;min-height:34px}
   /* Senkron sürerken: buton pasif görünür ve ikon döner. Dönme
      `prefers-reduced-motion` ile kapanıyor — o zaman soluklaşma tek
      göstergedir, ki yeterli. */
@@ -892,9 +896,9 @@
   }
   /* Hata metni ham makine çıktısı: sarmalanmalı ve kırılmalı, ama okunaklı
      kalmalı — uzun URL'ler yatay kaydırma yaratmasın. */
-  .errmsg{font-size:12.5px;color:var(--ink-2);white-space:pre-wrap;
+  .errmsg{font-size:13px;color:var(--ink-2);white-space:pre-wrap;
     overflow-wrap:anywhere;line-height:1.45}
-  .errcalls{margin-top:6px;font-size:11.5px;color:var(--ink-3);
+  .errcalls{margin-top:6px;font-size:12px;color:var(--ink-3);
     font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
   .errcalls b{color:var(--down)}
   /* Çözülmüş hata: silinmiyor ama soluk — "şu an bakılacak" ile "geçmişte
@@ -903,7 +907,7 @@
   /* Kapının altında kalan ülkeler: satır satır tablo değil, tek bakışta
      taranan çipler — buradaki bilgi "şu ülke şu kadar, henüz oran yok". */
   .thin-wrap{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0}
-  .thin-chip{font-size:11.5px;color:var(--ink-3);background:var(--canvas);
+  .thin-chip{font-size:12px;color:var(--ink-3);background:var(--canvas);
     border-radius:var(--r-pill);padding:5px 10px;white-space:nowrap}
   .thin-chip b{color:var(--ink-2);font-family:Manrope,sans-serif}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -919,7 +923,7 @@
 
   /* Üçüncü durum: ölçülmedi. Ne yeşil ne kırmızı — kendi token'ı var. */
   .unmeasured{display:flex;gap:10px;align-items:flex-start;background:var(--unmeasured-soft);
-    border-radius:var(--r-inner);padding:13px 15px;font-size:12.5px;color:var(--ink-2);line-height:1.55}
+    border-radius:var(--r-inner);padding:13px 15px;font-size:13px;color:var(--ink-2);line-height:1.55}
   .unmeasured svg{width:16px;height:16px;flex:none;margin-top:1px;color:var(--ink-3)}
   .unmeasured b{color:var(--ink)}
 
@@ -929,7 +933,7 @@
   .fb{display:flex;gap:11px;align-items:flex-start;background:var(--card-2);
     border-radius:var(--r-inner);padding:13px 15px;flex-wrap:wrap}
   .fb>svg{width:16px;height:16px;flex:none;margin-top:2px;color:var(--ink-3)}
-  .fb-body{flex:1;min-width:180px;font-size:12.5px;color:var(--ink-2);line-height:1.55}
+  .fb-body{flex:1;min-width:180px;font-size:13px;color:var(--ink-2);line-height:1.55}
   .fb-body b{color:var(--ink)}
   .fb-act{all:unset;cursor:pointer;white-space:nowrap;font:700 12px/1 Manrope,sans-serif;
     color:var(--accent-text);background:var(--accent-soft);padding:9px 13px;border-radius:var(--r-pill)}
@@ -950,8 +954,8 @@
   .fn-stage{padding:13px 0;border-top:1px solid var(--hair)}
   .fn-stage:first-child{border-top:0;padding-top:2px}
   .fn-top{display:flex;align-items:baseline;gap:10px}
-  .fn-name{font:700 13.5px/1.3 Manrope,sans-serif;flex:1;min-width:0}
-  .fn-val{font:800 19px/1 Manrope,sans-serif;font-variant-numeric:tabular-nums}
+  .fn-name{font:700 13px/1.3 Manrope,sans-serif;flex:1;min-width:0}
+  .fn-val{font:800 20px/1 Manrope,sans-serif;font-variant-numeric:tabular-nums}
   .fn-pct{font:700 12px/1 Manrope,sans-serif;padding:4px 8px;border-radius:var(--r-pill);
     background:var(--unmeasured-soft);color:var(--ink-2);white-space:nowrap}
   .fn-bar{height:9px;border-radius:5px;background:var(--ground);margin-top:9px;overflow:hidden}
@@ -970,10 +974,10 @@
     border-radius:var(--r-inner);padding:11px 13px;margin-bottom:12px}
   .rd-day{font:800 14px/1 Manrope,sans-serif;white-space:nowrap}
   .rd-items{display:flex;gap:14px;flex-wrap:wrap;flex:1}
-  .rd-item{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+  .rd-item{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-2);white-space:nowrap}
   .rd-item i{width:11px;height:3px;border-radius:2px;flex:none}
   .rd-item i.dot{width:9px;height:9px;border-radius:50%}
-  .rd-item b{font:800 13.5px/1 Manrope,sans-serif;color:var(--ink);font-variant-numeric:tabular-nums}
+  .rd-item b{font:800 13px/1 Manrope,sans-serif;color:var(--ink);font-variant-numeric:tabular-nums}
   .rd-nav{display:flex;gap:4px}
   .rd-nav button{all:unset;cursor:pointer;width:30px;height:30px;border-radius:9px;display:grid;
     place-items:center;background:var(--ground);color:var(--ink-2)}
@@ -1009,14 +1013,14 @@
       background:var(--panel);color:var(--panel-ink)">
       <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
     </div>
-    <div style="font-size:19px;font-weight:700;letter-spacing:-.025em;margin-bottom:5px">App Cockpit</div>
+    <div style="font-size:20px;font-weight:700;letter-spacing:-.025em;margin-bottom:5px">App Cockpit</div>
     <div class="card-sub" style="margin-bottom:18px">Panel okuma anahtarını gir</div>
     <input id="gateKey" type="password" placeholder="anahtar" autocomplete="off"
       style="width:100%;font:inherit;font-weight:600;padding:12px 14px;border-radius:var(--r-pill);border:0;
         background:var(--ground);color:var(--ink);text-align:center">
     <button id="gateBtn" class="pillbtn" style="width:100%;justify-content:center;margin-top:11px;
       background:var(--accent-btn-bg);color:var(--accent-btn-ink)">Aç</button>
-    <div id="gateErr" style="color:var(--down);font-size:12.5px;margin-top:10px"></div>
+    <div id="gateErr" style="color:var(--down);font-size:13px;margin-top:10px"></div>
   </div>
 </div>
 
@@ -1163,7 +1167,7 @@
             </span>
             <span class="kpi-name">Mağaza durumu</span>
           </div>
-          <div class="kpi-val" id="plStore" style="font-size:22px">–</div>
+          <div class="kpi-val" id="plStore" style="font-size:20px">–</div>
           <div class="kpi-foot"><span id="plStoreSub"></span></div>
         </div>
         <div class="rev-item">
@@ -1271,7 +1275,7 @@
             </span>
             <span class="kpi-name">Aktif abonelik<br><span class="card-sub">RevenueCat · güncel</span></span>
           </div>
-          <div class="kpi-val tnum" id="gSubs" style="font-size:22px">–</div>
+          <div class="kpi-val tnum" id="gSubs" style="font-size:20px">–</div>
         </div>
         <div class="rev-item">
           <div class="kpi-top">
@@ -1414,7 +1418,7 @@
       <div class="card c4" data-store-only>
         <div class="card-head">
           <div><div class="card-title">Kaynak kırılımı</div><div class="card-sub">Gösterim ve indirme nereden</div></div>
-          <select id="srcSort" style="font:inherit;font-size:12.5px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
+          <select id="srcSort" style="font:inherit;font-size:13px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
             <option value="imp">Gösterim</option><option value="pv">Sayfa</option><option value="dl">İndirme</option><option value="crImp">Gösterim→indirme</option><option value="crPv">Sayfa→indirme</option>
           </select>
         </div>
@@ -1497,7 +1501,7 @@
       <div data-move-to="aso" class="card c5">
         <div class="card-head">
           <div><div class="card-title">Puan sıralaması</div><div class="card-sub">biz + rakipler · son 30g puanı ve sürüm hareketi</div></div>
-          <select id="lbSort" style="font:inherit;font-size:12.5px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
+          <select id="lbSort" style="font:inherit;font-size:13px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
             <option value="rating">Puan</option><option value="votes">Oy</option><option value="size">Boyut</option><option value="rel">Son sürüm</option>
           </select>
         </div>
@@ -1857,7 +1861,7 @@
              gördüğü için Spendy tarafında yeni bir instrumentasyon GEREKMİYOR.
              Eksik olan tek şey `revenuecat` konektörünün bu chart'ları da
              çekmesi. Doğrulama: docs/audit-2026-09-03-para-merkezli.md §2. -->
-        <div class="c12" style="font-size:11.5px;color:var(--ink-3)">
+        <div class="c12" style="font-size:12px;color:var(--ink-3)">
           <b>Retention/kohort LTV neden yok:</b> RevenueCat'in <code>cohort_explorer</code> ve
           <code>subscription_retention</code> uçları var, ama ölçülerinin hepsi abone/gelir
           merkezli (gelir, realized LTV, retained <i>subscriptions</i>) — "geri dönen kullanıcı"
@@ -1885,7 +1889,7 @@
           <div class="card-head">
             <div><div class="card-title">Uygulamalar</div>
                  <div class="card-sub">her uygulama kendi ÖLÇÜLEN geçmişiyle · aralık seçicisinden bağımsız</div></div>
-            <select id="pfSort" style="font:inherit;font-size:12.5px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
+            <select id="pfSort" style="font:inherit;font-size:13px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
               <option value="wasted">İsraf edilen envanter</option>
               <option value="rev">Gelir</option>
               <option value="dau">Günlük aktif</option>
@@ -2085,7 +2089,7 @@
         <div class="card c4">
           <div class="card-head"><div><div class="card-title">Yıldız dağılımı</div>
             <div class="card-sub" id="yDistSub">–</div></div>
-            <select id="yDistWho" style="font:inherit;font-size:12.5px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
+            <select id="yDistWho" style="font:inherit;font-size:13px;background:var(--canvas);border:0;border-radius:999px;padding:6px 11px;color:var(--ink)">
               <option value="self" selected>Yalnız biz</option><option value="rival">Yalnız rakip</option><option value="">Biz + rakip</option></select>
           </div>
           <div id="yDist"></div>
@@ -3430,7 +3434,7 @@ function drawKpis(){
       : `<span class="fn-pct">${pct.toFixed(pct<10?1:0)}% girişin</span>`;
     return `<div class="fn-stage">
       <div class="fn-top"><span class="fn-name">${nm}</span>
-        <span class="fn-val">${v==null?'<span style="font-size:14px;color:var(--ink-3)">ölçülmüyor</span>':num(v)}</span>
+        <span class="fn-val">${v==null?'<span style="font-size:13px;color:var(--ink-3)">ölçülmüyor</span>':num(v)}</span>
         ${head}</div>
       <div class="fn-bar"><i style="width:${w}%;background:${col}"></i></div>
       ${sub?`<div class="fn-sub">${sub}</div>`:''}
@@ -4822,7 +4826,7 @@ function drawAi(){
       ? 'Model çağrılamadı.' : 'Model çıktısı denetimden geçemedi (kanıtsız iddia veya uydurulmuş sayı).';
     host.innerHTML=`<div class="ai-off"><b>${esc(why)}</b>
       ${esc(r.failure_detail||'ayrıntı yok')}
-      <div style="margin-top:6px;color:var(--ink-3);font-size:11.5px">${esc(day)} · ${esc(when)} · ${esc(r.status)}</div></div>`;
+      <div style="margin-top:6px;color:var(--ink-3);font-size:12px">${esc(day)} · ${esc(when)} · ${esc(r.status)}</div></div>`;
     return;
   }
   const a=r.analysis||{};
@@ -5935,16 +5939,16 @@ function renderPazarPre(){
   el('pzPreCover').innerHTML =
     `<div class="brk"><div class="brk-top"><span class="dot" style="background:var(--s3)"></span>
       <b style="font-family:Manrope">Ölçülen: ${rows.map(r=>`${FLAG[r.cc]||"🏳️"} ${String(r.cc).toUpperCase()}`).join(' ')||'yok'}</b></div>
-      <div style="font-size:12.5px;color:var(--ink-2)">Aşağıdaki tablo yalnız bu mağazalar arasında bir seçim yapar.</div></div>`+
+      <div style="font-size:13px;color:var(--ink-2)">Aşağıdaki tablo yalnız bu mağazalar arasında bir seçim yapar.</div></div>`+
     `<div class="brk"><div class="brk-top"><span class="dot" style="background:var(--s4)"></span>
       <b style="font-family:Manrope">${num(openLeft)} mağaza ölçülebilir ama ölçülmedi</b></div>
-      <div style="font-size:12.5px;color:var(--ink-2)">Bu mağazalarda talep de rakip de ÖLÇÜLMEDİ — "fırsat yok" demek değil, "bakmadık" demek. Lansman pazarını yalnız 5 ölçüme dayandırmadan önce bunlar ölçülmeli.</div></div>`+
+      <div style="font-size:13px;color:var(--ink-2)">Bu mağazalarda talep de rakip de ÖLÇÜLMEDİ — "fırsat yok" demek değil, "bakmadık" demek. Lansman pazarını yalnız 5 ölçüme dayandırmadan önce bunlar ölçülmeli.</div></div>`+
     `<div class="brk"><div class="brk-top"><span class="dot" style="background:var(--ink-3)"></span>
       <b style="font-family:Manrope">${num(cov.absent)} mağaza Apple Ads dizininde yok</b></div>
-      <div style="font-size:12.5px;color:var(--ink-2)">Apple Ads bu mağazalara <b>400 Invalid storefront name</b> diyor — sinyal boş sonuç değil, aracın kendi cevabı. ${SF_TOTAL} mağazalık tam tarama ${dShort(SF_SCAN_DAY)}'da yapıldı; bu liste o günden beri ölçüldükçe güncelleniyor. Yapılacak iş değil, bu araçla ölçülemeyen mağazalar.</div></div>`+
+      <div style="font-size:13px;color:var(--ink-2)">Apple Ads bu mağazalara <b>400 Invalid storefront name</b> diyor — sinyal boş sonuç değil, aracın kendi cevabı. ${SF_TOTAL} mağazalık tam tarama ${dShort(SF_SCAN_DAY)}'da yapıldı; bu liste o günden beri ölçüldükçe güncelleniyor. Yapılacak iş değil, bu araçla ölçülemeyen mağazalar.</div></div>`+
     (stale?`<div class="brk"><div class="brk-top"><span class="dot" style="background:var(--s2)"></span>
       <b style="font-family:Manrope">asa_popularity konektörü KAPALI</b></div>
-      <div style="font-size:12.5px;color:var(--ink-2)">Bu sayılar elle alınmış bir anlık ölçüm; kendiliğinden tazelenmiyor ve bayatladığında Veri sağlığı uyarmaz. Yeni mağaza ölçmek Apple Ads oturumu açmayı gerektiriyor.</div></div>`:'');
+      <div style="font-size:13px;color:var(--ink-2)">Bu sayılar elle alınmış bir anlık ölçüm; kendiliğinden tazelenmiyor ve bayatladığında Veri sağlığı uyarmaz. Yeni mağaza ölçmek Apple Ads oturumu açmayı gerektiriyor.</div></div>`:'');
 
   /* Talep skoru HER MAĞAZANIN KENDİ İÇİNDE normalize (100 o mağazanın
      tavanı). Küçük bir pazardaki 49 ile büyük bir pazardaki 52 benzer
@@ -6034,13 +6038,13 @@ function drawGrowthMove(){
   const say=[];
   const top=rows[0];
   if(top && top.dl/totDl>=0.4 && totDl>=minN)
-    say.push(`<b>Bağımlılık:</b> indirmenin ${pcTr(top.dl/totDl)} kadarı tek kanaldan (${esc(top.name)}). O kanal daralırsa büyüme aynı oranda daralır — ikinci bir kanal geliştirmek bu haftanın işi olabilir.`);
+    say.push({k:'act',t:`<b>→ Bağımlılık:</b> indirmenin ${pcTr(top.dl/totDl)} kadarı tek kanaldan (${esc(top.name)}). O kanal daralırsa büyüme aynı oranda daralır — ikinci bir kanal geliştirmek bu haftanın işi olabilir.`});
   const unk=cur.find(r=>/unavailable/i.test(r.name));
   if(unk && totPv>=minN && unk.pv/totPv>=0.3)
-    say.push(`<b>Kör nokta:</b> ürün sayfası görüntülemenin ${pcTr(unk.pv/totPv)} kadarının kaynağı belirsiz ("${esc(unk.name)}") ve bunlardan ${num(unk.dl)} indirme geldi. Bu kısım için kanal kararı verilemez.`);
+    say.push({k:'unm',t:`<b>○ Kör nokta:</b> ürün sayfası görüntülemenin ${pcTr(unk.pv/totPv)} kadarının kaynağı belirsiz ("${esc(unk.name)}") ve bunlardan ${num(unk.dl)} indirme geldi. Bu kısım için kanal kararı verilemez.`});
   const best=[...cur].filter(r=>r.pv>=minN).sort((a,b)=>b.dl/b.pv-a.dl/a.pv)[0];
   if(best && top && best.name!==top.name)
-    say.push(`<b>En verimli kanal:</b> ${esc(best.name)} — sayfa→indirme ${pcTr(best.dl/best.pv)} (en büyük kanal ${esc(top.name)}: ${pcTr(top.dl/Math.max(1,top.pv))}). Hacmi küçükse büyütülebilir; büyüyüp büyümediği ancak denenince bilinir.`);
+    say.push({k:'act',t:`<b>→ En verimli kanal:</b> ${esc(best.name)} — sayfa→indirme ${pcTr(best.dl/best.pv)} (en büyük kanal ${esc(top.name)}: ${pcTr(top.dl/Math.max(1,top.pv))}). Hacmi küçükse büyütülebilir; büyüyüp büyümediği ancak denenince bilinir.`});
   /* Kelime hamlesi: talebi ölçülmüş, metadata'da olmayan en yüksek talepli 5 terim. */
   const gaps=gapsFor().filter(g=>g.verdict==='GAP'&&g.demand!=null&&Number(g.demand)>ASA_FLOOR);
   const byTerm=new Map();
@@ -6052,7 +6056,7 @@ function drawGrowthMove(){
       +`<br><span style="color:var(--ink-3)">Talep yüksek ≠ kazanılır: rakip yoğunluğu bu sayıda yok. Önce en az rekabetli olanla dene, sonra dönüşüme bak.</span></div>`
     : `<div class="kr-sub" style="margin-top:12px"><b>Kelime:</b> talebi ölçülmüş fırsat terim yok — ya listeleme kapsamlı ya talep ölçümü eski (Büyüme › Tüm terimler).</div>`;
   el('gmBody').innerHTML=line
-    +(say.length?`<div class="kr-verdict" style="border:0;padding:8px 0 0;margin:0">${say.map(t=>`<div class="kr-move" style="margin-top:8px">${t}</div>`).join('')}</div>`:'')
+    +(say.length?`<div class="kr-verdict" style="border:0;padding:8px 0 0;margin:0">${say.map(o=>`<div class="kr-move${o.k==='unm'?' unmeasured':''}" style="margin-top:8px">${o.t}</div>`).join('')}</div>`:'')
     +kw;
 }
 function renderPazar(){
@@ -6208,7 +6212,7 @@ function renderPazar(){
       <span class="dot" style="background:var(--s4)"></span>
       <b style="font-family:Manrope">${FLAG[r.cc]||"🏳️"} ${esc(countryLabel(r.cc))}</b>
       <span class="v">${num(r.dl)} ind.</span></div>
-      <div style="font-size:12.5px;color:var(--ink-2)">${num(r.pv)} sayfa görüntüleme · bu ülkede hiç anahtar kelime talebi ölçmedik</div></div>`).join("")
+      <div style="font-size:13px;color:var(--ink-2)">${num(r.pv)} sayfa görüntüleme · bu ülkede hiç anahtar kelime talebi ölçmedik</div></div>`).join("")
     : `<div class="empty">Trafiği olan her ölçülebilir ülkede talep ölçümü var</div>`;
   /* Ölçülemeyen ama TRAFİĞİ olan ülkeler her iki halde de ekranda kalmalı:
      liste boşalınca not da kaybolursa, o ülkelerin varlığı sessizce silinir
@@ -6216,7 +6220,7 @@ function renderPazar(){
   if(absentWithTraffic) el('pzUnmeasured').innerHTML +=
     `<div class="brk"><div class="brk-top"><span class="dot" style="background:var(--ink-3)"></span>
       <b style="font-family:Manrope">${num(absentWithTraffic)} ülkede trafik var ama ölçülemiyor</b></div>
-      <div style="font-size:12.5px;color:var(--ink-2)">Apple Ads bu mağazaları tanımıyor (400 Invalid storefront name) — yapılacak iş değil, aracın sınırı.</div></div>`;
+      <div style="font-size:13px;color:var(--ink-2)">Apple Ads bu mağazaları tanımıyor (400 Invalid storefront name) — yapılacak iş değil, aracın sınırı.</div></div>`;
 
   /* --- yapısal: ülke bazında kelime fırsatı --- */
   const gapByC={};
@@ -7642,10 +7646,10 @@ function drawBlockers(slug){
       <span class="dot" style="background:${urgent?'var(--s2)':'var(--ink-3)'}"></span>
       <b style="font-family:Manrope">${esc(r.slug)} · ${esc(r.source)}</b>
       <span class="v">${esc(r.kind||'')}</span></div>
-      <div style="font-size:12.5px;color:var(--ink-2)">${esc(r.action||r.note||'')}</div></div>`;
+      <div style="font-size:13px;color:var(--ink-2)">${esc(r.action||r.note||'')}</div></div>`;
   el('sBlockList').innerHTML = rows.length
     ? todo.map(r=>row(r,true)).join("")+
-      (info.length?`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;color:var(--ink-3)">${info.length} bilgi notu — bilinçli kararlar ve henüz gelmemiş uçlar</summary>${info.map(r=>row(r,false)).join("")}</details>`:'')
+      (info.length?`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:13px;color:var(--ink-3)">${info.length} bilgi notu — bilinçli kararlar ve henüz gelmemiş uçlar</summary>${info.map(r=>row(r,false)).join("")}</details>`:'')
     : `<div class="empty">Eksik kimlik, süresi geçmiş anahtar veya reddedilmiş oturum yok</div>`;
 }
 
@@ -7672,7 +7676,7 @@ function renderSaglik(){
     <div class="brk"><div class="brk-top">
       <span class="dot" style="background:var(--ink-3)"></span>
       <b style="font-family:Manrope">${esc(b.slug==='__global__'?'global':b.slug)}/${esc(b.source)}</b></div>
-      <div style="font-size:12.5px;color:var(--ink-2)">${esc(b.blocked_on||"sebep yazılmamış")}</div></div>`).join("")
+      <div style="font-size:13px;color:var(--ink-2)">${esc(b.blocked_on||"sebep yazılmamış")}</div></div>`).join("")
     :`<div class="empty">Kapalı kaynak yok</div>`;
   drawSyncErrors(); drawDeferred();
 }
@@ -7745,7 +7749,7 @@ function drawDeferred(){
       <span class="dot" style="background:var(--s4)"></span>
       <b style="font-family:Manrope">${esc(r.slug==='__global__'?'global':r.slug)}/${esc(r.source)}</b>
       <span class="tag nod" style="margin-left:auto">${q?'karantina':'backoff'}</span></div>
-      <div style="font-size:12.5px;color:var(--ink-2)">${esc(String(r.consecutive_failures||0))} ardışık hata · ${esc(wait)} yeniden denenecek${r.status?` · ${esc(r.status)}`:''}</div></div>`;
+      <div style="font-size:13px;color:var(--ink-2)">${esc(String(r.consecutive_failures||0))} ardışık hata · ${esc(wait)} yeniden denenecek${r.status?` · ${esc(r.status)}`:''}</div></div>`;
   }).join("") : `<div class="empty">Geri çekilmiş kaynak yok</div>`;
 }
 /* Bir kaynağın SON koşusunda satırların ne olduğu. "Koştu" ile "veri getirdi"
