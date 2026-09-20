@@ -283,6 +283,32 @@
   .sig .hd{font:600 13.5px/1.35 Manrope,sans-serif}
   .sig .bd{font-size:12px;color:var(--ink-2);margin-top:3px;line-height:1.45}
   .sig .amt{font:600 13px/1 Manrope,sans-serif;white-space:nowrap;margin-left:auto;padding-left:10px}
+  /* karne — bkz. drawKarne() */
+  .kr-verdict{padding:2px 2px 12px;border-bottom:1px solid var(--hair);margin-bottom:4px}
+  .kr-verdict .kr-h{font:700 15px/1.35 Manrope,sans-serif}
+  .kr-verdict .kr-move{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--brand-soft);
+    font-size:12.5px;line-height:1.5;color:var(--ink)}
+  .kr-verdict .kr-move b{font-weight:700}
+  .kr-verdict .kr-gain{display:block;margin-top:5px;color:var(--ink-2);font-size:12px}
+  .kr-row{padding:12px 2px;border-top:1px solid var(--hair)}
+  .kr-row:first-of-type{border-top:0}
+  .kr-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .kr-name{font:600 13.5px/1.3 Manrope,sans-serif}
+  .kr-q{font-size:11px;color:var(--ink-3);font-weight:500;margin-left:6px}
+  .kr-val{font:700 20px/1 Manrope,sans-serif;font-variant-numeric:tabular-nums}
+  .kr-bar{position:relative;height:6px;border-radius:99px;background:var(--unmeasured-soft);margin:9px 0 7px}
+  .kr-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--s1)}
+  .kr-bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.55;border-radius:1px}
+  .kr-row.weak .kr-bar i{background:var(--down)}
+  .kr-row.edge .kr-bar i{background:var(--amber)}
+  .kr-row.good .kr-bar i{background:var(--up)}
+  .kr-sub{font-size:12px;color:var(--ink-2);line-height:1.45}
+  .kr-badge{display:inline-block;font:700 11px/1 Manrope,sans-serif;padding:4px 8px;border-radius:99px;
+    background:var(--unmeasured-soft);color:var(--ink-2);margin-right:6px;white-space:nowrap}
+  .kr-row.weak .kr-badge{background:var(--down-soft);color:var(--down)}
+  .kr-row.edge .kr-badge{background:var(--amber-soft);color:var(--amber)}
+  .kr-row.good .kr-badge{background:var(--up-soft);color:var(--up)}
+  .kr-note{font-size:11px;color:var(--ink-3);padding-top:10px;border-top:1px solid var(--hair);margin-top:2px;line-height:1.45}
   .sig-none{font-size:12.5px;color:var(--ink-3);padding:6px 2px}
   /* Dokunmayla açılan açıklama. Panelde bağlamın çoğu `title=` içinde:
      çipin neden gri olduğu, bölgesel rozetin hangi sayılardan geldiği,
@@ -1064,6 +1090,18 @@
            getirir ve o an gerçekten önemli olanı gizler. Hiçbir kural
            tetiklenmezse liste "işaretlenecek bir şey yok" der — dolgu
            üretmez. -->
+      <!-- KARNE — bir ürün/pazarlama yöneticisinin ilk sorusu: "kullanıcı
+           yolculuğunun HANGİ halkası kopuk?" Yolculuk sırasıyla (edinim →
+           aktivasyon → tutma → gelir) dört halka, her biri ölçülmüş pay/payda
+           + referans + zayıfsa somut hamle. İlk kopan halka öne çıkar: üstteki
+           halka delikken alttakini düzeltmek boşa çabadır (aşağıya az kişi
+           ulaşır). Referans eşikler panel.threshold'da, ekranda "referans"
+           etiketiyle — ölçülmüş değil, kabaca sektör ortancası. -->
+      <div class="c12 region-label" id="karneLabel">Karne</div>
+      <div class="card c12" id="karneCard">
+        <div id="karneBody"></div>
+      </div>
+
       <div class="c12 region-label" id="sigLabel">Sinyaller</div>
       <div class="card c12" id="sigCard">
         <div class="siglist" id="sigList"></div>
@@ -2851,6 +2889,153 @@ function drawRetentionKpi(){
     : 'Kayıt olan kullanıcıların ertesi gün geri dönme oranı — huninin son halkası.';
 }
 
+/* =====================================================================
+   KARNE — kullanıcı yolculuğunun hangi halkası kopuk?
+
+   NEDEN böyle: panelin eski hâli her sayıyı ayrı kart olarak gösteriyordu ve
+   "şimdi ne yapayım" sorusunu okuyana bırakıyordu. Bir ürün/pazarlama
+   yöneticisi tek şey sorar: yolculuk (edinim → aktivasyon → tutma → gelir)
+   nerede tıkalı ve orayı düzeltmek kaç kişi eder. Burada dört halka aynı
+   dilde: ölçülmüş pay/payda, referans, durum, zayıfsa hamle ve HAMLENİN
+   BÜYÜKLÜĞÜ (referansa çıkarsa kaç kişi).
+
+   KURALLAR (panel ilkeleriyle):
+   · Üç durum var: iyi / zayıf / ÖLÇÜLMEDİ. Ölçülmeyen halka "sorun yok" diye
+     gösterilmez (3. bölüm) — kendi satırında "ölçülmedi" der.
+   · Paydası n < alarm.min_sample olan oran sayı olarak yazılmaz (12. ilke).
+   · Referanslar panel.threshold'da ve ekranda "referans" etiketli — ölçülmüş
+     değil, kabaca sektör ortancası. Edinimin referansı YOK (kategoriye göre
+     çok değişir): yalnız kendi önceki dönemiyle kıyaslanır.
+   · Hamlenin büyüklüğü yalnız ÖLÇÜLMÜŞ girdilerden hesaplanır (yeni kullanıcı
+     sayısı × referansla fark). Tahmin garanti değil; formül yazılı.
+   · "İlk kopan halka": yolculuk sırasında ilk zayıf halka. Üstteki halka
+     delikken alttakini düzeltmek boşa çaba — daha az kişi oraya ulaşır. */
+const pcTr=(v,d=0)=>'%'+(v*100).toFixed(d).replace('.',',');
+function karneStages(){
+  const minN=thr('alarm.min_sample',30);
+  const weakR=thr('karne.weak_ratio',0.8);
+  const days=storeDays(), prev=storePrevDays();
+  const sf=storeFunnel(days), sfp=storeFunnel(prev);
+  const nuWin = RANGE===1?'1d':RANGE===30?'30d':'7d';
+  const newUsers=stockValue('app_export_new_users_'+nuWin);
+  const total=stockValue('app_export_total_users'), act=stockValue('app_export_activated_users');
+  const ret=stockValue('app_export_retention_next_day_retained'), elig=stockValue('app_export_retention_next_day_eligible');
+  const push=stockValue('app_export_push_reachable_users');
+  const subs=stockValue('rc_active_subscriptions'), mrr=stockValue('rc_mrr');
+  const cv=(D.stockSeries||[]).filter(r=>r.slug===APP&&r.metric==='rc_initial_conversion');
+  const pn=cv.reduce((a,r)=>a+Number(r.num||0),0), pd=cv.reduce((a,r)=>a+Number(r.den||0),0);
+  const winLbl = RANGE===1?'son 1 gün':RANGE===30?'son 30 gün':'son 7 gün';
+
+  const ci=(k,n)=>{ const w=wilson(k,n); return w?` · %95 aralık ${pcTr(w[0])}–${pcTr(w[1])}`:''; };
+  /* Ortak oran halkası: pay/payda + referans → durum. */
+  const ratioStage=(o)=>{
+    if(o.d==null||o.n==null||o.d===0) return {...o,state:'none',valTxt:'–',sub:o.noData};
+    if(o.d<minN) return {...o,state:'few',valTxt:'–',sub:`${num(o.d)} kayıt var — ${num(minN)} altında oran yazılmaz (yetersiz veri)`};
+    const pct=o.n/o.d, ratio=o.ref? pct/o.ref : null;
+    const state = ratio==null ? 'info' : ratio<weakR ? 'weak' : ratio<1 ? 'edge' : 'good';
+    return {...o,pct,ratio,state,valTxt:pcTr(pct,pct<0.1?1:0),
+      sub:`${num(o.n)}/${num(o.d)} ${o.what}${ci(o.n,o.d)}${o.ref?` · referans ${pcTr(o.ref)}`:''}`};
+  };
+
+  const st=[];
+  /* 1 · EDİNİM — referansı yok, yalnız kendi önceki dönemi. */
+  (function(){
+    const conv=sf.imp>=minN? sf.dl/sf.imp : null;
+    const shortPrev=prev.length>0&&prev.length<days.length;
+    let cmp='';
+    if(conv!=null && !shortPrev && sfp.imp>=minN){
+      const c=confRatio(sf.dl,sf.imp,sfp.dl,sfp.imp), o=sfp.dl/sfp.imp, d=(conv-o)*100;
+      cmp=` · önceki dönem ${pcTr(o,1)} (${d>=0?'+':''}${d.toFixed(1).replace('.',',')} puan, ${c.label})`;
+    } else if(conv!=null) cmp=' · önceki dönem yok/eksik — yön söylenmiyor';
+    const pvRate=sf.imp? sf.pv/sf.imp : null, dlRate=sf.pv? sf.dl/sf.pv : null;
+    st.push({key:'edinim',name:'Edinim',q:'mağazada görülüp indiriliyor mu?',
+      state: conv==null?(sf.imp?'few':'none'):'info',
+      valTxt: conv==null?'–':pcTr(conv,1),
+      sub: conv==null ? 'Mağaza gösterimi yok/yetersiz.'
+        : `${num(sf.imp)} gösterim → ${num(sf.pv)} sayfa → ${num(sf.dl)} indirme${cmp}`,
+      hint: (pvRate!=null&&dlRate!=null)
+        ? `Gösterimin ${pcTr(pvRate,1)}'i sayfayı açıyor (ikon + başlık işi), sayfayı açanın ${pcTr(dlRate)}'i indiriyor (ekran görüntüsü + vaat işi).` : ''});
+  })();
+  /* 2 · AKTİVASYON */
+  st.push(ratioStage({key:'aktivasyon',name:'Aktivasyon',q:'kayıt olan ürünü kullanıyor mu?',
+    n:act,d:total,ref:thr('karne.activation_ref',0.5),what:'kayıtlı en az 1 işlem ekledi',
+    noData:'Kendi backend verisinden aktivasyon gelmedi.'}));
+  /* 3 · TUTMA */
+  st.push(ratioStage({key:'tutma',name:'Tutma',q:'ertesi gün geri dönüyor mu?',
+    n:ret,d:elig,ref:thr('karne.retention_d1_ref',0.25),what:'ertesi gün döndü',
+    noData:'Kendi backend verisinden tutma gelmedi.'}));
+  /* 4 · GELİR */
+  st.push(ratioStage({key:'gelir',name:'Gelir',q:'yeni müşteri ödüyor mu?',
+    n:pn,d:pd,ref:thr('karne.paid_conv_ref',0.01),what:'yeni müşteri ödedi',
+    noData:'RevenueCat dönüşüm verisi gelmedi.'}));
+  const g=st[st.length-1];
+  if(g.pct!=null){ g.sub+=` · ${num(subs||0)} abone${mrr!=null?` · MRR ${money2(mrr)}`:''}`; }
+  /* 5 · YAYILMA — ölçü yok; gizlemek "sorun yok" demek olurdu. */
+  st.push({key:'yayilma',name:'Yayılma',q:'kullanıcı başkasını getiriyor mu?',state:'none',valTxt:'–',
+    sub:'Davet/paylaşım hiç ölçülmüyor — sıfır değil, veri yok. Ölçüsü olmayan halka iyileştirilemez.'});
+
+  /* İlk kopan halka + hamle. Referanslı halkalar arasında yolculuk sırasıyla. */
+  const first=st.find(x=>x.state==='weak')||null;
+  const push100=(push!=null&&total)? push/total : null;
+  st.forEach(x=>{
+    if(x.state!=='weak' && x.state!=='edge') return;
+    const gapUsers = (x.d&&x.ref) ? Math.max(0,Math.round((x.ref-x.pct)*x.d)) : null;
+    if(x.key==='tutma'){
+      const per100=Math.max(0,Math.round((x.ref-x.pct)*100));
+      x.move=`İlk oturumda değer anını öne çek (ilk işlem ilk dakikada) ve ilk gün akşamı tek bir hatırlatıcı gönder`
+        +(push100!=null?` — bugün kullanıcıların ${pcTr(push100)}'ine push ulaşabiliyor (${num(push)}/${num(total)}), yani hatırlatıcı en fazla bu kadarına gider`:'')
+        +`. Yeni kullanıcı aramak yerine bu daha ucuz.`;
+      x.gain=`Referansa (${pcTr(x.ref)}) çıkarsa: her 100 yeni kullanıcıda +${per100} dönen`
+        +(newUsers!=null&&newUsers>0?` · ${winLbl}de ${num(newUsers)} yeni kullanıcı ≈ +${num(Math.round((x.ref-x.pct)*newUsers))} kişi`:'')+'.';
+    } else if(x.key==='aktivasyon'){
+      const per100=Math.max(0,Math.round((x.ref-x.pct)*100));
+      x.move=`Kayıt olup hiç işlem eklemeyen ${num(Math.max(0,(x.d||0)-(x.n||0)))} kişinin hangi ekranda bıraktığı ölçülmüyor. Önce onboarding adımlarını ölç (docs/export-contract-additions.md), sonra en çok kaybettireni sadeleştir.`;
+      x.gain=`Referansa (${pcTr(x.ref)}) çıkarsa: her 100 kayıtta +${per100} aktif kullanıcı.`;
+    } else if(x.key==='gelir'){
+      const paying=Math.max(1,Math.ceil(x.ref*x.d))-x.n;
+      const arpu=(subs&&mrr)? mrr/subs : null;
+      x.move=`Paywall gösterimi ölçülmüyor: "görülmüyor mu, görülüp reddediliyor mu" ayrılamıyor. Önce paywall görme + deneme başlatma adımlarını ölç (docs/export-contract-additions.md); ölçü gelmeden fiyat/vaat oynamak kör atış.`;
+      x.gain=`Referansa (${pcTr(x.ref,0)}) çıkarsa: ${num(x.d)} yeni müşteriden ≈ ${num(paying)} ödeyen`
+        +(arpu!=null?` ≈ +${money2(paying*arpu)} MRR (mevcut abone başına ${money2(arpu)} üzerinden)`:'')+'.';
+    }
+    void gapUsers;
+  });
+  return {stages:st,first};
+}
+function drawKarne(){
+  const host=el('karneBody'); if(!host) return;
+  const {stages,first}=karneStages();
+  const badge={weak:'⚠ zayıf',edge:'◐ sınırda',good:'✓ referansta',info:'· referanssız',none:'○ ölçülmedi',few:'○ yetersiz veri'};
+  /* Üst özet: ilk kopan halka + hamle. Hiç zayıf yoksa bunu, ölçülmeyen halka
+     varsa onu AÇIKÇA söyler — "her şey yolunda" demek ölçülmemiş halkayı
+     yok saymak olurdu. */
+  const unmeasured=stages.filter(x=>x.state==='none'||x.state==='few').map(x=>x.name);
+  let verdict;
+  if(first){
+    const next=stages.slice(stages.indexOf(first)+1).find(x=>x.state==='weak');
+    verdict=`<div class="kr-h">İlk kopan halka: ${esc(first.name)} — ${esc(first.valTxt)} <span style="font-weight:500;color:var(--ink-2)">(referans ${pcTr(first.ref)})</span>${next?` · sonra ${esc(next.name)}`:''}</div>`
+      +`<div class="kr-move"><b>Bu hafta:</b> ${esc(first.move||'')}<span class="kr-gain">${esc(first.gain||'')}</span></div>`;
+  } else {
+    verdict=`<div class="kr-h">Referans altında halka yok${unmeasured.length?` — ama ${esc(unmeasured.join(', '))} ölçülmediği için bu "sorun yok" demek değil`:''}.</div>`;
+  }
+  const rows=stages.map(x=>{
+    let barHtml='';
+    if(x.pct!=null){
+      const max=Math.max((x.ref||x.pct)*2, x.pct*1.15, 0.0001);
+      barHtml=`<div class="kr-bar"><i style="width:${Math.min(100,x.pct/max*100).toFixed(1)}%"></i>`
+        +(x.ref?`<b style="left:${(x.ref/max*100).toFixed(1)}%"></b>`:'')+`</div>`;
+    } else barHtml=`<div class="kr-bar"></div>`;
+    return `<div class="kr-row ${x.state}">
+      <div class="kr-top"><span class="kr-name">${esc(x.name)}<span class="kr-q">${esc(x.q)}</span></span><span class="kr-val">${esc(x.valTxt)}</span></div>
+      ${barHtml}
+      <div class="kr-sub"><span class="kr-badge">${badge[x.state]||''}</span>${esc(x.sub||'')}${x.hint?`<div style="margin-top:4px">${esc(x.hint)}</div>`:''}</div>
+      ${(x.state==='weak'||x.state==='edge')&&x!==first&&x.move?`<div class="kr-sub" style="margin-top:6px"><b>Hamle:</b> ${esc(x.move)} <span style="color:var(--ink-3)">${esc(x.gain||'')}</span></div>`:''}
+    </div>`;
+  }).join('');
+  host.innerHTML=`<div class="kr-verdict">${verdict}</div>${rows}
+    <div class="kr-note">Çubuktaki çizgi referans. Referans ölçülmüş değil, kabaca sektör ortancası (ayar: panel.threshold · karne.*). Halkalar yolculuk sırasında; üstteki halka delikken alttakini düzeltmek az kişiye ulaşır.</div>`;
+}
+
 function drawRevenue(){
   const mrr=stockValue('rc_mrr'), subs=stockValue('rc_active_subscriptions'),
         trials=stockValue('rc_active_trials'), adRev=sumMetric(adDays(),'rev');
@@ -4226,7 +4411,7 @@ function renderAll(){
   el('v-ozet').classList.toggle('pre',pre);
   const span=pre?'henüz yayında değil':`${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}`;
   drawCrumb(span); drawFresh(); drawWeekly(); drawAssertions(); drawRecon(); drawDifferential();
-  fillSelects(); drawSyncLabel(); renderSignals(); drawPrelaunch(); drawRevenue(); drawRetentionKpi(); drawKpis(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
+  fillSelects(); drawSyncLabel(); renderSignals(); drawPrelaunch(); drawRevenue(); drawRetentionKpi(); drawKpis(); drawKarne(); drawChart(); drawSrc(); drawCtry(); drawHealth(); drawKw(); drawRing(); drawLb(); drawRev();
   visibleViews().forEach(k=>RENDERERS[k]?.());
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
   // yukarıda değişiyor ve bazı region-label'lar görünür/gizli olabiliyor —
