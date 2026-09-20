@@ -309,6 +309,12 @@
   .kr-row.edge .kr-badge{background:var(--amber-soft);color:var(--amber)}
   .kr-row.good .kr-badge{background:var(--up-soft);color:var(--up)}
   .kr-note{font-size:11px;color:var(--ink-3);padding-top:10px;border-top:1px solid var(--hair);margin-top:2px;line-height:1.45}
+  .sig-more,.why-more{margin-top:4px}
+  .sig-more>summary,.why-more>summary{list-style:none;cursor:pointer;display:inline-block;
+    font:600 12px/1 Manrope,sans-serif;color:var(--accent-text);padding:10px 0;min-height:44px;box-sizing:border-box}
+  .sig-more>summary::-webkit-details-marker,.why-more>summary::-webkit-details-marker{display:none}
+  .sig-more>summary::after,.why-more>summary::after{content:" ›"}
+  .sig-more[open]>summary::after,.why-more[open]>summary::after{content:" ⌃"}
   .sig-none{font-size:12.5px;color:var(--ink-3);padding:6px 2px}
   /* Dokunmayla açılan açıklama. Panelde bağlamın çoğu `title=` içinde:
      çipin neden gri olduğu, bölgesel rozetin hangi sayılardan geldiği,
@@ -1255,8 +1261,10 @@
         <div class="mdelta" id="chartMarkDelta"></div>
       </div>
 
-      <!-- gauge -->
-      <div class="card c4" data-store-only>
+      <!-- gauge — KPI "Dönüşüm" kartı ve Karne aynı oranı + pay/payda'yı veriyor;
+           tek sayı için koca yarım daire tekrar sayılıyordu. Gizli, silinmedi:
+           drawKpis() içindeki id'ler çizim için duruyor. -->
+      <div class="card c4" data-store-only data-move-to="__drop">
         <div class="card-head">
           <div><div class="card-title">Dönüşüm oranı</div><div class="card-sub">gösterimden indirmeye</div></div>
         </div>
@@ -2933,7 +2941,7 @@ function karneStages(){
     if(o.d<minN) return {...o,state:'few',valTxt:'–',sub:`${num(o.d)} kayıt var — ${num(minN)} altında oran yazılmaz (yetersiz veri)`};
     const pct=o.n/o.d, ratio=o.ref? pct/o.ref : null;
     const state = ratio==null ? 'info' : ratio<weakR ? 'weak' : ratio<1 ? 'edge' : 'good';
-    return {...o,pct,ratio,state,valTxt:pcTr(pct,pct<0.1?1:0),
+    return {...o,pct,ratio,state,valTxt:pct===0?'%0':pcTr(pct,pct<0.1?1:0),
       sub:`${num(o.n)}/${num(o.d)} ${o.what}${ci(o.n,o.d)}${o.ref?` · referans ${pcTr(o.ref)}`:''}`};
   };
 
@@ -2983,7 +2991,7 @@ function karneStages(){
     if(x.key==='tutma'){
       const per100=Math.max(0,Math.round((x.ref-x.pct)*100));
       x.move=`İlk oturumda değer anını öne çek (ilk işlem ilk dakikada) ve ilk gün akşamı tek bir hatırlatıcı gönder`
-        +(push100!=null?` — bugün kullanıcıların ${pcTr(push100)}'ine push ulaşabiliyor (${num(push)}/${num(total)}), yani hatırlatıcı en fazla bu kadarına gider`:'')
+        +(push100!=null?` — bugün push alabilen kullanıcı payı ${pcTr(push100)} (${num(push)}/${num(total)}); hatırlatıcı en fazla bu kadarına ulaşır`:'')
         +`. Yeni kullanıcı aramak yerine bu daha ucuz.`;
       x.gain=`Referansa (${pcTr(x.ref)}) çıkarsa: her 100 yeni kullanıcıda +${per100} dönen`
         +(newUsers!=null&&newUsers>0?` · ${winLbl}de ${num(newUsers)} yeni kullanıcı ≈ +${num(Math.round((x.ref-x.pct)*newUsers))} kişi`:'')+'.';
@@ -3028,8 +3036,13 @@ function drawKarne(){
     return `<div class="kr-row ${x.state}">
       <div class="kr-top"><span class="kr-name">${esc(x.name)}<span class="kr-q">${esc(x.q)}</span></span><span class="kr-val">${esc(x.valTxt)}</span></div>
       ${barHtml}
-      <div class="kr-sub"><span class="kr-badge">${badge[x.state]||''}</span>${esc(x.sub||'')}${x.hint?`<div style="margin-top:4px">${esc(x.hint)}</div>`:''}</div>
-      ${(x.state==='weak'||x.state==='edge')&&x!==first&&x.move?`<div class="kr-sub" style="margin-top:6px"><b>Hamle:</b> ${esc(x.move)} <span style="color:var(--ink-3)">${esc(x.gain||'')}</span></div>`:''}
+      <div class="kr-sub"><span class="kr-badge">${badge[x.state]||''}</span>${esc(x.sub||'')}</div>
+      ${(()=>{
+        const more=[];
+        if(x.hint) more.push(esc(x.hint));
+        if((x.state==='weak'||x.state==='edge')&&x!==first&&x.move) more.push(`<b>Hamle:</b> ${esc(x.move)} <span style="color:var(--ink-3)">${esc(x.gain||'')}</span>`);
+        return more.length?`<details class="sig-more"><summary>${x.move&&x!==first?'hamle':'ayrıntı'}</summary><div class="kr-sub">${more.join('<div style="height:6px"></div>')}</div></details>`:'';
+      })()}
     </div>`;
   }).join('');
   host.innerHTML=`<div class="kr-verdict">${verdict}</div>${rows}
@@ -3120,8 +3133,12 @@ function drawKpis(){
     const perDl = (adRevWin!=null && adRevWin>0 && cur.dl>0) ? adRevWin/cur.dl : null;
     const why=(id,gain,loss)=>{
       const h=el(id); if(!h) return;
-      h.innerHTML = `<div class="gain"><b>SAĞLAR</b><span>${gain}</span></div>`
-                  + `<div class="loss"><b>KAYBETTİRİR</b><span>${loss}</span></div>`;
+      /* Kapalı gelir: dört kartta tekrar eden iki paragraf Bugün'ü ~700px
+         uzatıyordu ve karar vermek için değil, öğrenmek için okunuyor. Metin
+         silinmedi, dokunmayla açılıyor. */
+      h.innerHTML = `<details class="why-more"><summary>Neden önemli</summary>`
+                  + `<div class="gain"><b>SAĞLAR</b><span>${gain}</span></div>`
+                  + `<div class="loss"><b>KAYBETTİRİR</b><span>${loss}</span></div></details>`;
     };
     why('kImpWhy',
       per100==null
@@ -6053,7 +6070,8 @@ function renderSignals(){
   host.innerHTML = (sigs.length
     ? sigs.map(s=>`<div class="sig">
         <span class="dot" style="background:${s.sev}"></span>
-        <span class="txt"><span class="hd">${esc(s.hd)}</span><div class="bd">${esc(s.bd)}</div></span>
+        <span class="txt"><span class="hd">${esc(s.hd)}</span>
+          <details class="sig-more"><summary>ayrıntı ve hamle</summary><div class="bd">${esc(s.bd)}</div></details></span>
         ${s.amt?`<span class="amt" style="color:${s.sev}">${esc(s.amt)}</span>`:''}
       </div>`).join('')
     : `<div class="unmeasured">
