@@ -315,6 +315,24 @@
   .sig-more>summary::-webkit-details-marker,.why-more>summary::-webkit-details-marker{display:none}
   .sig-more>summary::after,.why-more>summary::after{content:" ›"}
   .sig-more[open]>summary::after,.why-more[open]>summary::after{content:" ⌃"}
+  /* listeleme denemeleri — bkz. renderAsoChanges() */
+  .lc-ev{padding:14px 0;border-top:1px solid var(--hair)}
+  .lc-ev:first-child{border-top:0;padding-top:4px}
+  .lc-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .lc-when{font:700 15px/1.2 Manrope,sans-serif}
+  .lc-what{font-size:12.5px;color:var(--ink-2);flex:1;min-width:0}
+  .lc-line{font-size:12.5px;line-height:1.5;color:var(--ink-2);margin-top:8px}
+  .lc-terms{display:grid;gap:0;margin-top:6px}
+  .lc-term{display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:baseline;padding:7px 0;border-top:1px solid var(--hair);font-size:12.5px}
+  .lc-term:first-child{border-top:0}
+  .lc-term span{color:var(--ink-3);font-size:11.5px;text-align:right}
+  .lc-term em{grid-column:1/-1;font-style:normal;font-size:11.5px;color:var(--ink-3)}
+  .lc-term em.ok{color:var(--up)} .lc-term em.low{color:var(--amber)}
+  .lc-result{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--card-2);font-size:12.5px;line-height:1.45}
+  .lc-num{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 0 0;align-items:baseline}
+  .lc-num span{color:var(--ink-2)} .lc-num b{font-variant-numeric:tabular-nums;text-align:right}
+  .lc-num em{grid-column:1/-1;font-style:normal;font-size:11.5px;color:var(--ink-3)}
+  .lc-caveat{margin-top:8px;font-size:12px;color:var(--amber);line-height:1.45}
   .sig-none{font-size:12.5px;color:var(--ink-3);padding:6px 2px}
   /* Dokunmayla açılan açıklama. Panelde bağlamın çoğu `title=` içinde:
      çipin neden gri olduğu, bölgesel rozetin hangi sayılardan geldiği,
@@ -1515,13 +1533,13 @@
              alanın değiştiğini söylemez. Apple metin için A/B vermediği (PPO yalnız
              ikon/ekran görüntüsü/önizleme) için okunabilir tek şey bu eşleşmedir. -->
         <div class="card c12">
-          <div class="card-head"><div><div class="card-title">Listelemede fark edilen değişiklikler</div>
-            <div class="card-sub">ad · altyazı · anahtar kelime — haftalık tablodaki sürüm sütunu bunları sayıyor</div></div></div>
-          <div id="aChanges" style="max-height:420px;overflow:auto"></div>
-          <div class="funnel-note">Tarih panelin FARK ETTİĞİ gün, Apple'ın yayın günü değil.
-            Aynı gün birçok dil birden değişmiş görünüyorsa değişen şey metin değil,
-            canlı sürüm olabilir — konektör canlı sürümün dillerini okuyor. Açıklama ve
-            promo metni bu listede yok (konektör onları bilerek çekmiyor).</div>
+          <div class="card-head"><div><div class="card-title">Listeleme denemeleri</div>
+            <div class="card-sub">ne değiştirdin · eklediğin kelimelerin talebi var mı · işe yaradı mı</div></div></div>
+          <div id="aChanges"></div>
+          <details class="sig-more"><summary>Bu tarihler nasıl okunur</summary>
+            <div class="funnel-note" style="margin-top:0">Tarih panelin FARK ETTİĞİ gün, Apple'ın yayın günü değil.
+            Aynı gün birçok dil birden değişmiş görünüyorsa değişen şey metin değil, canlı sürüm olabilir —
+            konektör canlı sürümün dillerini okuyor. Açıklama ve promo metni izlenmiyor (bilerek).</div></details>
         </div>
       </div>
     </div>
@@ -5025,32 +5043,67 @@ function asoTermDiff(before, after){
    (ilk hâli böyleydi, tarayıcıda okunmadığı görüldü). Doğru birim SATIR değil OLAY:
    bir tarih + bir alan = bir push. Olay başına tek cümle, terim rozetleri, ve isteyen
    için dil dil ayrıntı. */
+/* Deneme günlüğü. Eski hâli her terimi bir rozet olarak basıyordu (19 rozet) ve
+   ne işe yaradığını söylemiyordu. Bir pazarlamacının sorusu üç parça:
+     1) NE değiştirdim (kaç terim, kaç dil),
+     2) eklediğim terimlerin TALEBİ var mı (ölü ağırlık mı ekledim),
+     3) İŞE YARADI mı (öncesi/sonrası arama gösterimi ve indirmesi).
+   Üçüncüsü yalnız ölçülmüş günlerden ve gürültü testiyle; olgunlaşmadan (21 gün)
+   "ilk okuma" diye etiketli — kesin sonuç gibi sunulmaz. Aynı hafta sürüm çıktıysa
+   atıf ayrılamayacağı cümlenin içinde yazıyor. */
+const LC_RIPE_DAYS=21;
+function confRate(sumA,nA,sumB,nB){
+  if(nA<3||nB<3) return {dot:'○',label:'karşılaştırmak için gün az'};
+  const la=sumA/nA, lb=sumB/nB, se=Math.sqrt(la/nA+lb/nB);
+  if(!se) return {dot:'○',label:'gürültü'};
+  const z=Math.abs(la-lb)/se;
+  return z>2?{dot:'●',label:'gürültü üstü'}:z>1?{dot:'◐',label:'sınırda'}:{dot:'○',label:'gürültü içinde'};
+}
+function searchDailyMap(metric){
+  const m=new Map();
+  (D.bySourceDaily||[]).filter(r=>r.slug===APP&&r.source_type==='App Store search'&&r.metric===metric)
+    .forEach(r=>m.set(r.day,(m.get(r.day)||0)+Number(r.v||0)));
+  return m;
+}
 function renderAsoChanges(){
   const ch=(D.listingChanges||[]).filter(r=>r.slug===APP);
   const host=el('aChanges');
   if(!ch.length){
-    host.innerHTML=`<div class="sig-none">Henüz iki kesit yok — ilk kesitten SONRAKİ
-      değişiklikler burada çıkar. Bu "değişiklik olmadı" DEĞİL, "karşılaştırılacak
-      öncesi yok" demektir.</div>`;
+    host.innerHTML=`<div class="sig-none">Henüz iki kesit yok — ilk kesitten SONRAKİ değişiklikler burada çıkar.
+      Bu "değişiklik olmadı" DEĞİL, "karşılaştırılacak öncesi yok" demektir.</div>`;
     return;
   }
-
-  /* Olaylar: tarih + alan. Aynı push'un dilleri tek bloğa giriyor. */
   const ev=new Map();
   ch.forEach(r=>{
     const k=r.noticed_on+'|'+r.field;
     if(!ev.has(k)) ev.set(k,{day:r.noticed_on, field:r.field, rows:[]});
     ev.get(k).rows.push(r);
   });
-
-  /* Aynı haftada yayına geçen sürüm: "metin mi değişti, canlı sürüm mü" ayrımı
-     yapılamıyor ve bunu gizlemek yerine cümlenin içine yazıyoruz. */
   const relByWeek=new Map();
   asoReleases().forEach(r=>{const k=asoWkStart(r.day); relByWeek.set(k,(relByWeek.get(k)?relByWeek.get(k)+', ':'')+r.version)});
 
+  /* Talep sözlüğü: terim → en yüksek ölçülmüş ASA popülerliği (ülkeler arası). */
+  const dem=new Map();
+  gapsFor().forEach(g=>{
+    const k=String(g.term).toLowerCase(), v=g.demand==null?null:Number(g.demand);
+    const o=dem.get(k);
+    if(!o) dem.set(k,{max:v});
+    else if(v!=null && (o.max==null||v>o.max)) o.max=v;
+  });
+  const demTxt=t=>{
+    const o=dem.get(t.toLowerCase());
+    if(!o||o.max==null) return {cls:'unm',txt:'talep ölçülmedi'};
+    if(o.max<=ASA_FLOOR) return {cls:'low',txt:`talep tabanda (${num(o.max)})`};
+    return {cls:'ok',txt:`talep ${num(o.max)}`};
+  };
+  /* Öncesi/sonrası: yalnız mağaza verisinin ölçülmüş aralığında. */
+  const all=allDays(), [f,l]=storeSpan(all);
+  const impM=searchDailyMap('store_impression'), dlM=searchDailyMap('downloads_first_time');
+  const measured=(f>=0&&l>=0)?all.slice(f,l+1):[];
+  const sumOver=(m,ds)=>ds.reduce((t,d)=>t+(m.get(d)||0),0);
+
   const events=[...ev.values()].sort((a,b)=>a.day<b.day?1:-1);
   host.innerHTML=events.map(e=>{
-    /* Terim bazında kaç dilde eklendi/çıktı: en yaygın terim en önde. */
     const addCount=new Map(), remCount=new Map(), perLocale=[];
     let orderOnly=0;
     e.rows.forEach(r=>{
@@ -5067,37 +5120,55 @@ function renderAsoChanges(){
          removed.map(t=>`<span class="down">−${esc(t)}</span>`)).join(' ')
          || `<span class="lb-sub">yalnız sıra</span>`));
     });
-    const byCount=m=>[...m.entries()].sort((a,b)=>b[1]-a[1]||(a[0]<b[0]?-1:1));
-    const chips=byCount(addCount).map(([t,n])=>`<span class="chip up">+${esc(t)}${n>1?` <span class="lb-sub">${n}</span>`:''}</span>`)
-      .concat(byCount(remCount).map(([t,n])=>`<span class="chip down">−${esc(t)}${n>1?` <span class="lb-sub">${n}</span>`:''}</span>`));
-
-    /* Tek cümle: kaç dil, kaç terim, ve okunamayacak kadar erken mi. */
-    const rel=relByWeek.get(asoWkStart(e.day));
-    const bits=[`${e.rows.length} dil`];
-    if(addCount.size) bits.push(`${addCount.size} terim eklendi`);
-    if(remCount.size) bits.push(`${remCount.size} terim çıkarıldı`);
-    if(orderOnly) bits.push(`${orderOnly} dilde yalnız sıra değişti`);
+    const isKw=e.field==='anahtar kelime';
     const days=Math.round((Date.now()-new Date(e.day+'T00:00:00Z').getTime())/86400000);
-    const ripe=days>=21
-      ? `<span class="tag cov">${days} gün geçti · okunabilir</span>`
-      : `<span class="tag st-warn">${days} gün geçti · 21 günden önce okunmaz</span>`;
-    /* Olgunluk rozeti AKIŞIN İÇİNDE, `.sig .amt` yuvasında DEĞİL: o yuva
-       `white-space:nowrap` ve 390px'te metin sütununu 39px'e eziyordu (tarayıcıda
-       görüldü — her kelime kendi satırına düşüyordu). Buradaki `.tag` satır sonunda
-       kendiliğinden alt satıra kayıyor. */
-    return `<div class="sig">
-      <span class="dot" style="background:var(--s3)"></span>
-      <span class="txt">
-        <span class="hd">${dShort(e.day)} · ${esc(e.field)}</span>
-        <div class="bd">
-          <div class="lb-sub" style="margin-top:2px">${bits.join(' · ')} ${ripe}</div>
-          <div style="display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 2px">${chips.join('')}</div>
-          ${rel?`<div class="lb-sub">Aynı hafta <b>${esc(rel)}</b> yayına geçti — sayıdaki hareketin metinden mi sürümden mi geldiği AYRILAMAZ.</div>`:''}
-          <details style="margin-top:5px"><summary class="lb-sub" style="cursor:pointer">dil dil</summary>
-            <div style="margin-top:4px;display:grid;gap:3px">${perLocale.map(x=>`<div>${x}</div>`).join('')}</div>
-          </details>
-        </div>
-      </span>
+    const pct=Math.min(100,days/LC_RIPE_DAYS*100);
+    const ripe=days>=LC_RIPE_DAYS;
+
+    /* 2) Eklenen terimlerin talebi. */
+    const added=[...addCount.entries()].map(([t,n])=>({t,n,d:demTxt(t)}))
+      .sort((a,b)=>b.n-a.n||(dem.get(b.t.toLowerCase())?.max??-1)-(dem.get(a.t.toLowerCase())?.max??-1));
+    const nOk=added.filter(x=>x.d.cls==='ok').length, nLow=added.filter(x=>x.d.cls==='low').length, nUnm=added.filter(x=>x.d.cls==='unm').length;
+    const demandLine = !isKw||!added.length ? '' :
+      `<div class="lc-line"><b>Talep kontrolü:</b> eklenen ${num(added.length)} terimden `
+      +`<b>${num(nOk)}</b> tanesinin talebi ölçülmüş ve tabanın üstünde`
+      +(nLow?`, ${num(nLow)} tanesi talep tabanında (ölü ağırlık adayı)`:'')
+      +(nUnm?`, ${num(nUnm)} tanesi hiç ölçülmemiş (ASA popülerliği çekilmeli)`:'')+'.</div>';
+
+    /* 3) Sonuç: arama gösterimi + arama indirmesi, günlük ortalama. */
+    const before=measured.filter(d=>d<e.day).slice(-14), after=measured.filter(d=>d>e.day);
+    let result='';
+    if(before.length>=3 && after.length>=3){
+      const rate=(m,ds)=>sumOver(m,ds)/ds.length;
+      const bi=rate(impM,before), ai=rate(impM,after), bd=rate(dlM,before), ad=rate(dlM,after);
+      const ci=confRate(sumOver(impM,after),after.length,sumOver(impM,before),before.length);
+      const cd=confRate(sumOver(dlM,after),after.length,sumOver(dlM,before),before.length);
+      const arrow=(a,b)=>b===0?'':(a>b?'▲':a<b?'▼':'≈')+' '+(a>=b?'+':'−')+Math.abs(Math.round((a-b)/b*100))+'%';
+      result=`<div class="lc-result"><b>${ripe?'Sonuç':'İlk okuma — kesin değil'}</b> · günlük ortalama, ${num(before.length)} gün önce / ${num(after.length)} gün sonra
+        <div class="lc-num"><span>Arama gösterimi</span><b>${num(Math.round(bi))} → ${num(Math.round(ai))}</b><em>${arrow(ai,bi)} · ${ci.dot} ${ci.label}</em></div>
+        <div class="lc-num"><span>Arama indirmesi</span><b>${bd.toFixed(1).replace('.',',')} → ${ad.toFixed(1).replace('.',',')}</b><em>${arrow(ad,bd)} · ${cd.dot} ${cd.label}</em></div></div>`;
+    } else {
+      result=`<div class="lc-result"><b>Sonuç okunamıyor:</b> ${before.length<3?`öncesinde yalnız ${num(before.length)} gün mağaza ölçümü var`:`sonrasında yalnız ${num(after.length)} gün mağaza ölçümü var (Apple ~2 gün geriden)`} — en az 3 gün gerekir. Bu "işe yaramadı" değil, "henüz bilinmiyor".</div>`;
+    }
+    const rel=relByWeek.get(asoWkStart(e.day));
+    const relTxt=rel?`<div class="lc-caveat">Aynı hafta <b>${esc(rel)}</b> yayına geçti — hareketin metinden mi sürümden mi geldiği ayrılamaz.</div>`:'';
+
+    /* Terim listesi: ilk 5 satır görünür, kalanı açılır. */
+    const row=x=>`<div class="lc-term"><b>+${esc(x.t)}</b><span>${x.n} dil</span><em class="${x.d.cls}">${esc(x.d.txt)}</em></div>`;
+    const remList=[...remCount.entries()].sort((a,b)=>b[1]-a[1]);
+    const terms = isKw && added.length
+      ? `<div class="lc-terms">${added.slice(0,5).map(row).join('')}</div>`
+        +(added.length>5?`<details class="sig-more"><summary>diğer ${num(added.length-5)} terim</summary><div class="lc-terms">${added.slice(5).map(row).join('')}</div></details>`:'')
+        +(remList.length?`<div class="lc-line" style="margin-top:6px"><b>Çıkarılan:</b> ${remList.map(([t,n])=>`−${esc(t)} (${n} dil)`).join(', ')}</div>`:'')
+      : '';
+    const headBits=[`${num(e.rows.length)} dil`];
+    if(orderOnly) headBits.push(`${num(orderOnly)} dilde yalnız sıra`);
+    return `<div class="lc-ev">
+      <div class="lc-top"><span class="lc-when">${dShort(e.day)}</span><span class="lc-what">${esc(e.field)} · ${headBits.join(' · ')}</span>
+        <span class="tag ${ripe?'cov':'st-warn'}">${ripe?'olgun':`${days}/${LC_RIPE_DAYS} gün`}</span></div>
+      <div class="kr-bar"><i style="width:${pct.toFixed(0)}%;background:${ripe?'var(--up)':'var(--amber)'}"></i></div>
+      ${demandLine}${terms}${result}${relTxt}
+      <details class="sig-more"><summary>dil dil</summary><div style="display:grid;gap:3px;font-size:12px">${perLocale.map(x=>`<div>${x}</div>`).join('')}</div></details>
     </div>`;
   }).join('');
 }
