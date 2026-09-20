@@ -2970,7 +2970,7 @@ function karneStages(){
       sub: conv==null ? 'Mağaza gösterimi yok/yetersiz.'
         : `${num(sf.imp)} gösterim → ${num(sf.pv)} sayfa → ${num(sf.dl)} indirme${cmp}`,
       hint: (pvRate!=null&&dlRate!=null)
-        ? `Gösterimin ${pcTr(pvRate,1)}'i sayfayı açıyor (ikon + başlık işi), sayfayı açanın ${pcTr(dlRate)}'i indiriyor (ekran görüntüsü + vaat işi).` : ''});
+        ? `Gösterimin ${pcTr(pvRate,1)} kadarı sayfayı açıyor (ikon + başlık işi); sayfayı açanın ${pcTr(dlRate)} kadarı indiriyor (ekran görüntüsü + vaat işi).` : ''});
   })();
   /* 2 · AKTİVASYON */
   st.push(ratioStage({key:'aktivasyon',name:'Aktivasyon',q:'kayıt olan ürünü kullanıyor mu?',
@@ -5388,22 +5388,22 @@ function drawGrowthMove(){
       const pd=o?o.dl:0, diff=r.dl-pd;
       d = pd===0&&r.dl===0 ? '' : ` <span class="chip ${diff>0?'up':diff<0?'down':'flat'}" style="margin-left:6px">${diff>0?'▲ +':diff<0?'▼ ':''}${num(diff)}</span>`;
     }
-    const cr = r.pv>=minN ? ` · sayfayı görenin ${pcTr(r.dl/r.pv)}'i indiriyor` : '';
+    const cr = r.pv>=minN ? ` · sayfa→indirme ${pcTr(r.dl/r.pv)}` : '';
     return `<div class="kr-row"><div class="kr-top"><span class="kr-name">${esc(r.name)}${d}</span><span class="kr-val">${num(r.dl)}</span></div>
       <div class="kr-bar"><i style="width:${(share*100).toFixed(1)}%;background:${srcColor(r.name)}"></i></div>
-      <div class="kr-sub">indirmenin ${pcTr(share)}'i${cr}</div></div>`;
+      <div class="kr-sub">indirme payı ${pcTr(share)}${cr}</div></div>`;
   }).join('');
   /* Yorumlar */
   const say=[];
   const top=rows[0];
   if(top && top.dl/totDl>=0.4 && totDl>=minN)
-    say.push(`<b>Bağımlılık:</b> indirmenin ${pcTr(top.dl/totDl)}'i tek kanaldan (${esc(top.name)}). O kanal daralırsa büyüme aynı oranda daralır — ikinci bir kanal geliştirmek bu haftanın işi olabilir.`);
+    say.push(`<b>Bağımlılık:</b> indirmenin ${pcTr(top.dl/totDl)} kadarı tek kanaldan (${esc(top.name)}). O kanal daralırsa büyüme aynı oranda daralır — ikinci bir kanal geliştirmek bu haftanın işi olabilir.`);
   const unk=cur.find(r=>/unavailable/i.test(r.name));
   if(unk && totPv>=minN && unk.pv/totPv>=0.3)
-    say.push(`<b>Kör nokta:</b> ürün sayfası görüntülemenin ${pcTr(unk.pv/totPv)}'i kaynağı belirsiz ("${esc(unk.name)}") ve bunlardan ${num(unk.dl)} indirme geldi. Bu kısım için kanal kararı verilemez.`);
+    say.push(`<b>Kör nokta:</b> ürün sayfası görüntülemenin ${pcTr(unk.pv/totPv)} kadarının kaynağı belirsiz ("${esc(unk.name)}") ve bunlardan ${num(unk.dl)} indirme geldi. Bu kısım için kanal kararı verilemez.`);
   const best=[...cur].filter(r=>r.pv>=minN).sort((a,b)=>b.dl/b.pv-a.dl/a.pv)[0];
   if(best && top && best.name!==top.name)
-    say.push(`<b>En verimli kanal:</b> ${esc(best.name)} — sayfayı görenin ${pcTr(best.dl/best.pv)}'i indiriyor (en büyük kanal ${esc(top.name)}: ${pcTr(top.dl/Math.max(1,top.pv))}). Hacmi küçükse büyütülebilir; büyüyüp büyümediği ancak denenince bilinir.`);
+    say.push(`<b>En verimli kanal:</b> ${esc(best.name)} — sayfa→indirme ${pcTr(best.dl/best.pv)} (en büyük kanal ${esc(top.name)}: ${pcTr(top.dl/Math.max(1,top.pv))}). Hacmi küçükse büyütülebilir; büyüyüp büyümediği ancak denenince bilinir.`);
   /* Kelime hamlesi: talebi ölçülmüş, metadata'da olmayan en yüksek talepli 5 terim. */
   const gaps=gapsFor().filter(g=>g.verdict==='GAP'&&g.demand!=null&&Number(g.demand)>ASA_FLOOR);
   const byTerm=new Map();
