@@ -4863,9 +4863,12 @@ function drawSpotCheck(){
       +'metric_def.formula alanı 66 metrikten 10 tanesinde dolu; denetim kartı yalnız onları seçebiliyor.</div>';
     return;
   }
-  // Hafta tohumu: yılın kaçıncı günü / 7. Aynı hafta aynı satır.
-  const son=days[days.length-1];
-  const seed=Math.floor(new Date(son+'T00:00:00Z').getTime()/(7*864e5));
+  /* TOHUM TAKVİM HAFTASINDAN, ölçülen son günden DEĞİL.
+     İlk hâli `days[days.length-1]`i kullanıyordu: veri akışı durursa kart
+     sonsuza dek aynı satırda donar ve "bu haftaki denetim" cümlesi yalan olur —
+     tam da kartın yakalamak için var olduğu sessiz durgunluk, kartın kendisini
+     de dondururdu. Takvim haftası veri gelse de gelmese de ilerler. */
+  const seed=Math.floor(Date.now()/(7*864e5));
   const r=rows[seed % rows.length];
   const d=dict.find(x=>x.metric===r.metric)||{};
   const src=(D.syncRecent||[]).find(x=>x.app_slug===APP && x.source===(d.authority_source||''));
