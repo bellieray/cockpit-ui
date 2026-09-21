@@ -1302,7 +1302,11 @@
            Oran SAKLANMIYOR, her seferinde çiftten hesaplanıyor; karşılaştırma
            da önceki günün ÇİFTİNDEN (metrics.md §3). n < 30 ise oran yerine n. -->
       <div class="c12 region-label" id="ratLabel">Ürün sağlığı</div>
-      <div class="card c12" id="ratCard">
+      <div class="card c12" id="ratCard" data-collapse-default>
+        <div class="card-head">
+          <div><div class="card-title">Ürün sağlığı halkaları</div>
+               <div class="card-sub" id="ratSub">—</div></div>
+        </div>
         <div id="ratBody"></div>
       </div>
 
@@ -1324,7 +1328,11 @@
            yalnız çizim. Payda TEKİL KULLANICI: "401 kez Kaydet'e basıldı"
            bir dönüşüm oranı vermez, "74 kişi bastı" verir. -->
       <div class="c12 region-label" id="funLabel">Nerede tıkanıyor</div>
-      <div class="card c12" id="funCard">
+      <div class="card c12" id="funCard" data-collapse-default>
+        <div class="card-head">
+          <div><div class="card-title">Nerede tıkanıyor</div>
+               <div class="card-sub" id="funSub">—</div></div>
+        </div>
         <div id="funBody"></div>
       </div>
 
@@ -4262,7 +4270,13 @@ function collapseTallCards(){
     const head=c.querySelector('.card-head'); if(!head) return;
     const h=c.scrollHeight;
     const already=c.classList.contains('cc');
-    if(!already && h<=limit){ head.querySelector('.cc-btn')?.remove(); return; }
+    /* `data-collapse-default`: kart yüksekliği eşiğin ALTINDA olsa bile kapalı
+       başlar. Bugün ekranı "bugün ne yapmalıyım"a cevap veriyor; referans
+       kartları bulgusunu BAŞLIK ALTINDA söyleyip detayı bir dokunuşa
+       saklamalı. 850px'lik bir kart eşiği geçmiyor ama ekranın beşte birini
+       yiyor. */
+    const varsayilanKapali = c.dataset.collapseDefault != null;
+    if(!already && !varsayilanKapali && h<=limit){ head.querySelector('.cc-btn')?.remove(); return; }
     if(!already) c.classList.add('cc','cc-closed');
     if(head.querySelector('.cc-btn')) return;
     const b=document.createElement('button');
@@ -5054,6 +5068,22 @@ function drawRatios(){
       +'yazılı değil — bu "sağlıklı" demek değil, "bakılmadı" demek.</div>';
     return;
   }
+  /* Özet: referansın en altındaki halka. Referanssız satırlar yarışmaz —
+     "referans yok" bir zayıflık değil, bir bilgisizliktir. */
+  const rsub=el('ratSub');
+  if(rsub){
+    let zayif=null;
+    for(const r of rows){
+      if(r.ratio_pct==null||r.reference_pct==null) continue;
+      const oran=r.ratio_pct/r.reference_pct;
+      if(!zayif||oran<zayif.oran) zayif={oran,r};
+    }
+    const olculemeyen=rows.filter(r=>r.ratio_pct==null).length;
+    rsub.textContent = (zayif && zayif.oran<1
+        ? `en zayıf halka: ${zayif.r.label.split(' · ')[0]} %${String(zayif.r.ratio_pct).replace('.',',')} (referans %${String(zayif.r.reference_pct).replace('.',',')})`
+        : `${num(rows.length)} halka · referans altında halka yok`)
+      + (olculemeyen?` · ${num(olculemeyen)} ölçülmedi`:'');
+  }
   host.innerHTML=rows.map(r=>{
     const pct=r.ratio_pct, ref=r.reference_pct;
     if(pct==null&&!r.n_too_small)
@@ -5127,6 +5157,27 @@ function drawFunnels(){
       Hangi olayların bir yolculuk oluşturduğu <code>panel.event_funnel</code>'de
       yazılı değil — bu "tıkanma yok" demek değil, "bakılmadı" demek.</div>`;
     return;
+  }
+  /* Özet satırı BULGUYU taşır, sayım değil. "3 huni" bir şey söylemez;
+     "Kaydet'e basan 74 kişiden 54'ü doğrulamaya takıldı" bir karar
+     değiştirir. Kart kapalıyken okunan tek satır bu. */
+  const sub=el('funSub');
+  if(sub){
+    let enBuyuk=null;
+    for(const k of keys) for(const st of (f[k].steps||[])){
+      if(st.state!=='ölçülüyor') continue;
+      /* Sürtünme adımı bir KAYIP değil, bir engeldir — ama en çok karar
+         değiştiren satır genelde odur, o yüzden ikisi de yarışıyor ve
+         hangisi olduğu cümlede yazıyor. */
+      const kayip = st.is_friction ? Number(st.users||0) : Number(st.lost_users||0);
+      if(kayip>0 && (!enBuyuk || kayip>enBuyuk.kayip))
+        enBuyuk={kayip, st, k, oran:st.from_prev_pct};
+    }
+    sub.textContent = enBuyuk
+      ? (enBuyuk.st.is_friction
+          ? `${enBuyuk.k}: ${num(enBuyuk.st.prev_users)} kişiden ${num(enBuyuk.kayip)}'i "${enBuyuk.st.label}"`
+          : `${enBuyuk.k}: en büyük kayıp "${enBuyuk.st.label}" adımında — ${num(enBuyuk.kayip)} kişi`)
+      : `${num(keys.length)} huni · ölçülebilir kayıp yok`;
   }
   host.innerHTML=keys.map(k=>{
     const fn=f[k], steps=fn.steps||[];
