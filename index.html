@@ -786,6 +786,10 @@
     font-size:13px;padding:10px 12px;border:1px solid var(--hair);
     border-radius:var(--r-md);background:var(--canvas);color:var(--ink)}
   .wk-note:focus{outline:0;border-color:var(--brand)}
+  /* Her ağ eylemi görünür bir sonuç üretir (ui-and-motion.md §6) — not kutusu
+     `localStorage` yerine sunucuya yazıyor (A3, 2026-09-21), "sessiz başarı"
+     burada da yasak. Renk `wkNoteSave` içinde --up/--down ile ayarlanıyor. */
+  .wk-note-status{font-size:12px;min-height:16px;margin-top:4px}
 
   .tw-more{display:block;width:100%;margin-top:10px;padding:10px 12px;border:0;
     background:var(--canvas);color:var(--ink-2);font:inherit;font-size:13px;
@@ -2284,6 +2288,7 @@
           <div id="wkPrevNote"></div>
           <input class="wk-note" id="wkNote" type="text" maxlength="160"
                  placeholder="Bu haftanın notu — tek satır, gelecek hafta karşına çıkar">
+          <div id="wkNoteStatus" class="wk-note-status" aria-live="polite"></div>
           <button class="wk-copy" id="wkCopy" data-wk-copy type="button">Raporu kopyala</button>
           <div class="wk-trust" id="wkTrust"></div>
         </div>
@@ -4616,30 +4621,81 @@ addEventListener('hashchange',()=>{ SH_OPEN=null; drawSheet(); });
    "göremiyorum" demiyor, "şu nedenle göremiyorum" diyor. Beşinci blok geçen
    haftanın notunu geri getiriyor — karar → sonuç → yeni karar halkasının tek
    veri bağı; onsuz panel karar defteri değil, sayı panosu kalır. */
-const WK_NOTE_KEY=()=>'wknote_'+APP;
-/* Not takvim HAFTASINA bağlı (pazartesi başlangıcı), kayan 7 günlük pencereye değil:
-   pencere her gün kayıyor, "bu haftanın notu" her sabah yeni bir kutu olurdu. Yeni
-   hafta başlayınca kayıtlı not "geçen not" olur ve kutu boşalır — karar → sonuç →
-   yeni karar halkasının tek veri bağı bu. Eski düz-metin kayıt (sürümden önceki) bu
-   haftanın notu sayılır. */
-function wkNoteWeek(){ const a=allDays(); return a.length?asoWkStart(a[a.length-1]):''; }
+/* A3 KARARI (2026-09-21): not artık sunucuda (`panel.review_session`,
+   functions/panel/index.ts `saveReviewNote`) — `localStorage` masaüstü↔telefon
+   arasında kayboluyordu, karar→sonuç→yeni karar halkasının tek veri bağı çok
+   cihazlı akışta kopuyordu. `D.reviewNotes` dashboard yükünde geliyor:
+   {slug,rn,wk,text} satırları, rn=1 en yeni oturum.
+
+   Hafta TAKVİM haftası (pazartesi başlangıcı, UTC) — eskiden son ÖLÇÜM gününe
+   bağlıydı, artık sunucuyla (date_trunc('week', now())) aynı tanımı kullanıyor;
+   ikisi ayrışırsa not yanlış kutuya düşer. */
+function wkNoteWeek(){ return asoWkStart(new Date().toISOString().slice(0,10)); }
+function wkNoteRows(){ return (D.reviewNotes||[]).filter(r=>r.slug===APP).sort((a,b)=>a.rn-b.rn); }
 function wkNoteLoad(){
-  let raw=null; try{ raw=JSON.parse(localStorage.getItem(WK_NOTE_KEY())||'null'); }catch{}
-  if(typeof raw==='string'||raw==null){
-    let t=''; try{ t=localStorage.getItem(WK_NOTE_KEY())||''; }catch{}
-    raw={cur:t?{wk:wkNoteWeek(),text:t}:null,prev:null};
-  }
-  const wk=wkNoteWeek();
-  if(raw.cur && raw.cur.wk!==wk) return {cur:'',prev:raw.cur.text||''};
-  return {cur:raw.cur?raw.cur.text:'',prev:raw.prev?raw.prev.text:''};
+  const rows=wkNoteRows(), wk=wkNoteWeek();
+  if(rows[0] && rows[0].wk===wk) return {cur:rows[0].text||'', prev:rows[1]?rows[1].text||'':''};
+  return {cur:'', prev:rows[0]?rows[0].text||'':''};
 }
-function wkNoteSave(text){
-  const wk=wkNoteWeek(); let raw=null;
-  try{ raw=JSON.parse(localStorage.getItem(WK_NOTE_KEY())||'null'); }catch{}
-  if(typeof raw==='string'||raw==null) raw={cur:null,prev:null};
-  if(raw.cur && raw.cur.wk!==wk) raw.prev=raw.cur;
-  raw.cur={wk,text};
-  try{ localStorage.setItem(WK_NOTE_KEY(),JSON.stringify(raw)); }catch{}
+/* İyimser güncelleme (ui-and-motion.md §6 — geri alınabilir eylemlerde izinli):
+   `D.reviewNotes` hemen güncellenir, kutu sunucu yanıtını beklemeden doğru
+   metni gösterir. Ama "sessiz başarı yasak" (aynı kural) — durum yazısı ayrı. */
+function wkNoteSetLocal(text){
+  const wk=wkNoteWeek(), rows=wkNoteRows();
+  const prevRow = rows[0] && rows[0].wk===wk ? rows[1] : rows[0];
+  const next=[{slug:APP,rn:1,wk,text}];
+  if(prevRow) next.push({slug:APP,rn:2,wk:prevRow.wk,text:prevRow.text});
+  D.reviewNotes=(D.reviewNotes||[]).filter(r=>r.slug!==APP).concat(next);
+}
+let WK_NOTE_SEQ=0;
+async function wkNoteSave(text){
+  const seq=++WK_NOTE_SEQ, st=el('wkNoteStatus');
+  wkNoteSetLocal(text);
+  if(st) st.textContent='kaydediliyor…';
+  let ok=false;
+  try{
+    const res=await fetch(API,{method:'POST',
+      headers:{'content-type':'application/json','x-panel-secret':getKey()},
+      body:JSON.stringify({action:'saveReviewNote',app:APP,note:text})});
+    const j=await res.json().catch(()=>({}));
+    ok=res.ok && !!j.ok;
+  }catch{ ok=false; }
+  if(seq!==WK_NOTE_SEQ) return; /* araya yeni bir yazma girdi, bu yanıt bayat */
+  if(st){
+    st.textContent = ok ? 'kaydedildi' : 'kaydedilemedi — bağlantı yok, tekrar dene';
+    st.style.color = ok ? 'var(--up)' : 'var(--down)';
+    setTimeout(()=>{ if(WK_NOTE_SEQ===seq) st.textContent=''; }, ok?2000:5000);
+  }
+}
+/* TEK SEFERLİK TAŞIMA: eskiden `localStorage`'da yazılmış bu haftanın notu
+   sessizce kaybolmasın diye (A3, 2026-09-21). Sunucuda o uygulama için bu
+   haftaya ait not ZATEN varsa üstüne yazmıyor — başka cihazdan gelmiş olabilir
+   ve üzerine yazmak o notu kaybettirirdi. Her uygulama için kendi `APP`
+   bağlamı dışında çalıştığından `wkNoteSave` yerine doğrudan istek atıyor. */
+async function wkNoteMigrateLegacy(apps){
+  const wk=wkNoteWeek();
+  for(const a of apps){
+    const key='wknote_'+a.slug;
+    let raw=null; try{ raw=localStorage.getItem(key); }catch{ continue; }
+    if(!raw) continue;
+    let obj=null; try{ obj=JSON.parse(raw); }catch{}
+    const text=(typeof obj==='string' ? obj
+      : (obj && obj.cur && obj.cur.wk===wk) ? obj.cur.text
+      : (typeof raw==='string' && obj==null) ? raw : '').trim();
+    if(!text){ try{ localStorage.removeItem(key); }catch{} continue; }
+    const already=(D.reviewNotes||[]).some(r=>r.slug===a.slug && r.rn===1 && r.wk===wk);
+    if(!already){
+      try{
+        const res=await fetch(API,{method:'POST',
+          headers:{'content-type':'application/json','x-panel-secret':getKey()},
+          body:JSON.stringify({action:'saveReviewNote',app:a.slug,note:text})});
+        const j=await res.json().catch(()=>({}));
+        if(!res.ok || !j.ok) continue; /* taşınamadı — localStorage'da dursun, sonraki yüklemede tekrar denenir */
+      }catch{ continue; }
+    }
+    try{ localStorage.removeItem(key); }catch{}
+  }
+  if(APP && apps.some(a=>a.slug===APP)) drawWeekly();
 }
 /* HAFTALIK DEĞERLENDİRME.
    Eski hâli ==== çizgili düz metindi ve içeriği süreçle doluydu ("8 kural kontrol
@@ -8531,6 +8587,7 @@ async function load(){
     if(!APP){ el('boot').textContent='Kayıtlı uygulama yok.'; return; }
     el('boot').style.display='none'; el('app').style.display='';
     bind(); renderAll();
+    wkNoteMigrateLegacy(real);
   }catch(e){
     el('boot').innerHTML=`Veri alınamadı: ${esc(e.message||e)}<br><br>
       <button class="pillbtn" onclick="location.reload()">Tekrar dene</button>`;
