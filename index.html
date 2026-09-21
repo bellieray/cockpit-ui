@@ -605,6 +605,19 @@
     opacity:0;pointer-events:none;margin:0;padding-top:0;padding-bottom:0;
     border:0;transition:max-height .2s ease-out,opacity .15s}
   .cc:not(.cc-closed) > *:not(.card-head){max-height:none}
+  /* Uzun bir `card-sub`, `flex-wrap` yüzünden "Aç" düğmesini ALT SATIRA
+     itiyordu ve kartlar arasında düğme konumu tutarsız görünüyordu. Metin
+     bloğu daralabilir (min-width:0), düğme daralmaz. */
+  /* `flex-basis:auto` metnin MAX-CONTENT genişliğini talep ediyor: uzun bir
+     `card-sub` tüm satırı alıp "Aç" düğmesini alta itiyordu (ölçüldü: 318px
+     talep, 318px kap). `0` tabanıyla blok düğmeden ARTAN yeri alır ve metin
+     sarar — düğme her kartta aynı yerde kalır.
+
+     KAPSAM DAR: yalnız katlanma düğmesi EKLENMİŞ başlıklarda. Tüm
+     `.card-head`lere uygulandığında, ikinci çocuğu geniş olan bir başlıkta
+     ilk blok 4px'e çöktü ve başlığı kırptı (ölçüldü). Sınıfı düğmeyi ekleyen
+     JS koyuyor — `:has()` gerekmiyor, yani eski iOS'ta da çalışır. */
+  .card-head.has-cc>div:first-child{min-width:0;flex:1 1 0}
   .cc-btn{flex:none}
 
   /* === değişmez listesi === */
@@ -1304,7 +1317,7 @@
       <div class="c12 region-label" id="ratLabel">Ürün sağlığı</div>
       <div class="card c12" id="ratCard" data-collapse-default>
         <div class="card-head">
-          <div><div class="card-title">Ürün sağlığı halkaları</div>
+          <div><div class="card-title">Halkalar ve referanslar</div>
                <div class="card-sub" id="ratSub">—</div></div>
         </div>
         <div id="ratBody"></div>
@@ -1330,7 +1343,7 @@
       <div class="c12 region-label" id="funLabel">Nerede tıkanıyor</div>
       <div class="card c12" id="funCard" data-collapse-default>
         <div class="card-head">
-          <div><div class="card-title">Nerede tıkanıyor</div>
+          <div><div class="card-title">Olay hunileri · kişi bazlı</div>
                <div class="card-sub" id="funSub">—</div></div>
         </div>
         <div id="funBody"></div>
@@ -4285,6 +4298,7 @@ function collapseTallCards(){
     b.textContent=lbl();
     b.addEventListener('click',()=>{ c.classList.toggle('cc-closed'); b.textContent=lbl(); });
     head.appendChild(b);
+    head.classList.add('has-cc');   /* yerleşim kuralının kapsamı: bkz. .card-head.has-cc */
   });
 }
 
