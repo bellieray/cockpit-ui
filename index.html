@@ -779,6 +779,8 @@
   .cov-dot{font-size:11px;width:12px;flex:0 0 12px}
   .cov.miss .cov-dot{color:var(--crit)}
   .cov.opt .cov-dot{color:var(--ink-3)}
+  /* Sürüm bekleyen olay: iş bitti, sıra mağazada — kırmızı değil uyarı rengi. */
+  .cov.pend .cov-dot{color:var(--warn)}
   .cov.ok .cov-dot{color:var(--ok)}
   .cov-n{font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
     min-width:0;overflow-wrap:anywhere}
@@ -5396,18 +5398,24 @@ function drawCoverage(){
     if(sub) sub.textContent='tanım yok';
     return;
   }
-  const miss=rows.filter(r=>!r.seen && r.required);
-  const opt =rows.filter(r=>!r.seen && !r.required);
+  // Üç hâl: geliyor / sürüm bekliyor / gönderilmiyor. Ortadaki, kodu yazılmış
+  // ama mağaza sürümü çıkmamış olaydır — eksik ölçüm değil, bekleyen sürüm.
+  const pend=rows.filter(r=>!r.seen && r.code_ready);
+  const miss=rows.filter(r=>!r.seen && !r.code_ready && r.required);
+  const opt =rows.filter(r=>!r.seen && !r.code_ready && !r.required);
   if(sub) sub.textContent = `${num(rows.length)} beklenen olay · `
     + (miss.length?`${num(miss.length)} gönderilmiyor`:'hepsi geliyor')
+    + (pend.length?` · ${num(pend.length)} sürüm bekliyor`:'')
     + (opt.length?` · ${num(opt.length)} isteğe bağlı eksik`:'');
-  const rank=r=>(!r.seen&&r.required)?0:(!r.seen?1:2);
+  const rank=r=>(!r.seen&&!r.code_ready&&r.required)?0:(!r.seen&&r.code_ready?1:(!r.seen?2:3));
   host.innerHTML=[...rows].sort((a,b)=>rank(a)-rank(b)||a.stage.localeCompare(b.stage)
       ||a.event_name.localeCompare(b.event_name))
     .map(r=>{
-      const cls=!r.seen&&r.required?'miss':(!r.seen?'opt':'ok');
-      const dot=cls==='miss'?'✕':cls==='opt'?'○':'●';
-      const state=!r.seen?(r.required?'gönderilmiyor':'isteğe bağlı, yok'):'geliyor';
+      const pending=!r.seen&&r.code_ready;
+      const cls=pending?'pend':(!r.seen&&r.required?'miss':(!r.seen?'opt':'ok'));
+      const dot=cls==='miss'?'✕':cls==='pend'?'⏳':cls==='opt'?'○':'●';
+      const state=r.seen?'geliyor':(pending?'kod hazır, sürüm bekliyor'
+        :(r.required?'gönderilmiyor':'isteğe bağlı, yok'));
       return `<div class="cov ${cls}"><span class="cov-dot">${dot}</span>
         <span class="cov-n">${esc(r.event_name)}</span>
         <span class="cov-s">${esc(r.stage)} · ${esc(state)}</span>
