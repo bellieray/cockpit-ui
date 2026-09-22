@@ -424,6 +424,33 @@
   .legend .li.off{opacity:.32}
   .legend .dot{width:9px;height:9px;border-radius:50%}
   .chart svg{display:block;width:100%;height:230px;overflow:visible}
+
+  /* ── ZAMAN SERİSİ KARTI (ts-*) ───────────────────────────────────────
+     Ölçüldü 2026-09-22: on görünümde TOPLAM 6 grafik yüzeyi var ve
+     YEDİSİNDE hiç yok — Para, Pazarlar, ASO, Ürün, Portföy, Yorumlar,
+     Veri güveni sayı ve tablo olarak okunuyor, şekil olarak değil.
+     Sahibinin sözü: "grafiksel dönemsel incelenmiyor".
+
+     Bu kart ayrı bir grafik SİSTEMİ değil: panelin kendi `rangeDays()` /
+     `prevRangeDays()` penceresine ve `appIdx()` indeksine biniyor. Üst
+     bardaki aralık seçicisi değişince kendiliğinden yeniden çiziliyor —
+     karta ayrı pill koymak iki ayrı pencere durumu yaratırdı ve iki kart
+     farklı dönemden konuşurdu. */
+  .ts-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .ts-win{font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .ts-items{display:flex;gap:14px;flex-wrap:wrap;flex:1}
+  .ts-item{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+  .ts-item i{width:11px;height:3px;border-radius:2px;flex:none}
+  .ts-item i.dot{width:9px;height:9px;border-radius:50%}
+  .ts-item b{font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
+  .ts-svg{display:block;width:100%;height:230px;overflow:visible}
+  @media (max-width:1079.98px){ .ts-svg{height:300px} }
+  .ts-x{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-3);margin-top:6px;
+        font-variant-numeric:tabular-nums}
+  .ts-lg{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--ink-3)}
+  .ts-lg span{display:flex;align-items:center;gap:6px}
+  .ts-lg i{width:11px;height:3px;border-radius:2px}
+  .ts-empty{padding:18px 12px;text-align:center;font-size:12.5px;color:var(--ink-3);line-height:1.6}
   .xaxis{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-3);margin-top:10px}
 
   /* === sürüm işaret bandı === İşaretler çizim alanının İÇİNE değil, eksenin
@@ -1673,6 +1700,14 @@
     <!-- ================= ASO ================= -->
     <div class="view" id="v-aso" style="display:none">
       <div class="grid">
+        <div class="c12 region-label">Zaman içinde</div>
+        <div class="card c12" data-no-collapse>
+          <div class="card-head"><div>
+            <div class="card-title">Görünürlük ve kurulum, gün gün</div>
+            <div class="card-sub">Kelime çalışmasının sonucu burada okunur: gösterim arttı mı, kuruluma dönüyor mu.</div></div></div>
+          <div id="tsAso"></div>
+        </div>
+
         <!-- `v-aso`'da hiç bölge başlığı yoktu: çıpa çubuğu yalnız
              `region-label` topluyor, yani 14 ASO kartı (içinde 2.021 satırlık
              kelime tablosu) çıpasız kalıyordu. -->
@@ -1800,6 +1835,14 @@
          akıyor (stockValue() ile okunuyor, revenue band'la aynı desen). -->
     <div class="view" id="v-urun" style="display:none">
       <div class="grid">
+        <div class="c12 region-label">Zaman içinde</div>
+        <div class="card c12" data-no-collapse>
+          <div class="card-head"><div>
+            <div class="card-title">Kullanım, gün gün</div>
+            <div class="card-sub">Kendi backend telemetrisi. Mağaza hunisiyle aynı eksende DEĞİL: biri gösterimle, öbürü uygulamayı açan kullanıcıyla başlıyor.</div></div></div>
+          <div id="tsUrun"></div>
+        </div>
+
         <div class="c12 region-label">Büyüme</div>
         <!-- WHY bu bant önce: kullanıcı "kaç kişi indirdi, kaç kişi kullanıyor,
              kaç hane var, günlük kaç kullanıcı geliyor" sordu — bunlar
@@ -2029,6 +2072,14 @@
          yenisini haksız yere sıfır gösterir. -->
     <div class="view" id="v-portfoy" style="display:none">
       <div class="grid">
+        <div class="c12 region-label">Zaman içinde</div>
+        <div class="card c12" data-no-collapse>
+          <div class="card-head"><div>
+            <div class="card-title">Ölçüm kapsaması, gün gün</div>
+            <div class="card-sub">Uygulama başına gün gün kaç ölçüm satırı yazıldı. Boş gün "o gün sıfır ölçüldü" DEĞİL, "o gün hiç ölçüm yazılmadı" demek.</div></div></div>
+          <div id="tsPortfoy"></div>
+        </div>
+
         <div class="c12 region-label">Portföy</div>
         <div class="card c12">
           <div class="card-head">
@@ -2062,6 +2113,21 @@
          Backend: adByFormat + adByCountry (panel/index.ts). -->
     <div class="view" id="v-para" style="display:none">
       <div class="grid">
+        <div class="c12 region-label">Zaman içinde</div>
+        <div class="card c12" data-no-collapse>
+          <div class="card-head"><div>
+            <div class="card-title">Reklam kazancı, gün gün</div>
+            <div class="card-sub">Üstteki aralık seçicisine bağlı. Kesikli çizgi önceki eşit dönem; ölçülmemiş gün boşluk, sıfır değil.</div></div></div>
+          <div id="tsPara"></div>
+        </div>
+
+                <div class="card c12" data-no-collapse>
+          <div class="card-head"><div>
+            <div class="card-title">Reklam zinciri, gün gün</div>
+            <div class="card-sub">İstek ve gösterim aynı eksende — ikisi de sayım, aynı birim. Aradaki açıklık doldurulmayan istek.</div></div></div>
+          <div id="tsParaChain"></div>
+        </div>
+
         <div class="c12 region-label">Reklam</div>
         <div class="card c3">
           <div class="kpi-top">
@@ -2202,6 +2268,21 @@
 
     <div class="view" id="v-yorum" style="display:none">
       <div class="grid">
+        <div class="c12 region-label">Zaman içinde</div>
+        <div class="card c12" data-no-collapse>
+          <div class="card-head"><div>
+            <div class="card-title">Rakip yorum akışı, gün gün</div>
+            <div class="card-sub">Rakiplerin aldığı yorum sayısı. Bizim yorumumuz burada YOK: birkaç güne yayılmış birkaç satır bir seri değil, tek tek okunacak yorumlar.</div></div></div>
+          <div id="tsYorum"></div>
+        </div>
+
+                <div class="card c12" data-no-collapse>
+          <div class="card-head"><div>
+            <div class="card-title">Rakip puan ortalaması, gün gün</div>
+            <div class="card-sub">Pencere değeri ağırlıklı ortalama — o günün yorum sayısıyla çarpılıp bölünüyor. Günlük ortalamaların düz ortalaması yanlış olurdu.</div></div></div>
+          <div id="tsYorumRate"></div>
+        </div>
+
         <div class="card c3"><div class="kpi-top"><span class="kpi-ic" style="background:color-mix(in oklab,var(--s3) 15%,transparent);color:var(--s3)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.6 5.6 6.4.8-4.7 4.3 1.2 6.3L12 17l-5.5 3 1.2-6.3L3 9.4l6.4-.8z"/></svg></span>
           <span class="kpi-name">Bizim puanımız<br><span class="card-sub">ömür boyu · yıldız oyları</span></span></div>
@@ -2304,6 +2385,14 @@
 
     <div class="view" id="v-pazar" style="display:none">
       <div class="grid">
+        <div class="c12 region-label">Zaman içinde</div>
+        <div class="card c12" data-no-collapse>
+          <div class="card-head"><div>
+            <div class="card-title">Mağaza zinciri, gün gün</div>
+            <div class="card-sub">Gösterim → dokunma → ilk kurulum. Ülke × gün kırılımı Apple'da yok; bu grafik tüm ülkelerin toplamı.</div></div></div>
+          <div id="tsPazar"></div>
+        </div>
+
         <!-- BÜYÜME HAMLESİ — pazarlamacının iki sorusu: indirme NEREDEN geliyor
              (bağımlılık, izlenemeyen pay, en verimli kanal) ve hangi kelimeyi
              sonraki sürüme koymalı. Aşağıdaki tablolar bunun ham hâli. -->
@@ -2396,6 +2485,14 @@
 
     <div class="view" id="v-saglik" style="display:none">
       <div class="grid">
+        <div class="c12 region-label">Zaman içinde</div>
+        <div class="card c12" data-no-collapse>
+          <div class="card-head"><div>
+            <div class="card-title">Senkron turları, gün gün</div>
+            <div class="card-sub">Panel kendi sağlığını ölçüyor. Başarılı ve başarısız tur aynı eksende: ikisi de tur sayısı, aynı birim.</div></div></div>
+          <div id="tsSaglik"></div>
+        </div>
+
       <div class="c12 region-label">Doğruluk</div>
       <!-- Değişmezler. `testing.md` Katman 1: "başarısız olan bir değişmezin
            ilgili metriği çizilmez ve panele şerit uyarı basılır." Assertion'lar
@@ -5523,6 +5620,258 @@ function drawFresh(){
   }
 }
 
+/* ---------- zaman serisi kartı ----------
+   NEDEN: on görünümün yedisinde hiç grafik yoktu (ölçüldü 2026-09-22:
+   toplam 6 çizim yüzeyi). Sayı ve tablo "ne kadar" sorusuna cevap veriyor,
+   "ne zaman değişti" sorusuna vermiyor — ve panelin işi ikincisi.
+
+   Ayrı bir grafik SİSTEMİ kurulmadı, `drawChart` duruyor. Bu kart panelin
+   kendi penceresine biniyor: `rangeDays()` seçili dönem, `prevRangeDays()`
+   önceki eşit dönem. Karta kendi aralık düğmesi KOYULMADI — iki pencere
+   durumu olsaydı iki kart farklı dönemden konuşurdu (ilke: tek tanım).
+
+   Eksik gün `null`, 0 DEĞİL. `seriesFor` eksik günü `||0` ile sıfırlıyor ve
+   bu grafikte bir çöküş gibi okunur; `tsVals` o yüzden indeksten doğrudan
+   okuyor ve olmayan günü boş bırakıyor (ui-and-motion.md: eksik gün boşluk,
+   LOCF yasak). */
+function tsVals(metric, days){
+  const by = appIdx(APP).sum.get(metric);
+  if(!by) return null;
+  return days.map(d => by.has(d) ? Number(by.get(d)) : null);
+}
+
+/* Payload'daki DİĞER günlük kaynaklar tek arayüze indiriliyor: `drawTS` yalnız
+   `{metric, ...}` biliyor, verinin hangi sorgudan geldiğini bilmiyor.
+
+   Hepsi eksik günü ATLIYOR (null bırakıyor), 0 yazmıyor: "o gün hiç satır
+   yazılmadı" ile "o gün ölçüm sıfırdı" ayrı şeyler ve grafikte ikincisi bir
+   çöküş gibi okunur.
+
+   `??` ile korunuyorlar: bu arayüz sürümü, yeni sorguları HENÜZ içermeyen bir
+   Edge Function sürümüyle karşılaşabilir (deploy sırası: önce fonksiyon, sonra
+   SPA — ama ters sıra kaza eseri olur). O durumda kart "ölçülmüyor" diyor,
+   patlamıyor. */
+function dailyMap(rows, keyFn, valFn){
+  const m = new Map();
+  (rows||[]).forEach(r=>{ const k=keyFn(r); if(k==null) return;
+    m.set(k, (m.get(k)||0) + Number(valFn(r)||0)); });
+  return m;
+}
+const TS_SOURCE = {
+  /* Ürün: `app_export_d_*` `series`ten dışlanmış (payload'ı ikiye katlamamak
+     için) ama `catalogDaily`de kırılımlarıyla duruyor — gün bazında toplanıyor. */
+  catalog: metric => days => {
+    const m = dailyMap((D.catalogDaily||[]).filter(r=>r.slug===APP && r.metric===metric),
+                       r=>r.day, r=>r.v);
+    return m.size ? days.map(d=> m.has(d) ? m.get(d) : null) : null;
+  },
+  review: field => days => {
+    const rows=(D.reviewDaily||[]).filter(r=>r.slug===APP && r.subject==='rival');
+    if(!rows.length) return null;
+    if(field==='n'){ const m=dailyMap(rows, r=>r.day, r=>r.n);
+      return days.map(d=> m.has(d)? m.get(d) : null); }
+    /* Puan ORTALAMA: günler toplanamaz. Aynı gün birden çok satır varsa
+       (iki rakip) `n` ile ağırlıklandırılıyor — satırları düz ortalamak
+       az yorumlu rakibi çok yorumluyla eşit sayardı. */
+    const num=new Map(), den=new Map();
+    rows.forEach(r=>{ if(r.rating_avg==null) return;
+      num.set(r.day,(num.get(r.day)||0)+Number(r.rating_avg)*Number(r.n||0));
+      den.set(r.day,(den.get(r.day)||0)+Number(r.n||0)); });
+    return days.map(d=> den.get(d) ? num.get(d)/den.get(d) : null);
+  },
+  sync: field => days => {
+    const rows=(D.syncDaily||[]).filter(r=>r.slug===APP||r.slug==='__global__');
+    if(!rows.length) return null;
+    const m=dailyMap(rows, r=>r.day, r=>r[field]);
+    return days.map(d=> m.has(d)? m.get(d) : null);
+  },
+  coverage: slug => days => {
+    const rows=(D.coverageDaily||[]).filter(r=>r.slug===slug);
+    if(!rows.length) return null;
+    const m=dailyMap(rows, r=>r.day, r=>r.rows);
+    return days.map(d=> m.has(d)? m.get(d) : null);
+  },
+};
+
+function drawTS(mountId, spec){
+  const host = el(mountId); if(!host) return;
+  /* Eksen SÜREKLİ takvim aralığı, `rangeDays()`in ham hâli DEĞİL.
+     `rangeDays()` ÖLÇÜLEN günleri döndürüyor (allDays → series günleri) ve
+     bu grafikte iki ayrı hataya yol açıyordu:
+       1. Ölçüm olmayan bir gün eksende HİÇ yer almıyor, yani grafik o günü
+          atlıyor ve komşu iki gün yan yana çizilerek boşluk görünmez oluyor —
+          "eksik gün boşluk çizilir" kuralının tam tersi.
+       2. Daha kötüsü: başka bir kaynaktan (yorum, senkron, kapsama) o gün
+          VERİ VARSA o veri sessizce toplam dışında kalıyor. Ölçüldü
+          2026-09-22: 24 Ağustos'ta reklam ölçümü yok ama 29 rakip yorumu var;
+          rakip puanının ağırlıklı ortalaması 1.245 yerine 1.216 yorum üstünden
+          hesaplanıyordu. Sayı MAKUL görünüyordu (3,61 yerine 3,61) — sessiz
+          yanlışın tam tanımı.
+     `rangeDays()` diğer çizerlerde olduğu gibi bırakıldı; burada yalnız uçları
+     alınıp arası dolduruluyor. Dolan günlerin değeri `null` kalıyor, 0 değil. */
+  const span = (arr) => {
+    if(!arr.length) return [];
+    const out=[], last=arr[arr.length-1];
+    for(let d=arr[0]; d<=last; d=new Date(Date.parse(d)+864e5).toISOString().slice(0,10)) out.push(d);
+    return out;
+  };
+  const days = span(rangeDays());
+  /* ÖNCEKİ PENCERE takvimden kuruluyor, `prevRangeDays()`ten DEĞİL.
+     `prevRangeDays()` de ölçülen günleri dilimliyor, yani uzunluğu şimdiki
+     pencereyle eşit OLMAYABİLİR. Ölçüldü 2026-09-22: şimdiki pencere 31 takvim
+     günü, `prevRangeDays()` 24 gün döndürüyordu — ve kart bunu "önceki EŞİT
+     dönem +1821%" diye yazıyordu. Etiket yalan söylüyordu: 31 günün toplamı
+     24 günün toplamıyla kıyaslanıyordu ve fark büyüme gibi okunuyordu.
+     Şimdi: şimdiki pencerenin hemen öncesindeki AYNI SAYIDA takvim günü.
+     Eşitlik artık kurgu gereği doğru, ölçüme bağlı değil. */
+  const gunOnce = (iso,n)=> new Date(Date.parse(iso)-n*864e5).toISOString().slice(0,10);
+  const prevDays = days.length
+    ? span([gunOnce(days[0], days.length), gunOnce(days[0], 1)])
+    : [];
+  const cur = spec.series.map(sr => ({...sr,
+    vals: sr.from ? sr.from(days) : tsVals(sr.metric, days)}));
+  if(!days.length || cur.every(sr => !sr.vals || sr.vals.every(v => v==null))){
+    host.innerHTML = `<div class="ts-empty">Bu kartın günlük serisi <b>ölçülmüyor</b>.${
+      spec.note ? '<br>'+esc(spec.note) : ''}</div>`;
+    return;
+  }
+  const prev = prevDays.length
+    ? (spec.series[0].from ? spec.series[0].from(prevDays) : tsVals(cur[0].metric, prevDays))
+    : null;
+
+  const W=600, H=230, top=14, bot=30, L=34;
+  const all=[]; cur.forEach(sr=> (sr.vals||[]).forEach(v=> v!=null && all.push(v)));
+  (prev||[]).forEach(v=> v!=null && all.push(v));
+  /* Eksen tabanı 0; `yMin` verilirse oradan. 1-5'lik bir puanı 0'dan çizmek
+     grafiğin alt beşte dördünü harcıyor ve gerçek oynamayı düz çizgiye
+     çeviriyor. ui-and-motion §5 buna izin veriyor ama İŞARETLENMESİNİ şart
+     koşuyor — lejantta yazıyor. */
+  const yMin = spec.yMin ?? 0;
+  const max = Math.max(yMin + 1e-6, ...all) * (spec.yMin==null ? 1.1 : 1.02);
+  const x = i => days.length<2 ? (L+W)/2 : L + i*((W-L)/(days.length-1));
+  const y = v => H-bot - ((v-yMin)/(max-yMin))*(H-top-bot);
+
+  let svg='';
+  for(let g=0; g<=4; g++){
+    const gy = top + g*((H-top-bot)/4);
+    const gv = max - (max-yMin)/4*g;
+    svg += `<line x1="${L}" y1="${gy.toFixed(1)}" x2="${W}" y2="${gy.toFixed(1)}" stroke="var(--line)" stroke-dasharray="4 6"/>`
+         + `<text x="${L-6}" y="${(gy+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--ink-3)">${spec.yMin!=null?gv.toFixed(1):num(Math.round(gv))}</text>`;
+  }
+  /* önceki eşit dönem — soluk kesikli, YALNIZ ilk seri. Üç seriyi birden
+     ikiye katlamak grafiği okunmaz yapardı; karşılaştırma ana seri için. */
+  if(prev && prev.some(v=>v!=null)){
+    const segs=[]; let run=[];
+    prev.forEach((v,i)=>{ if(v==null){ if(run.length>1) segs.push(run); run=[]; } else run.push(`${x(i).toFixed(1)},${y(v).toFixed(1)}`); });
+    if(run.length>1) segs.push(run);
+    segs.forEach(p=> svg += `<path d="M${p.join(' L')}" fill="none" stroke="var(--ink-3)" stroke-width="1.6" stroke-dasharray="4 4" opacity=".5"/>`);
+  }
+  const bw = Math.max(2, Math.min(14, (W-L)/Math.max(days.length,1)*0.6));
+  /* Döngü değişkeni `sr`: `x` DEĞİL. `x` bu kapsamda konum fonksiyonu ve bir
+     forEach parametresi onu gölgeleyip `x(i)` çağrısını "seri nesnesini
+     çağırdın" hatasına çevirirdi — çalışma anında patlar, tip kontrolü görmez. */
+  cur.filter(sr=>sr.kind==='bar').forEach(sr=> (sr.vals||[]).forEach((v,i)=>{
+    if(v==null) return;
+    svg += `<rect x="${(x(i)-bw/2).toFixed(1)}" y="${y(v).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1.5,H-bot-y(v)).toFixed(1)}" rx="3" fill="${sr.color}" opacity=".85"/>`;
+  }));
+  cur.filter(sr=>sr.kind!=='bar').forEach(sr=>{
+    const segs=[]; let run=[];
+    (sr.vals||[]).forEach((v,i)=>{ if(v==null){ if(run.length>1) segs.push(run); run=[]; } else run.push([x(i),y(v)]); });
+    if(run.length>1) segs.push(run);
+    segs.forEach(p=>{
+      const d = smooth(p);
+      if(sr.kind==='area') svg += `<path d="${d} L${p[p.length-1][0].toFixed(1)},${H-bot} L${p[0][0].toFixed(1)},${H-bot} Z" fill="${sr.color}" opacity=".12"/>`;
+      svg += `<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+    });
+    const li=(sr.vals||[]).length-1;
+    if(sr.vals && sr.vals[li]!=null)
+      svg += `<circle cx="${x(li).toFixed(1)}" cy="${y(sr.vals[li]).toFixed(1)}" r="4.5" fill="var(--card)" stroke="${sr.color}" stroke-width="2.6"/>`;
+  });
+
+  /* Toplayıcı `grain`den gelir, ekrandan değil. `wavg`: seri GÜNLÜK ORTALAMA
+     taşıyorsa pencere değeri Σ(ort×n)÷Σ(n) — günlük ortalamaların düz
+     ortalaması her zaman yanlıştır (metrics.md §3). Ağırlık serisi yoksa
+     sayı HİÇ basılmıyor: yanlış ortalama basmaktansa "ölçülmedi". */
+  const plain = a => { let n=0, any=false; (a||[]).forEach(v=>{ if(v!=null){n+=v;any=true;} }); return any?n:null; };
+  const wavg = a => {
+    const wv = spec.weightFrom ? spec.weightFrom(days) : null;
+    if(!wv) return null;
+    let num=0, den=0;
+    (a||[]).forEach((v,i)=>{ const w=wv[i]; if(v!=null&&w!=null){ num+=v*w; den+=w; } });
+    return den ? num/den : null;
+  };
+  const sum = spec.agg==='wavg' ? wavg : plain;
+  const fmt = spec.fmt || (v => v==null ? 'ölçülmedi' : num(Math.round(v)));
+  const c0=sum(cur[0].vals), p0=sum(prev);
+  /* KARŞILAŞTIRMA KAPSAMA KAPISI.
+     Ölçüldü 2026-09-22: Ürün kartı "önceki eşit dönem +1821%" yazıyordu. Sayı
+     aritmetik olarak doğruydu ve tamamen anlamsızdı — önceki pencerede seri
+     daha yeni başladığı için yalnız birkaç günün ölçümü vardı. İki pencerenin
+     UZUNLUĞU eşit olsa bile KAPSAMASI eşit değilse oran karşılaştırma değil,
+     kapsama farkının yüzdeye çevrilmiş hâlidir (ilke 3: ölçülmedi ≠ 0).
+
+     Kapı: önceki pencerenin ölçülen gün sayısı, şimdikinin %60'ından azsa
+     yüzde HİÇ basılmıyor; yerine kaç günün ölçüldüğü adıyla yazılıyor.
+     "Karşılaştırma yok" demek gözlemi bırakmak olurdu (kural 6) — bu yüzden
+     yokluk da bir cümle, boşluk değil. */
+  const olculen = a => (a||[]).filter(v=>v!=null).length;
+  const curN = olculen(cur[0].vals), prevN = olculen(prev);
+  const kapsamaYeterli = curN > 0 && prevN >= Math.ceil(curN * 0.6);
+  let delta='';
+  if(c0!=null && p0!=null && p0!==0 && kapsamaYeterli){
+    const d=(c0-p0)/p0*100;
+    delta = `<span class="ts-item" style="margin-left:auto">önceki eşit dönem <b>${d>0?'+':''}${d.toFixed(0)}%</b></span>`;
+  } else if(prevDays.length===0){
+    delta = `<span class="ts-item" style="margin-left:auto;color:var(--ink-3)">önceki dönem <b>ölçülmedi</b></span>`;
+  } else if(!kapsamaYeterli){
+    delta = `<span class="ts-item" style="margin-left:auto;color:var(--ink-3)">önceki dönemde <b>${prevN}/${prevDays.length} gün</b> ölçülmüş · oran basılmadı</span>`;
+  }
+
+  host.innerHTML =
+    `<div class="ts-head">
+       <span class="ts-win">${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}</span>
+       <span class="ts-items">${cur.map(sr=>
+         `<span class="ts-item"><i class="${sr.kind==='bar'?'dot':''}" style="background:${sr.color}"></i>${esc(sr.label)} <b>${fmt(sum(sr.vals))}</b></span>`).join('')}</span>
+       ${delta}
+     </div>
+     <svg class="ts-svg" viewBox="0 0 ${W} ${H}">${svg}</svg>
+     <div class="ts-x"><span>${esc(dShort(days[0]))}</span><span>${esc(dShort(days[days.length-1]))}</span></div>
+     <div class="ts-lg">${cur.map(sr=>`<span><i style="background:${sr.color}"></i>${esc(sr.label)}</span>`).join('')}
+       ${prev&&prev.some(v=>v!=null)?'<span><i style="background:var(--ink-3);opacity:.5"></i>önceki eşit dönem</span>':''}
+       ${spec.yMin!=null?`<span>eksen ${spec.yMin}'ten başlıyor, 0'dan değil</span>`:''}</div>`;
+}
+
+/* Kartların tanımı tek yerde: hangi görünüm, hangi metrikler, hangi renk.
+   Renk `--s*` adımlarından; bunlar CVD kapılarından geçmiş seri renkleri ve
+   metin TAŞIMIYORLAR (yalnız çizgi ve çubuk). */
+const TS_CARDS = [
+  ['tsUrun',  {series:[{from:TS_SOURCE.catalog('app_export_d_users_active'), label:'Aktif kullanıcı', color:'var(--s1)', kind:'line'},
+                       {from:TS_SOURCE.catalog('app_export_d_tx_created'),   label:'Yazılan işlem',   color:'var(--s3)', kind:'bar'},
+                       {from:TS_SOURCE.catalog('app_export_d_users_signups'),label:'Yeni kayıt',      color:'var(--s4)', kind:'line'}]}],
+  ['tsYorum', {series:[{from:TS_SOURCE.review('n'), label:'Rakip yorumu', color:'var(--s1)', kind:'bar'}]}],
+  ['tsYorumRate', {series:[{from:TS_SOURCE.review('avg'), label:'Ortalama puan', color:'var(--s4)', kind:'line'}],
+               /* Pencere değeri ağırlıklı ortalama; `sum` burada yanlış olurdu.
+                  `agg` verilmezse drawTS toplar — o yüzden açıkça yazılıyor. */
+               agg:'wavg', weightFrom:TS_SOURCE.review('n'),
+               fmt:v=> v==null?'ölçülmedi':v.toFixed(2).replace('.',','), yMin:1}],
+  ['tsSaglik',{series:[{from:TS_SOURCE.sync('ok'),   label:'Başarılı tur',  color:'var(--s3)', kind:'bar'},
+                       {from:TS_SOURCE.sync('fail'), label:'Başarısız tur', color:'var(--s2)', kind:'line'}]}],
+  ['tsPortfoy',{series:[{from:TS_SOURCE.coverage('spendy'),     label:'Spendy',     color:'var(--s1)', kind:'bar'},
+                        {from:TS_SOURCE.coverage('astroscope'), label:'AstroScope', color:'var(--s5)', kind:'line'}]}],
+  ['tsPara',  {series:[{metric:'ad_estimated_earnings', label:'Kazanç', color:'var(--s2)', kind:'area'}],
+               /* `money()` USD'ye sabit; AdMob kazancı TRY ölçülüyor. Birimi
+                  yanlış yazmak sayıyı yanlış yazmaktan beter: sayı doğru görünür. */
+               fmt:v=> v==null?'ölçülmedi':'₺'+Number(v).toLocaleString('tr',{maximumFractionDigits:2})}],
+  ['tsParaChain', {series:[{metric:'ad_requests', label:'İstek', color:'var(--s1)', kind:'line'},
+                           {metric:'ad_impressions', label:'Gösterim', color:'var(--s3)', kind:'bar'}]}],
+  ['tsPazar', {series:[{metric:'store_impression', label:'Gösterim', color:'var(--s1)', kind:'line'},
+                       {metric:'store_tap', label:'Dokunma', color:'var(--s3)', kind:'line'},
+                       {metric:'downloads_first_time', label:'İlk kurulum', color:'var(--s2)', kind:'bar'}]}],
+  ['tsAso',   {series:[{metric:'store_impression', label:'Gösterim', color:'var(--s1)', kind:'line'},
+                       {metric:'downloads_first_time', label:'İlk kurulum', color:'var(--s2)', kind:'bar'}]}],
+];
+function drawTSAll(){ TS_CARDS.forEach(([id,spec])=>{ try{ drawTS(id,spec); }catch(e){ console.error('drawTS',id,e); } }); }
+
 function renderAll(){
   const days=rangeDays();
   const a=(D.apps||[]).find(x=>x.slug===APP);
@@ -5542,6 +5891,7 @@ function renderAll(){
   // WHY burada da: uygulama değişince (ör. Spendy → AstroScope) `.pre` sınıfı
   // yukarıda değişiyor ve bazı region-label'lar görünür/gizli olabiliyor —
   // sekme değişmeden çıpa şeridi bayat kalmasın diye burada da yeniden kurulur.
+  drawTSAll();
   buildAnchors();
   capTables();
   collapseTallCards();
