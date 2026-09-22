@@ -5657,6 +5657,14 @@ function dailyMap(rows, keyFn, valFn){
     m.set(k, (m.get(k)||0) + Number(valFn(r)||0)); });
   return m;
 }
+/* Her kaynak, değerinin yanında KENDİ GÜN KÜMESİNİ de verebiliyor (`days`).
+   Gerek: `rangeDays()` seçili uygulamanın AKIŞ ölçümlerinden türüyor; o
+   uygulamanın akış ölçümü yoksa boş dönüyor ve yedek pencere kurulamıyor.
+   Ölçüldü: AstroScope'un hiç akış ölçümü yok ama 241 satır rakip yorumu ve
+   63 satır senkron turu VAR — gün kümesi olmadan bu iki kart da boş kalıyordu
+   ve ekranda "ölçülmüyor" yazıyordu. Yanlış: ölçülüyor, yalnız pencere
+   başka bir kaynağın kapsamından türetiliyordu. */
+const tsDays = rows => [...new Set((rows||[]).map(r=>r.day))];
 const TS_SOURCE = {
   /* Ürün: `app_export_d_*` `series`ten dışlanmış (payload'ı ikiye katlamamak
      için) ama `catalogDaily`de kırılımlarıyla duruyor — gün bazında toplanıyor. */
@@ -5715,7 +5723,40 @@ function drawTS(mountId, spec){
     for(let d=arr[0]; d<=last; d=new Date(Date.parse(d)+864e5).toISOString().slice(0,10)) out.push(d);
     return out;
   };
-  const days = span(rangeDays());
+  /* PENCERE KAYNAĞI. Normalde panelin kendi `rangeDays()`i — bütün kartlar
+     aynı dönemden konuşsun diye (kural 1).
+
+     Ama `rangeDays()` SEÇİLİ UYGULAMANIN akış ölçümlerinden türüyor ve o
+     uygulamanın hiç akış ölçümü yoksa BOŞ dönüyor. Ölçüldü 2026-09-22, canlıda:
+     varsayılan uygulama AstroScope ve onun günlük serisi yok → `rangeDays()`
+     sıfır gün → dokuz kartın dokuzu da "ölçülmüyor" dedi, sıfır hata verdi.
+     Kartların çoğu için bu DOĞRU cevaptı; ama Portföy'ün kapsama kartı iki
+     uygulamayı birden çiziyor ve onun boş kalması yanlıştı — üstelik "bu
+     kartın serisi ölçülmüyor" cümlesi nedeni SÖYLEMİYORDU (asıl neden seçili
+     uygulamaydı, kartın metriği değil).
+
+     Çözüm: panel penceresi boşsa kart KENDİ serilerinin kapsadığı günlerden
+     bir pencere kuruyor ve bunu kartın üstünde AÇIKÇA yazıyor. İki kartın
+     farklı pencereden konuşması riski, pencere her kartta yazılı olduğu için
+     gizli kalmıyor (kural 1'in korumak istediği şey sessiz tutarsızlıktı). */
+  let days = span(rangeDays());
+  let kendiPencere = false;
+  if(!days.length){
+    const hepsi = new Set();
+    spec.series.forEach(sr=>{
+      if(sr.days) { sr.days().forEach(d=>hepsi.add(d)); return; }
+      const by = sr.metric ? appIdx(APP).sum.get(sr.metric) : null;
+      if(by) by.forEach((_,d)=>hepsi.add(d));
+    });
+    const sirali=[...hepsi].sort();
+    if(sirali.length){
+      const son=sirali[sirali.length-1];
+      const n = RANGE===0 ? sirali.length : RANGE;
+      const ilk = sirali.length>n ? sirali[sirali.length-n] : sirali[0];
+      days = span([ilk, son]);
+      kendiPencere = true;
+    }
+  }
   /* ÖNCEKİ PENCERE takvimden kuruluyor, `prevRangeDays()`ten DEĞİL.
      `prevRangeDays()` de ölçülen günleri dilimliyor, yani uzunluğu şimdiki
      pencereyle eşit OLMAYABİLİR. Ölçüldü 2026-09-22: şimdiki pencere 31 takvim
@@ -5731,8 +5772,16 @@ function drawTS(mountId, spec){
   const cur = spec.series.map(sr => ({...sr,
     vals: sr.from ? sr.from(days) : tsVals(sr.metric, days)}));
   if(!days.length || cur.every(sr => !sr.vals || sr.vals.every(v => v==null))){
-    host.innerHTML = `<div class="ts-empty">Bu kartın günlük serisi <b>ölçülmüyor</b>.${
-      spec.note ? '<br>'+esc(spec.note) : ''}</div>`;
+    /* Boş durum NEDENİ adıyla söylüyor ve çıkmaz sokakta bitmiyor (kural 4).
+       Eski hâli "bu kartın günlük serisi ölçülmüyor" diyordu — oysa asıl neden
+       çoğu zaman SEÇİLİ UYGULAMA oluyor ve okuyan kişi bunu bilemiyordu. */
+    const ad = ((D.apps||[]).find(a=>a.slug===APP)||{}).name || APP;
+    const baskaVar = (D.apps||[]).filter(a=>a.slug!=='__global__' && a.slug!==APP);
+    host.innerHTML = `<div class="ts-empty">
+      <b>${esc(ad)}</b> için bu kartın günlük serisi <b>ölçülmüyor</b> — sıfır değil, <b>sayı yok</b>.
+      ${spec.note ? '<br>'+esc(spec.note) : ''}
+      ${baskaVar.length ? `<br>Ölçümü olan uygulama: ${baskaVar.map(a=>esc(a.name||a.slug)).join(', ')} — uygulama seçiciden değiştir.` : ''}
+    </div>`;
     return;
   }
   const prev = prevDays.length
@@ -5829,7 +5878,8 @@ function drawTS(mountId, spec){
 
   host.innerHTML =
     `<div class="ts-head">
-       <span class="ts-win">${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}</span>
+       <span class="ts-win">${esc(dShort(days[0]))} – ${esc(dShort(days[days.length-1]))}</span>${
+         kendiPencere ? '<span class="ts-item" style="color:var(--ink-3)">bu kartın kendi penceresi · üst aralık seçicisi bu uygulamada ölçüm bulamadı</span>' : ''}
        <span class="ts-items">${cur.map(sr=>
          `<span class="ts-item"><i class="${sr.kind==='bar'?'dot':''}" style="background:${sr.color}"></i>${esc(sr.label)} <b>${fmt(sum(sr.vals))}</b></span>`).join('')}</span>
        ${delta}
@@ -5845,19 +5895,29 @@ function drawTS(mountId, spec){
    Renk `--s*` adımlarından; bunlar CVD kapılarından geçmiş seri renkleri ve
    metin TAŞIMIYORLAR (yalnız çizgi ve çubuk). */
 const TS_CARDS = [
-  ['tsUrun',  {series:[{from:TS_SOURCE.catalog('app_export_d_users_active'), label:'Aktif kullanıcı', color:'var(--s1)', kind:'line'},
+  ['tsUrun',  {series:[{from:TS_SOURCE.catalog('app_export_d_users_active'), label:'Aktif kullanıcı', color:'var(--s1)', kind:'line',
+                       days:()=>tsDays((D.catalogDaily||[]).filter(r=>r.slug===APP&&r.metric==='app_export_d_users_active'))},
                        {from:TS_SOURCE.catalog('app_export_d_tx_created'),   label:'Yazılan işlem',   color:'var(--s3)', kind:'bar'},
                        {from:TS_SOURCE.catalog('app_export_d_users_signups'),label:'Yeni kayıt',      color:'var(--s4)', kind:'line'}]}],
-  ['tsYorum', {series:[{from:TS_SOURCE.review('n'), label:'Rakip yorumu', color:'var(--s1)', kind:'bar'}]}],
-  ['tsYorumRate', {series:[{from:TS_SOURCE.review('avg'), label:'Ortalama puan', color:'var(--s4)', kind:'line'}],
+  ['tsYorum', {series:[{from:TS_SOURCE.review('n'), label:'Rakip yorumu', color:'var(--s1)', kind:'bar',
+                       days:()=>tsDays((D.reviewDaily||[]).filter(r=>r.slug===APP&&r.subject==='rival'))}]}],
+  ['tsYorumRate', {series:[{from:TS_SOURCE.review('avg'), label:'Ortalama puan', color:'var(--s4)', kind:'line',
+                       days:()=>tsDays((D.reviewDaily||[]).filter(r=>r.slug===APP&&r.subject==='rival'))}],
                /* Pencere değeri ağırlıklı ortalama; `sum` burada yanlış olurdu.
                   `agg` verilmezse drawTS toplar — o yüzden açıkça yazılıyor. */
                agg:'wavg', weightFrom:TS_SOURCE.review('n'),
                fmt:v=> v==null?'ölçülmedi':v.toFixed(2).replace('.',','), yMin:1}],
-  ['tsSaglik',{series:[{from:TS_SOURCE.sync('ok'),   label:'Başarılı tur',  color:'var(--s3)', kind:'bar'},
+  ['tsSaglik',{series:[{from:TS_SOURCE.sync('ok'),   label:'Başarılı tur',  color:'var(--s3)', kind:'bar',
+                       days:()=>tsDays((D.syncDaily||[]).filter(r=>r.slug===APP||r.slug==='__global__'))},
                        {from:TS_SOURCE.sync('fail'), label:'Başarısız tur', color:'var(--s2)', kind:'line'}]}],
-  ['tsPortfoy',{series:[{from:TS_SOURCE.coverage('spendy'),     label:'Spendy',     color:'var(--s1)', kind:'bar'},
-                        {from:TS_SOURCE.coverage('astroscope'), label:'AstroScope', color:'var(--s5)', kind:'line'}]}],
+  /* Portföy kapsaması SEÇİLİ UYGULAMADAN bağımsız: iki uygulamayı yan yana
+     çizmek kartın tek işi. `days` de o yüzden kendi veri kümesinden geliyor —
+     yoksa AstroScope seçiliyken kart, tam da anlatmak istediği asimetri
+     yüzünden boş kalırdı. */
+  ['tsPortfoy',{series:[{from:TS_SOURCE.coverage('spendy'),     label:'Spendy',     color:'var(--s1)', kind:'bar',
+                         days:()=>[...new Set((D.coverageDaily||[]).filter(r=>r.slug==='spendy').map(r=>r.day))]},
+                        {from:TS_SOURCE.coverage('astroscope'), label:'AstroScope', color:'var(--s5)', kind:'line',
+                         days:()=>[...new Set((D.coverageDaily||[]).filter(r=>r.slug==='astroscope').map(r=>r.day))]}]}],
   ['tsPara',  {series:[{metric:'ad_estimated_earnings', label:'Kazanç', color:'var(--s2)', kind:'area'}],
                /* `money()` USD'ye sabit; AdMob kazancı TRY ölçülüyor. Birimi
                   yanlış yazmak sayıyı yanlış yazmaktan beter: sayı doğru görünür. */
