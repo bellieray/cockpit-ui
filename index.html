@@ -468,7 +468,7 @@ function vOzet(){
   }else h+=`<div class="empty"><b>Mağaza verisi yok.</b> ${isLiveNote()}</div>`;
   // alt sıra
   h+=`<div class="g3">`+card("Mağaza hunisi",imp.status==="measured"?`${fD(imp.w.start)} – ${fD(imp.w.end)}`:"",funnelHtml(null,null),`<button class="lnk" data-go="magaza">Kırılım →</button>`)+
-     card("Ne değişti","Sürümler ve senin değişikliklerin · yorumsuz",changesHtml(5),`<button class="lnk" data-go="degisiklik">Tümü →</button>`)+
+     card("Ne değişti","Sürümler ve senin değişikliklerin · yorumsuz",changesHtml(5,"__broken"),`<button class="lnk" data-go="degisiklik">Tümü →</button>`)+
      card("Senin yapman gereken","Otomasyonun yapamadığı tek şey: anahtarlar",todoHtml())+`</div>`;
   return h;
 }
@@ -492,8 +492,14 @@ function changesHtml(limit,filt){
   const it=[];const w=win();
   (D.docs||[]).filter(r=>r.slug===S.app&&r.released_at&&r.version).forEach(r=>{const self=r.subject==="self";it.push({d:r.released_at.slice(0,10),k:self?"sürüm":"rakip",c:self?"#10B981":"#94A3B8",t:(self?"":(r.subject_name||"Rakip")+" ")+r.version+(self?" yayında":""),s:self?"App Store kaydında gözlendi":(r.country||"").toUpperCase()});});
   (D.listingChanges||[]).filter(r=>r.slug===S.app).forEach(r=>it.push({d:r.noticed_on,k:"metadata",c:"#8B5CF6",t:`${r.locale} · ${r.field} değişti`,s:`${(r.before_value||"").slice(0,60)} → ${(r.after_value||"").slice(0,60)}`}));
+  /* Backend deploy'ları GÜN başına tek satır (render_events): 75 günde 375 deploy
+     tek tek dökülse çizelgeyi boğardı. `onlyBroken` (Genel bakış) yalnız kırık
+     build/çıkış olan günleri alır — sıradan deploy günü orada gürültü. */
+  const dep=FL("render_deploys"),bf=FL("render_builds_failed"),df=FL("render_deploys_failed");
+  if(dep)dep.forEach((n,d)=>{const b=(bf&&bf.get(d))||0,f=(df&&df.get(d))||0;if(!n&&!b)return;if(filt==="__broken"&&!b&&!f)return;
+    it.push({d,k:"backend",c:b||f?"#DC2626":"#64748B",t:`Backend: ${fN(n)} deploy${b?` · ${fN(b)} kırık build`:""}${f?` · ${fN(f)} kırık çıkış`:""}`,s:b||f?"Render · kırık build'de önceki sürüm canlıda kalır":"Render"});});
   (D.releaseEffect||[]).filter(r=>r.app_slug===S.app).forEach(r=>it.push({d:r.released_on,k:"etki",c:"#F59E0B",t:`${r.version} sonrası gösterim ${fN(r.before_impressions_per_day,1)} → ${fN(r.after_impressions_per_day,1)}/gün`,s:`dönüşüm %${fN(r.before_conversion_pct,1)} → %${fN(r.after_conversion_pct,1)} · ${r.before_days}+${r.after_days} gün · korelasyon, nedensellik değil`}));
-  const seen=new Set();let rows=it.filter(x=>{const key=x.k+x.t+x.d;if(seen.has(key))return false;seen.add(key);return true;}).filter(x=>x.d>=w.start&&x.d<=w.end).filter(x=>!filt||filt==="hepsi"||x.k===filt).sort((a,b)=>a.d<b.d?1:-1);
+  const seen=new Set();let rows=it.filter(x=>{const key=x.k+x.t+x.d;if(seen.has(key))return false;seen.add(key);return true;}).filter(x=>x.d>=w.start&&x.d<=w.end).filter(x=>!filt||filt==="hepsi"||x.k===filt||(filt==="__broken"&&(x.k!=="backend"||x.c==="#DC2626"))).sort((a,b)=>a.d<b.d?1:-1);
   if(!rows.length)return '<div class="empty">Bu aralıkta değişiklik kaydı yok.</div>';
   const n=rows.length;if(limit)rows=rows.slice(0,limit);
   return `<div class="tl">${rows.map(r=>`<div class="it" style="--c:${r.c}"><b>${esc(r.t)}</b><span class="tag" style="background:${r.c}22;color:#1E293B">${r.k}</span>${r.s?`<p>${esc(r.s)}</p>`:""}<small>${fD(r.d)}</small></div>`).join("")}</div>${limit&&n>limit?`<div class="foot">${n-limit} kayıt daha</div>`:""}`;
@@ -691,6 +697,8 @@ function vSurum(){
     const pv0=winAvg("store_page_view",bS,bE),pv1=winAvg("store_page_view",r.d,aEnd),dl0=winAvg("downloads_first_time",bS,bE),dl1=winAvg("downloads_first_time",r.d,aEnd);
     const conv=(d,p)=>d&&p&&p.sum>=MIN_N?fPct(d.sum/p.sum):(p?`n=${fN(p.sum)} <30`:"ölçülmedi");
     const rows=[["Gösterim",cmpCell(winAvg("store_impression",bS,bE),winAvg("store_impression",r.d,aEnd))],["Ürün sayfası",cmpCell(pv0,pv1)],["İlk indirme",cmpCell(dl0,dl1)],["İndirme / sayfa",`${conv(dl0,pv0)} → ${conv(dl1,pv1)}`],["Kayıt (kendi)",cmpCell(winAvg("",bS,bE,su),winAvg("",r.d,aEnd,su))],["Yorum",`${revIn(bS,bE)} → ${revIn(r.d,aEnd)}`]];
+    if(FL("render_deploys")){const bfs=(a,b2)=>{const m=FL("render_builds_failed");let s2=0;if(m)m.forEach((v,d)=>{if(d>=a&&d<=b2)s2+=v;});return s2;};
+      rows.push(["Backend deploy",cmpCell(winAvg("render_deploys",bS,bE),winAvg("render_deploys",r.d,aEnd))+` <span style="color:var(--mu);font-size:11.5px">kırık build ${fN(bfs(bS,bE))} → ${fN(bfs(r.d,aEnd))}</span>`]);}
     const short=next&&next<=aEnd0?`<div class="warnbox" style="margin-top:10px">Sonraki sürüm (${fD(next)}) pencereyi kesiyor: "sonra" yalnız ${span(r.d,aEnd)} gün.</div>`:"";
     const age=span(r.d,today())-1;if(age<REL_WIN)rows.unshift(["",`<span style="color:#92400E;font-weight:600">Yayın ${age} gün önce — "sonra" penceresi dolmadı; mağaza verisi ~2 gün geride. Karşılaştırma ${fD(addD(r.d,REL_WIN+2))} civarı anlamlı.</span>`]);
     const open=sel?sel===r.v:i<2;
@@ -758,7 +766,17 @@ function vHuni(){
 }
 
 /* ── Değişiklikler ── */
-function vDegisiklik(){const t=F("t","hepsi");return `<div class="ph"><h1>Değişiklikler</h1><p>Sürümler, metadata, rakip sürümleri, sürüm etkisi · ${esc(win().label)} · yorum yok, yalnız olay</p></div>`+card("Zaman çizelgesi",t==="hepsi"?"tüm türler":t,changesHtml(+F("lim",60),t));}
+function vDegisiklik(){const t=F("t","hepsi");let h=`<div class="ph"><h1>Değişiklikler</h1><p>Sürümler, metadata, rakip sürümleri, backend deploy'ları, sürüm etkisi · ${esc(win().label)} · yorum yok, yalnız olay</p></div>`;
+  const dep=FL("render_deploys");
+  if(dep){const w=win(),dd=days(w.start,w.end),bf=FL("render_builds_failed")||new Map(),df=FL("render_deploys_failed")||new Map();
+    const ok=new Map();dd.forEach(d=>{if(dep.has(d))ok.set(d,Math.max(0,dep.get(d)-(bf.get(d)||0)-(df.get(d)||0)));});
+    const tot=m=>{let s=0;dd.forEach(d=>{s+=(m.get(d)||0);});return s;};
+    h+=card("Backend deploy, gün gün",`Render · ${esc(w.label)} · bugün yazılmaz (gün bitmedi)`,
+      `<div class="legend"><button data-det="render_deploys"><i style="background:#10B981"></i><span>Başarılı<b class="t">${fN(tot(ok))}</b></span></button><button data-det="render_builds_failed"><i style="background:#DC2626"></i><span>Kırık build<b class="t">${fN(tot(bf))}</b></span></button><button data-det="render_deploys_failed"><i style="background:#F59E0B"></i><span>Kırık çıkış<b class="t">${fN(tot(df))}</b></span></button></div>`+
+      chartSpec("cDep",{days:dd,series:[{n:"Başarılı",c:"#10B981",map:ok},{n:"Kırık build",c:"#DC2626",map:bf},{n:"Kırık çıkış",c:"#F59E0B",map:df}],stack:1,marks:releaseMarks(dd),aria:"Backend deploy"})+
+      `<div class="foot">Kırık build'de deploy başlamaz, önceki sürüm canlıda kalır. Kesikli çizgi = uygulama sürümü. Uyku/uyanma Render API'sinde yok, ölçülmüyor.</div>`);}
+  else h+=`<div class="empty"><b>Backend deploy verisi yok.</b> Bu uygulamanın Render konektörü açık değil.</div>`;
+  return h+card("Zaman çizelgesi",t==="hepsi"?"tüm türler":t,changesHtml(+F("lim",60),t));}
 
 /* ── Uygulama verisi (katalog gezgini) ── */
 function vKatalog(){
@@ -802,7 +820,7 @@ function fbar(){
   if(v==="kullanici"){h+=`<label>Olay ara<input type="search" data-f="q" value="${esc(F("q",""))}" placeholder="ör. paywall"></label>`;}
   if(v==="kalite"){h+=sel("who","Yorum",[["self","Kendi"],["rival","Rakip"],["hepsi","Hepsi"]],F("who","self"))+sel("rating","Puan",[["hepsi","Tüm puanlar"],["1","1★"],["2","2★"],["3","3★"],["4","4★"],["5","5★"]],F("rating","hepsi"))+sel("cc","Ülke",ccOpts((D.reviews||[]).filter(r=>r.slug===S.app).map(r=>r.country)),F("cc",""));}
   if(v==="aso"){const g=(D.gaps||[]).filter(r=>r.slug===S.app);h+=sel("cc","Ülke",ccOpts(g.map(r=>r.country)),F("cc",""))+sel("vd","Durum",[["hepsi","Tüm durumlar"]].concat(Array.from(new Set(g.map(r=>r.verdict))).sort().map(x=>[x,x])),F("vd","hepsi"))+`<label>Terim<input type="search" data-f="q" value="${esc(F("q",""))}" placeholder="ör. budget"></label>`;}
-  if(v==="degisiklik"){h+=sel("t","Tür",[["hepsi","Tüm türler"],["sürüm","Sürüm"],["metadata","Metadata"],["rakip","Rakip"],["etki","Sürüm etkisi"]],F("t","hepsi"));}
+  if(v==="degisiklik"){h+=sel("t","Tür",[["hepsi","Tüm türler"],["sürüm","Sürüm"],["metadata","Metadata"],["rakip","Rakip"],["etki","Sürüm etkisi"],["backend","Backend deploy"]],F("t","hepsi"));}
   if(v==="katalog"){h+=`<label>Ölçüm ara<input type="search" data-f="q" value="${esc(F("q",""))}" placeholder="ör. paywall"></label>`;}
   if(v==="veri"){h+=sel("bad","Göster",[["1","Yalnız kırmızı"],["0","Tümü"]],F("bad","1"));}
   const act=Object.keys(S.f[v]||{}).length||S.from;
