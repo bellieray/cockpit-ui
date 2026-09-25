@@ -5919,9 +5919,11 @@ const TS_CARDS = [
                         {from:TS_SOURCE.coverage('astroscope'), label:'AstroScope', color:'var(--s5)', kind:'line',
                          days:()=>[...new Set((D.coverageDaily||[]).filter(r=>r.slug==='astroscope').map(r=>r.day))]}]}],
   ['tsPara',  {series:[{metric:'ad_estimated_earnings', label:'Kazanç', color:'var(--s2)', kind:'area'}],
-               /* `money()` USD'ye sabit; AdMob kazancı TRY ölçülüyor. Birimi
-                  yanlış yazmak sayıyı yanlış yazmaktan beter: sayı doğru görünür. */
-               fmt:v=> v==null?'ölçülmedi':'₺'+Number(v).toLocaleString('tr',{maximumFractionDigits:2})}],
+               /* value_num paranın ORTAK TABANI (USD) — admob.ts `valueNum =
+                  earnings × fxRate`; `currency` kolonu yalnız `amount_orig`in
+                  birimi (TRY). Eski yorum tersini söylüyordu ve grafik USD'yi ₺
+                  ile basıyordu (2026-09-25, MCP canlı testinde bulundu). */
+               fmt:v=> v==null?'ölçülmedi':'$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}],
   ['tsParaChain', {series:[{metric:'ad_requests', label:'İstek', color:'var(--s1)', kind:'line'},
                            {metric:'ad_impressions', label:'Gösterim', color:'var(--s3)', kind:'bar'}]}],
   ['tsPazar', {series:[{metric:'store_impression', label:'Gösterim', color:'var(--s1)', kind:'line'},
