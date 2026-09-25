@@ -305,9 +305,11 @@ const VIEWS=[
   {id:"gelir",t:"Gelir & MRR",ic:'<path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>'},
   {id:"magaza",t:"Mağaza & trafik",ic:'<path d="M3 3h2l2.4 12.2a2 2 0 002 1.6h8.8a2 2 0 002-1.6L22 7H6"/><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/>'},
   {id:"kullanici",t:"Kullanıcı & olaylar",ic:'<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8"/>'},
+  {id:"huni",t:"Huniler",ic:'<path d="M3 4h18l-7 8v6l-4 2v-8z"/>'},
   {id:"kalite",t:"Kalite & yorumlar",ic:'<path d="M13 2L3 14h9l-1 8 10-12h-9z"/>'},
   {id:"aso",t:"ASO & kelimeler",ic:'<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/>'},
   {id:"degisiklik",t:"Değişiklikler",ic:'<path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/>'},
+  {id:"surum",t:"Sürüm karnesi",ic:'<path d="M20 12V8H6a2 2 0 010-4h12v4M4 6v12a2 2 0 002 2h14v-4"/><circle cx="18" cy="14" r="2"/>'},
   {id:"katalog",t:"Uygulama verisi",ic:'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>'},
   {id:"veri",t:"Veri güveni",ic:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'}
 ];
@@ -423,10 +425,11 @@ function openDetail(o){
   (o.rows||[]).forEach(r=>rows.push(r));
   $("dTitle").textContent=o.title||d.title||o.lb||o.metric||"Detay";
   $("dSub").textContent=(o.metric?o.metric+" · ":"")+(o.src||d.authority_source||"")+(o.as?" · ölçüm "+fD(o.as):"");
-  const csv=["gün,değer"+(rows.some(r=>r.length>2)?",pay,payda":"")].concat(rows.map(r=>r.map(v=>v==null?"":v).join(","))).join("\n");
+  const cols=o.cols||["Gün","Değer","Pay","Payda"],isDay=x=>/^\d{4}-\d{2}-\d{2}$/.test(String(x)),c0=x=>isDay(x)?fD(x):esc(x);
+  const csv=[cols.slice(0,rows.some(r=>r.length>2)?4:2).join(",")].concat(rows.map(r=>r.map(v=>v==null?"":v).join(","))).join("\n");
   $("dBody").innerHTML=`${d.definition||o.def?`<p style="margin:0;font-size:13.5px;line-height:1.55">${esc(o.def||d.definition)}</p>`:""}
     <dl class="kv">${d.formula?`<dt>Formül</dt><dd><code>${esc(d.formula)}</code></dd>`:""}${d.grain?`<dt>Tür</dt><dd>${esc(d.grain)}${d.aggregation?" · "+esc(d.aggregation):""}</dd>`:""}${d.is_sampled?`<dt>Örneklem</dt><dd>Evet — yalnız veri paylaşımını kabul eden kullanıcılar</dd>`:""}${d.action_note?`<dt>Ne yapılır</dt><dd>${esc(d.action_note)}</dd>`:""}${o.note?`<dt>Not</dt><dd>${esc(o.note)}</dd>`:""}</dl>
-    ${rows.length?`<div class="tw"><table class="tbl"><thead><tr><th>Gün</th><th class="n">Değer</th>${rows.some(r=>r.length>2)?'<th class="n">Pay</th><th class="n">Payda</th>':""}</tr></thead><tbody>${rows.slice().reverse().map(r=>`<tr><td>${fD(r[0])}</td><td class="n">${r[1]==null?'<span style="color:var(--mu-2)">ölçülmedi</span>':fN(r[1],2)}</td>${r.length>2?`<td class="n">${fN(r[2])}</td><td class="n">${fN(r[3])}</td>`:""}</tr>`).join("")}</tbody></table></div>
+    ${rows.length?`<div class="tw"><table class="tbl"><thead><tr><th>${cols[0]}</th><th class="n">${cols[1]}</th>${rows.some(r=>r.length>2)?`<th class="n">${cols[2]}</th><th class="n">${cols[3]||""}</th>`:""}</tr></thead><tbody>${(o.keepOrder?rows:rows.slice().reverse()).map(r=>`<tr><td>${c0(r[0])}</td><td class="n">${r[1]==null?'<span style="color:var(--mu-2)">ölçülmedi</span>':fN(r[1],2)}</td>${r.length>2?`<td class="n">${r[2]==null?"–":fN(r[2])}</td><td class="n">${r[3]==null?"":fN(r[3])}</td>`:""}</tr>`).join("")}</tbody></table></div>
     <button class="btn" id="dCsv">CSV kopyala (${rows.length} satır)</button>`:'<div class="empty">Gün gün değer yok — bu bir anlık kesit.</div>'}`;
   const b=$("dCsv");if(b)b.onclick=()=>copy(csv,"CSV kopyalandı");
   $("drawer").classList.add("open");$("dscrim").classList.add("open");$("drawer").setAttribute("aria-hidden","false");$("dClose").focus();
@@ -582,7 +585,7 @@ function vKullanici(){
   const er=(IDX.catD[S.app]||{}).app_export_d_events_daily||[];const names={};er.forEach(r=>{if(r.day<w.start||r.day>w.end)return;const n=(r.dims||{}).olay;names[n]=(names[n]||0)+Number(r.v||0);});
   let evRows=Object.entries(names).map(([k,v],i)=>({k,v,c:PAL[i%PAL.length]})).filter(r=>!q||r.k.toLowerCase().includes(q.toLowerCase())).sort((a,b)=>b.v-a.v);
   const evMap=ev?catDailyMap("app_export_d_events_daily","olay",ev):null;
-  const evChart=card(ev?esc(ev)+", gün gün":"Bir olay seç","Cihaz saatine göre günlük sayım · listeden olaya dokun",ev?chartSpec("cEv",{days:dd,series:[{n:ev,c:"#3B82F6",map:evMap}],bars:1,aria:ev}):'<div class="empty">Aşağıdaki listeden bir olaya dokun.</div>',"","span2");
+  const evChart=card(ev?esc(ev)+", gün gün":"Bir olay seç","Cihaz saatine göre günlük sayım · listeden olaya dokun",ev?chartSpec("cEv",{days:dd,series:[{n:ev,c:"#3B82F6",map:evMap}],bars:1,marks:releaseMarks(dd),aria:ev}):'<div class="empty">Aşağıdaki listeden bir olaya dokun.</div>',"","span2");
   h+=`<div class="g3">`+evChart+card("Olaylar",`${esc(w.label)} · olaya dokun: gün gün grafiği aç`,evRows.length?`<div class="stack">${evRows.slice(0,+F("lim",20)).map((r,i)=>`<button data-ev="${esc(r.k)}" style="border:0;background:${ev===r.k?"var(--bl-soft)":"transparent"};border-radius:10px;padding:6px 8px;text-align:left" class="row"><div class="rt"><span>${esc(r.k)}</span><b>${fN(r.v)}</b></div><div class="bar"><i style="width:${(100*r.v/evRows[0].v).toFixed(1)}%;background:${PAL[i%PAL.length]}"></i></div></button>`).join("")}</div>${evRows.length>+F("lim",20)?`<button class="btn more" data-more>${evRows.length-F("lim",20)} olay daha</button>`:""}`:'<div class="empty">Olay yok.</div>')+`</div>`;
   return h;
 }
@@ -602,6 +605,13 @@ function vKalite(){
     card("Çökme: hangi hata","Son 30 gün",toRows("app_export_x_devices_crashes_by_error").length?barRows(toRows("app_export_x_devices_crashes_by_error")):'<div class="empty">Kırılım yok.</div>')+
     card("Çökme: hangi build","Son 30 gün",toRows("app_export_x_devices_crashes_by_build").length?barRows(toRows("app_export_x_devices_crashes_by_build")):'<div class="empty">Kırılım yok.</div>')+`</div>`;
   h+=card("Silme, gün gün","App Store · kurulum/silme raporu",chartSpec("cDel",{days:dd,series:[{n:"Silme",c:"#64748B",map:FL("app_deletions")||new Map()},{n:"Kurulum olayı",c:"#10B981",map:FL("app_installs_event")||new Map()}],noArea:1,aria:"Silme ve kurulum"}));
+  // yorum istatistiği: kendi + rakipler (tüm zamanlar, vw_review_stats)
+  const nm={};(D.docs||[]).forEach(r=>{if(r.slug===S.app&&r.subject!=="self"&&r.subject_name&&!nm[r.subject])nm[r.subject]=r.subject_name;});
+  const rs=(D.reviewStats||[]).filter(r=>r.slug===S.app).map(r=>{const n5=[1,2,3,4,5].reduce((a,k)=>a+Number(r["r"+k]||0),0);return{...r,rated:n5,avg:n5?[1,2,3,4,5].reduce((a,k)=>a+k*Number(r["r"+k]||0),0)/n5:null};});
+  const me=rs.find(r=>r.subject==="self");
+  const dist=r=>`<div class="stack">${[5,4,3,2,1].map(k=>{const v=Number(r["r"+k]||0);return `<div class="row"><div class="rt"><span>${k}★</span><b>${fN(v)}</b></div><div class="bar"><i style="width:${r.rated?(100*v/r.rated).toFixed(1):0}%;background:${k>=4?"#10B981":k===3?"#F59E0B":"#EF4444"}"></i></div></div>`;}).join("")}</div>`;
+  h+=`<div class="g3">`+card("Kendi yorumların","Tüm zamanlar · App Store",me?dist(me)+`<div class="foot">${fN(me.n)} yorum · ${fN(me.answered)} cevaplı · ${fN(me.low_unanswered)} cevapsız düşük puan · ${fN(me.removed)} kaldırılmış · ${fD(me.first_on)}–${fD(me.last_on)}${me.rated<MIN_N?" · n<30: ortalama gösterilmez":" · ort. "+fN(me.avg,2)+"★"}</div>`:'<div class="empty">Yorum yok.</div>')+
+    card("Rakipler",`${fN(rs.length-(me?1:0))} rakip · tüm zamanlar · düşük puanlı yorum = rakibin açığı`,`<div class="tw"><table class="tbl resp"><thead><tr><th>Rakip</th><th class="n">Yorum</th><th class="n">Ort.</th><th class="n">1–2★</th><th class="n">Son</th></tr></thead><tbody>${rs.filter(r=>r.subject!=="self").sort((a,b)=>b.n-a.n).slice(0,+F("rlim",10)).map(r=>`<tr><td>${esc(nm[r.subject]||r.subject)}</td><td class="n" data-l="yorum">${fN(r.n)}</td><td class="n" data-l="ort.">${r.rated>=MIN_N?fN(r.avg,2)+"★":"n<30"}</td><td class="n" data-l="1–2★">${fN(Number(r.r1||0)+Number(r.r2||0))}</td><td class="n" data-l="son" style="color:var(--mu)">${fD(r.last_on)}</td></tr>`).join("")}</tbody></table></div><div class="foot">Rakibin 1–2★ yorumlarını okumak için üstte Yorum: Rakip, Puan: 1★ seç.</div>`,"","span2")+`</div>`;
   // yorumlar
   let rv=(D.reviews||[]).filter(r=>r.slug===S.app&&(who==="hepsi"||(who==="self"?r.subject==="self":r.subject!=="self"))&&(rating==="hepsi"||String(r.rating)===rating)&&(!cc||r.country===cc)&&(r.submitted_at||"").slice(0,10)>=w.start);
   rv.sort((a,b)=>(a.submitted_at<b.submitted_at?1:-1));const lim=+F("lim",15);
@@ -621,8 +631,124 @@ function vAso(){
   g.sort((a,b)=>sort==="term"?a.term.localeCompare(b.term,"tr"):sort==="delta"?(Number(b.demand_delta||0)-Number(a.demand_delta||0)):(Number(b.demand||0)-Number(a.demand||0)));
   const cov=g.filter(r=>r.in_metadata).length;
   h+=`<div class="g4">`+kpi({c:"blue",lb:"Kelime",v:fN(g.length),chip:cc?cName(cc):"tüm ülkeler",dim:q?"“"+q+"”":""})+kpi({c:"green",lb:"Metadata'da",v:fN(cov),chip:g.length?fPct(cov/g.length,0):"",dim:"ASC'de yazılı"})+kpi({c:"amber",lb:"Sırası ölçülen",v:fN(Object.keys(rk).length),chip:"ilk 100'de bulunan",dim:""})+kpi({c:"violet",lb:"Son talep ölçümü",v:fD(g.reduce((a,b)=>b.measured_on>a?b.measured_on:a,"")),chip:"asa_popularity",dim:"elle"})+`</div>`;
+  h+=asoOpps(Array.from(gm.values()).filter(r=>!cc||r.country===cc));
   const lim=+F("lim",30);
-  h+=card("Kelimeler",`sütuna dokun: sırala · ${fN(g.length)} satır`,g.length?`<div class="tw"><table class="tbl resp"><thead><tr><th data-sort="term">Terim</th><th>Ülke</th><th class="n" data-sort="demand">Talep</th><th class="n" data-sort="delta">Değişim</th><th class="n">Sıra</th><th>Durum</th><th>Ölçüm</th></tr></thead><tbody>${g.slice(0,lim).map(r=>{const k=rk[r.country+"|"+r.term];const dl=Number(r.demand_delta||0);return `<tr><td>${esc(r.term)}</td><td data-l="ülke">${flag(r.country)} ${esc((r.country||"").toUpperCase())}</td><td class="n" data-l="talep">${fN(r.demand)}</td><td class="n" data-l="değişim" style="color:${dl>0?"var(--em-d)":dl<0?"var(--rd)":"var(--mu)"}">${r.demand_delta==null?"–":(dl>0?"+":"")+fN(dl)}</td><td class="n" data-l="sıra">${k?"#"+fN(k.rank)+` <span style="color:var(--mu);font-size:11px">${fD(k.day)}</span>`:'<span style="color:var(--mu-2)">ilk 100 dışı ya da ölçülmedi</span>'}</td><td><span class="tag" style="margin:0;background:${r.verdict==="COVERED"?"#ECFDF5":"#FFFBEB"};color:${r.verdict==="COVERED"?"#047857":"#B45309"}">${esc(r.verdict)}</span></td><td style="color:var(--mu);font-size:12px" data-l="ölçüm">${fD(r.measured_on)}</td></tr>`;}).join("")}</tbody></table></div>${g.length>lim?`<button class="btn more" data-more>${g.length-lim} kelime daha</button>`:""}`:'<div class="empty">Bu filtrede kelime yok.</div>');
+  h+=card("Kelimeler",`sütuna dokun: sırala · ${fN(g.length)} satır`,g.length?`<div class="tw"><table class="tbl resp"><thead><tr><th data-sort="term">Terim</th><th>Ülke</th><th class="n" data-sort="demand">Talep</th><th class="n" data-sort="delta">Değişim</th><th class="n">Sıra</th><th>Durum</th><th>Ölçüm</th></tr></thead><tbody>${g.slice(0,lim).map(r=>{const k=rk[r.country+"|"+r.term];const dl=Number(r.demand_delta||0);return `<tr><td>${esc(r.term)}</td><td data-l="ülke">${flag(r.country)} ${esc((r.country||"").toUpperCase())}</td><td class="n" data-l="talep">${fN(r.demand)}</td><td class="n" data-l="değişim" style="color:${dl>0?"var(--em-d)":dl<0?"var(--rd)":"var(--mu)"}">${r.demand_delta==null?"–":(dl>0?"+":"")+fN(dl)}</td><td class="n" data-l="sıra">${k?"#"+fN(k.rank)+` <span style="color:var(--mu);font-size:11px">${fD(k.day)}</span>`:'<span style="color:var(--mu-2)" title="ilk 100 dışı ya da ölçülmedi">–</span>'}</td><td><span class="tag" style="margin:0;background:${r.verdict==="COVERED"?"#ECFDF5":"#FFFBEB"};color:${r.verdict==="COVERED"?"#047857":"#B45309"}">${esc(r.verdict)}</span></td><td style="color:var(--mu);font-size:12px" data-l="ölçüm">${fD(r.measured_on)}</td></tr>`;}).join("")}</tbody></table></div><div class="foot">Sıra "–" = arama sonucunun ilk 100'ünde yok ya da o gün ölçülmedi; ikisi ayırt edilemiyor.</div>${g.length>lim?`<button class="btn more" data-more>${g.length-lim} kelime daha</button>`:""}`:'<div class="empty">Bu filtrede kelime yok.</div>');
+  return h;
+}
+
+/* ═══ Sürüm karnesi ═══════════════════════════════════════════════════════
+   Her sürüm için: yayın günü, o sürümle görünen metadata değişikliği, ve yayın
+   ÖNCESİ 14 gün ↔ SONRASI 14 gün aynı ölçüler. Bu bir öncesi/sonrası
+   karşılaştırmasıdır — aynı dönemde sezon, rakip, reklam da değişir; ekranda
+   "işe yaradı" değil "şu değişti" yazar. Yüzde yalnız iki pencerede de ≥7 ölçülmüş
+   gün ve taban ≥30 iken verilir. */
+const REL_WIN=14,REL_MIN_DAYS=7,META_ATTACH_DAYS=3;
+function releases(){
+  const m=new Map();
+  (D.releaseEffect||[]).filter(r=>r.app_slug===S.app&&r.released_on).forEach(r=>m.set(r.version,r.released_on));
+  (D.docs||[]).filter(r=>r.slug===S.app&&r.subject==="self"&&r.released_at&&r.version).forEach(r=>{const d=r.released_at.slice(0,10);if(!m.has(r.version)||d<m.get(r.version))m.set(r.version,d);});
+  return Array.from(m,([v,d])=>({v,d})).sort((a,b)=>a.d<b.d?1:-1);
+}
+function splitTerms(x){return (x||"").split(",").map(t=>t.trim()).filter(Boolean);}
+function localeCountries(loc){const p=(loc||"").split("-");if(p[1])return [p[1].toLowerCase()];const l=p[0].toLowerCase();const cs=(D.countryLang||[]).filter(r=>r.lang===l).map(r=>r.country);return cs.length?cs:[l];}
+function winAvg(metric,a,b,map){map=map||FL(metric);if(!map)return null;let s=0,n=0;map.forEach((v,d)=>{if(d>=a&&d<=b){s+=v;n++;}});return n?{sum:s,days:n,avg:s/n}:null;}
+function cmpCell(bef,aft,fmt){
+  if(!bef&&!aft)return '<span style="color:var(--mu-2)">ölçülmedi</span>';
+  const f=fmt||(v=>fN(v,1));const L=x=>x?`${f(x.avg)}<span style="color:var(--mu);font-size:11px"> /gün · ${x.days}g</span>`:'<span style="color:var(--mu-2)">ölçülmedi</span>';
+  let tag="";if(bef&&aft&&bef.days>=REL_MIN_DAYS&&aft.days>=REL_MIN_DAYS&&bef.sum>=MIN_N){const ch=(aft.avg-bef.avg)/bef.avg;tag=Math.abs(ch)<.1?'<span class="tag" style="background:#F1F5F9;color:#334155">±%10 içinde</span>':`<span class="tag" style="background:${ch>0?"#ECFDF5":"#FEF2F2"};color:${ch>0?"#047857":"#B91C1C"}">${ch>0?"↑":"↓"} ${fPct(Math.abs(ch),0)}</span>`;}
+  else if(bef||aft)tag='<span class="tag" style="background:#F1F5F9;color:#334155">yüzde yok: pencere eksik</span>';
+  return `${L(bef)} → ${L(aft)} ${tag}`;
+}
+function rankAround(term,cc,day,after){let best=null;(D.ranks||[]).forEach(r=>{if(r.slug!==S.app||r.term!==term||r.country!==cc)return;if(after?r.day>=day:r.day<day){if(!best||(after?r.day>best.day:r.day>best.day))best=r;}});return best;}
+function metaBlock(changes,relDay){
+  if(!changes.length)return '<div class="empty">Bu sürümle görünen metadata değişikliği yok.</div>';
+  const gap={};(D.gaps||[]).forEach(r=>{if(r.slug===S.app){const k=r.country+"|"+r.term;if(!gap[k]||Number(r.demand)>Number(gap[k].demand))gap[k]=r;}});
+  return `<div class="stack">${changes.map(c=>{
+    const b=splitTerms(c.before_value),a=splitTerms(c.after_value),add=a.filter(t=>!b.includes(t)),rem=b.filter(t=>!a.includes(t));const ccs=localeCountries(c.locale);
+    const termInfo=t=>{let g=null,cc=ccs[0];ccs.forEach(x=>{const r=gap[x+"|"+t];if(r&&(!g||Number(r.demand)>Number(g.demand))){g=r;cc=x;}});const r0=relDay?rankAround(t,cc,relDay,false):null,r1=relDay?rankAround(t,cc,relDay,true):null;
+      return `<span style="display:inline-block;margin:2px 6px 2px 0;padding:3px 8px;border-radius:8px;background:#F8FAFC;border:1px solid var(--ln);font-size:12px">${esc(t)}${g&&g.demand!=null?` <b class="t">talep ${fN(g.demand)}${Number(g.demand)<=5?" (taban)":""}</b>`:' <span style="color:var(--mu)">talep ölçülmedi</span>'}${r0||r1?` · sıra ${r0?"#"+r0.rank:"–"}→${r1?"#"+r1.rank:"–"}`:""}</span>`;};
+    return `<div class="row" style="border-bottom:1px solid var(--ln-2);padding-bottom:10px"><div class="rt"><span><b>${esc(c.locale)}</b> · ${esc(c.field)}</span><span style="color:var(--mu);font-size:11.5px">${fD(c.noticed_on)}</span></div>
+      ${add.length?`<div style="font-size:11.5px;color:var(--em-d);font-weight:600">+ eklenen ${add.length}</div><div>${add.map(termInfo).join("")}</div>`:""}
+      ${rem.length?`<div style="font-size:11.5px;color:var(--rd);font-weight:600">− çıkan ${rem.length}</div><div style="font-size:12px;color:var(--mu);overflow-wrap:anywhere">${rem.map(esc).join(", ")}</div>`:""}
+      ${!add.length&&!rem.length?`<div style="font-size:12px;color:var(--mu);overflow-wrap:anywhere">${esc((c.before_value||"").slice(0,120))} → ${esc((c.after_value||"").slice(0,120))}</div>`:""}</div>`;}).join("")}</div>`;
+}
+function vSurum(){
+  const rel=releases();const lc=(D.listingChanges||[]).filter(r=>r.slug===S.app);const used=new Set();const sel=F("v","");
+  let h=`<div class="ph"><h1>Sürüm karnesi</h1><p>Her sürümle ne değişti ve yayından önceki ${REL_WIN} gün ↔ sonraki ${REL_WIN} gün. Öncesi/sonrası farkı nedensellik değil: aynı dönemde sezon, rakip, reklam da değişir.</p></div>`;
+  if(!rel.length)return h+`<div class="empty"><b>Sürüm kaydı yok.</b> ${isLiveNote()}</div>`;
+  const su=catDailyMap("app_export_d_users_signups");
+  const rd=new Map();(D.reviewDaily||[]).filter(r=>r.slug===S.app&&r.subject==="self").forEach(r=>rd.set(r.day,{n:r.n,avg:Number(r.rating_avg)}));
+  const revIn=(a,b)=>{let n=0,s=0;rd.forEach((v,d)=>{if(d>=a&&d<=b){n+=v.n;s+=v.n*v.avg;}});return n?`${fN(n)} yorum · ort. ${fN(s/n,2)}★`:"yorum yok";};
+  const cards=rel.map((r,i)=>{
+    const next=i>0?rel[i-1].d:null;const aEnd0=addD(r.d,REL_WIN-1);const aEnd=next&&next<=aEnd0?addD(next,-1):aEnd0;const bS=addD(r.d,-REL_WIN),bE=addD(r.d,-1);
+    const ch=lc.filter(c=>c.noticed_on>=r.d&&c.noticed_on<=addD(r.d,META_ATTACH_DAYS));ch.forEach(c=>used.add(c));
+    const pv0=winAvg("store_page_view",bS,bE),pv1=winAvg("store_page_view",r.d,aEnd),dl0=winAvg("downloads_first_time",bS,bE),dl1=winAvg("downloads_first_time",r.d,aEnd);
+    const conv=(d,p)=>d&&p&&p.sum>=MIN_N?fPct(d.sum/p.sum):(p?`n=${fN(p.sum)} <30`:"ölçülmedi");
+    const rows=[["Gösterim",cmpCell(winAvg("store_impression",bS,bE),winAvg("store_impression",r.d,aEnd))],["Ürün sayfası",cmpCell(pv0,pv1)],["İlk indirme",cmpCell(dl0,dl1)],["İndirme / sayfa",`${conv(dl0,pv0)} → ${conv(dl1,pv1)}`],["Kayıt (kendi)",cmpCell(winAvg("",bS,bE,su),winAvg("",r.d,aEnd,su))],["Yorum",`${revIn(bS,bE)} → ${revIn(r.d,aEnd)}`]];
+    const short=next&&next<=aEnd0?`<div class="warnbox" style="margin-top:10px">Sonraki sürüm (${fD(next)}) pencereyi kesiyor: "sonra" yalnız ${span(r.d,aEnd)} gün.</div>`:"";
+    const age=span(r.d,today())-1;if(age<REL_WIN)rows.unshift(["",`<span style="color:#92400E;font-weight:600">Yayın ${age} gün önce — "sonra" penceresi dolmadı; mağaza verisi ~2 gün geride. Karşılaştırma ${fD(addD(r.d,REL_WIN+2))} civarı anlamlı.</span>`]);
+    const open=sel?sel===r.v:i<2;
+    return `<section class="card"><div class="ch"><div><h2>${esc(r.v)} <span class="tag" style="background:#ECFDF5;color:#047857">${fD(r.d)}</span>${ch.length?`<span class="tag" style="background:#EDE9FE;color:#4C1D95">${ch.length} metadata değişikliği</span>`:""}</h2><p>Önce ${fD(bS)}–${fD(bE)} · Sonra ${fD(r.d)}–${fD(aEnd)}</p></div><button class="lnk" data-relv="${esc(r.v)}|${open?1:0}">${open?"ASO ayrıntısını kapat":"ASO ayrıntısını aç"}</button></div>
+      <div class="tw"><table class="tbl resp"><tbody>${rows.map(x=>`<tr><td style="width:130px;color:var(--mu)">${x[0]}</td><td>${x[1]}</td></tr>`).join("")}</tbody></table></div>${short}
+      ${open?`<h3 style="font-size:13.5px;margin:16px 0 8px">Bu sürümle giden ASO değişikliği</h3>${metaBlock(ch,r.d)}`:""}</section>`;
+  });
+  const orphan=lc.filter(c=>!used.has(c));
+  h+=cards.join("");
+  if(orphan.length){const byDay={};orphan.forEach(c=>{(byDay[c.noticed_on]=byDay[c.noticed_on]||[]).push(c);});
+    h+=Object.keys(byDay).sort().reverse().map(d=>card(`Sürüme bağlanamayan değişiklik · ${fD(d)}`,`Bu tarihte gözlendi ama ${META_ATTACH_DAYS} gün içinde yayınlanmış bir sürüm kaydı yok — yeni sürüm henüz sürüm listesine düşmemiş olabilir. Etki ölçümü sürüm tarihi olmadan yapılmaz.`,metaBlock(byDay[d],d))).join("");}
+  return h;
+}
+
+/* ═══ ASO fırsatları: sınıflar vw_keyword_gap'ten (0012), burada yeniden hesaplanmaz ═══ */
+const VERDICT_TXT={GAP:"talep var, keyword alanında yok",COVERED:"talep var ve alanda",DEAD_WEIGHT:"alanda ama talep tabanda (≤5) — karakter israfı",NO_DEMAND:"talep tabanda, alanda da yok",UNMEASURED:"talep hiç ölçülmedi — 'talep yok' DEĞİL"};
+function asoOpps(g){
+  const gp=g.filter(r=>r.verdict==="GAP").sort((a,b)=>Number(b.demand)-Number(a.demand));
+  const rising=g.filter(r=>Number(r.demand_delta)>=5).sort((a,b)=>Number(b.demand_delta)-Number(a.demand_delta));
+  /* Keyword alanı dil başına ve birçok vitrine ortak: bir ülkede talebi taban olan kelime
+     başka ülkede çalışıyor olabilir. "Çıkarılabilir" yalnız alanda olduğu HER ölçülen
+     ülkede DEAD_WEIGHT olan kelime. */
+  const byT={};g.forEach(r=>{if(!r.in_metadata||r.verdict==="UNMEASURED")return;(byT[r.term]=byT[r.term]||[]).push(r);});
+  const dead=Object.entries(byT).filter(([,rs])=>rs.every(r=>r.verdict==="DEAD_WEIGHT")).map(([t,rs])=>({term:t,country:"",demand:5,n:rs.length,countries:rs.map(r=>r.country)})).sort((a,b)=>b.n-a.n);
+  const cnt={};g.forEach(r=>{cnt[r.verdict]=(cnt[r.verdict]||0)+1;});
+  const li=(rows,fmt)=>rows.length?`<div class="stack">${rows.slice(0,8).map(fmt).join("")}</div>${rows.length>8?`<div class="foot">${rows.length-8} tane daha — aşağıdaki tabloda "Durum" filtresiyle</div>`:""}`:'<div class="empty">Yok.</div>';
+  const one=r=>`<div class="rt row" style="flex-direction:row;justify-content:space-between;font-size:12.5px"><span>${flag(r.country)} <b>${esc(r.term)}</b> <span style="color:var(--mu)">${esc((r.country||"").toUpperCase())}${r.origins&&r.origins.includes("trending")?" · trend":""}</span></span><b class="t">${fN(r.demand)}${r.demand_delta!=null&&Number(r.demand_delta)!==0?` <span style="color:${Number(r.demand_delta)>0?"var(--em-d)":"var(--rd)"};font-size:11.5px">${Number(r.demand_delta)>0?"+":""}${fN(r.demand_delta)}</span>`:""}</b></div>`;
+  return `<div class="g3">`+card("Fırsat: talep var, alanda yok",`GAP · ${fN(gp.length)} kelime · talebe göre`,li(gp,one))+card("Talebi yükselen",`son iki ölçüm arasında ≥ +5 · ${fN(rising.length)}`,li(rising,one))+card("Yer kaplayan, hiçbir yerde talebi yok",`alanda olduğu ölçülen HER ülkede talep tabanda · ${fN(dead.length)} kelime`,li(dead,r=>`<div class="rt row" style="flex-direction:row;justify-content:space-between;font-size:12.5px"><span><b>${esc(r.term)}</b></span><span style="color:var(--mu)">${fN(r.n)} ülkede ölçüldü</span></div>`))+`</div>`+
+    card("Sınıflar ne demek","Talep = Apple Search Ads popülerlik skoru (5 taban, 100 tavan) · ülke ülke göreli, hacim DEĞİL",`<div class="stack">${Object.keys(VERDICT_TXT).map(k=>`<div class="rt row" style="flex-direction:row;justify-content:space-between;font-size:12.5px"><span><b>${k}</b> — ${VERDICT_TXT[k]}</span><b class="t">${fN(cnt[k]||0)}</b></div>`).join("")}</div>`);
+}
+
+/* ═══ Huniler: katalogdaki her huni aynı gramerle ═══ */
+const stepNo=l=>{const m=String(l).match(/^(\d+)([a-z]?)/);return m?{n:+m[1],branch:!!m[2]}:null;};
+function funnelSteps(rows){
+  const st=rows.map(r=>({k:dimLabel(Object.fromEntries(Object.entries(r.dims||{}).filter(([k])=>k!=="sort"))),v:Number(r.value),sort:(r.dims||{}).sort,no:stepNo((r.dims||{}).adım||"")})).sort((a,b)=>(a.sort??a.no?.n??0)-(b.sort??b.no?.n??0)||(a.k<b.k?-1:1));
+  /* Ana adım bir öncekine bölünür. Çıkış dalı (4a/4b, 3a/3b) hangi adımdan ayrıldığı
+     katalogda yazmadığı için İLK adıma bölünür — "öncekinin" demek yanlış olurdu. */
+  let lastMain=null;const first=st[0]?st[0].v:0;
+  return st.map(x=>{const br=!!(x.no&&x.no.branch);const base=br?first:lastMain;if(!br)lastMain=x.v;return{...x,base,br};});
+}
+function funnelCard(metric,title,def){
+  const rows=(IDX.cat[S.app]||{})[metric]||[];if(!rows.length)return "";const st=funnelSteps(rows);const top=Math.max(...st.map(x=>x.v),1);
+  const plain=String(def||"").replace(/\*\*|`/g,"");return card(esc(title),esc(plain.slice(0,260))+(plain.length>260?"…":""),`<div class="stack fun">${st.map((x,i)=>`<div class="st ${x.no&&x.no.branch?"":""}"><div class="rt row" style="flex-direction:row;justify-content:space-between;font-size:12.5px"><b style="font-weight:600">${esc(x.k)}${x.no&&x.no.branch?' <span class="tag" style="background:#FEF2F2;color:#B91C1C">çıkış dalı</span>':""}</b><b class="t">${fN(x.v)}</b></div><div class="bar" style="margin-top:6px;background:#E2E8F0"><i style="width:${(100*x.v/top).toFixed(1)}%;background:${x.no&&x.no.branch?"#EF4444":PAL[i%PAL.length]}"></i></div>${i&&x.base!=null?`<div class="rate t" style="color:var(--mu)">${x.base>=MIN_N?(x.br?"ilk adımın ":"önceki adımın ")+fPct(x.v/x.base)+(x.base-x.v>0&&!x.br?` · ${fN(x.base-x.v)} kişi bıraktı`:""):"taban "+fN(x.base)+" < 30, oran yok"}</div>`:""}</div>`).join("")}</div><div class="foot">${fD((rows[0]||{}).day)} anlık kesit · uygulama backend'i</div>`,`<button class="lnk" data-det3="${esc(metric)}">Detay →</button>`);
+}
+function pivot(rows,rk,ck){const R={},C=new Set();rows.forEach(r=>{const a=(r.dims||{})[rk]??"(toplam)",b=(r.dims||{})[ck]??"";C.add(b);(R[a]=R[a]||{})[b]=(R[a][b]||0)+Number(r.value??r.v??0);});return{R,C:Array.from(C).sort((x,y)=>String(x).localeCompare(String(y),"tr",{numeric:true}))};}
+function pivotTable(pv,rowTitle,rateFn,sortCol){const rows=Object.entries(pv.R).sort(sortCol==="__key"?((a,b)=>a[0]<b[0]?1:-1):((a,b)=>(b[1][sortCol||pv.C[0]]||0)-(a[1][sortCol||pv.C[0]]||0)));
+  return `<div class="tw"><table class="tbl resp"><thead><tr><th>${esc(rowTitle)}</th>${pv.C.map(c=>`<th class="n">${esc(c)}</th>`).join("")}${rateFn?'<th class="n">Oran</th>':""}</tr></thead><tbody>${rows.map(([k,v])=>`<tr><td>${/^\d{4}-\d{2}-\d{2}$/.test(k)?fD(k)+" haftası":esc(k)}</td>${pv.C.map(c=>`<td class="n" data-l="${esc(c)}">${v[c]==null?"–":fN(v[c])}</td>`).join("")}${rateFn?`<td class="n" data-l="oran">${rateFn(v)}</td>`:""}</tr>`).join("")}</tbody></table></div>`;}
+function vHuni(){
+  const cat=IDX.cat[S.app]||{},defs=(((D.catalogDefs||[]).find(r=>r.slug===S.app)||{}).payload||{}).definitions||{};
+  let h=`<div class="ph"><h1>Huniler</h1><p>Uygulamanın kendi olaylarından · her adıma ULAŞAN tekil kullanıcı · oran yalnız taban ≥ 30 iken</p></div>`;
+  const fm=Object.keys(cat).filter(m=>/_funnel$|_step$/.test(m)&&!/by_locale/.test(m)).sort((a,b)=>(/activation/.test(a)?-1:0)-(/activation/.test(b)?-1:0));
+  if(!fm.length)return h+`<div class="empty"><b>Huni verisi yok.</b> ${isLiveNote()}</div>`;
+  const key=m=>m.replace("app_export_x_","");
+  h+=`<div class="g3">${fm.map(m=>funnelCard(m,(defs[key(m)]||{}).title||key(m),(defs[key(m)]||{}).definition)).join("")}</div>`;
+  // haftalık aktivasyon
+  const wk=((IDX.catD[S.app]||{}).app_export_d_events_activation_funnel_weekly||[]).map(r=>({...r,value:r.v}));
+  if(wk.length){const pv=pivot(wk.map(r=>({dims:{hafta:r.day,adım:(r.dims||{}).adım},value:r.v})),"hafta","adım");const f=pv.C[0],l=pv.C[pv.C.length-1];
+    h+=card("Aktivasyon hunisi, hafta hafta","Hafta başı · her satır o hafta ilk kez gelen kullanıcılar",pivotTable(pv,"Hafta",v=>v[f]>=MIN_N?fPct((v[l]||0)/v[f]):"n<30","__key"));}
+  const loc=cat.app_export_x_events_activation_funnel_by_locale||[];
+  if(loc.length){const pv=pivot(loc,"dil","adım");const f=pv.C[0],l=pv.C[pv.C.length-1];h+=card("Aktivasyon hunisi, dile göre","Son 30 gün · dil = cihaz dili · oran = son adım / ilk adım",pivotTable(pv,"Dil",v=>v[f]>=MIN_N?fPct((v[l]||0)/v[f]):"n<30",f));}
+  const ob=cat.app_export_x_events_onboarding_step_tap||[];if(ob.length)h+=card("Onboarding kontrol listesi","Adım başına: tamamlanmış / bekliyor",pivotTable(pivot(ob,"adım","durum"),"Adım"));
+  const ps=cat.app_export_x_events_paywall_source||[];if(ps.length)h+=card("Paywall hangi kapıdan açıldı","Son 30 gün · kişi ve gösterim",pivotTable(pivot(ps,"kapı","ölçü"),"Kapı",null,"kişi"));
+  const fa=cat.app_export_x_events_form_abandoned||[];if(fa.length)h+=card("Yarım bırakılan form","Hangi kapıdan açıldı · kaç alan doluydu",pivotTable(pivot(fa,"kapı","dolu alan"),"Kapı"));
   return h;
 }
 
@@ -694,13 +820,13 @@ function render(){
   $("sideAsof").textContent="Veri "+fD((D.generatedAt||"").slice(0,10))+" "+(D.generatedAt||"").slice(11,16)+" · App Store 2 gün geride";
   CHARTS.length=0;for(const k in METRIC_INFO)delete METRIC_INFO[k];
   fbar();
-  const fn={ozet:vOzet,gelir:vGelir,magaza:vMagaza,kullanici:vKullanici,kalite:vKalite,aso:vAso,degisiklik:vDegisiklik,katalog:vKatalog,veri:vVeri}[S.view];
+  const fn={huni:vHuni,surum:vSurum,ozet:vOzet,gelir:vGelir,magaza:vMagaza,kullanici:vKullanici,kalite:vKalite,aso:vAso,degisiklik:vDegisiklik,katalog:vKatalog,veri:vVeri}[S.view];
   try{$("page").innerHTML=fn();}catch(e){console.error(e);$("page").innerHTML=`<div class="warnbox"><b>Bu ekran çizilemedi:</b> ${esc(e.message)}</div>`;}
   requestAnimationFrame(drawCharts);
 }
 function bind(){
   document.addEventListener("click",e=>{
-    const t=e.target.closest("[data-rng],[data-app],[data-go],[data-kpi],[data-tog],[data-det],[data-det2],[data-cc],[data-sort],[data-more],[data-ev],[data-cm],[data-copyev],#fReset,#copyEv,#navOpen,#scrim,#dscrim,#dClose,#mTodo,#syncBtn,#keyBtn,.nav a");
+    const t=e.target.closest("[data-relv],[data-det3],[data-rng],[data-app],[data-go],[data-kpi],[data-tog],[data-det],[data-det2],[data-cc],[data-sort],[data-more],[data-ev],[data-cm],[data-copyev],#fReset,#copyEv,#navOpen,#scrim,#dscrim,#dClose,#mTodo,#syncBtn,#keyBtn,.nav a");
     if(!t)return;
     if(t.matches(".nav a")){closeNav();return;}
     if(t.id==="navOpen"){$("side").classList.add("open");$("scrim").classList.add("open");return;}
@@ -722,6 +848,8 @@ function bind(){
     if(t.dataset.sort){setF("sort",t.dataset.sort);render();return;}
     if(t.dataset.more!=null){setF("lim",+F("lim",15)+30);render();return;}
     if(t.dataset.ev){setF("ev",F("ev","")===t.dataset.ev?"":t.dataset.ev);render();const c=$("cEv");if(c)c.scrollIntoView({block:"center",behavior:"smooth"});return;}
+    if(t.dataset.relv){const [v,o]=t.dataset.relv.split("|");setF("v",o==="1"?"__none":v);render();return;}
+    if(t.dataset.det3){const m=t.dataset.det3,rows=(IDX.cat[S.app]||{})[m]||[],defs=(((D.catalogDefs||[]).find(r=>r.slug===S.app)||{}).payload||{}).definitions||{},d=defs[m.replace("app_export_x_","")]||{};const prev={};(D.catalogPrev||[]).filter(r=>r.slug===S.app&&r.metric===m).forEach(r=>{prev[dimLabel(r.dims)]=Number(r.value);});openDetail({title:d.title||m,def:d.definition,src:"uygulama backend'i",as:(rows[0]||{}).day,note:"Tablo: bugünkü değer ve bir önceki ölçüm ("+fD(((D.catalogPrev||[]).find(r=>r.slug===S.app&&r.metric===m)||{}).day)+").",cols:["Adım / kırılım","Bugün","Önceki ölçüm",""],keepOrder:1,rows:rows.slice().sort(dimSort).map(r=>[dimLabel(r.dims),Number(r.value),prev[dimLabel(r.dims)]??null,null])});return;}
     if(t.dataset.cm){setF("m",t.dataset.cm);render();const c=$("catDet");if(c&&innerWidth<1024)c.scrollIntoView({block:"start",behavior:"smooth"});return;}
   });
   document.addEventListener("change",e=>{const t=e.target;
