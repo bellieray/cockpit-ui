@@ -311,6 +311,7 @@ const VIEWS=[
   {id:"seo",t:"Web sitesi (SEO)",ic:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/>'},
   {id:"degisiklik",t:"Değişiklikler",ic:'<path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/>'},
   {id:"surum",t:"Sürüm karnesi",ic:'<path d="M20 12V8H6a2 2 0 010-4h12v4M4 6v12a2 2 0 002 2h14v-4"/><circle cx="18" cy="14" r="2"/>'},
+  {id:"ai",t:"AI asistan",ic:'<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>'},
   {id:"katalog",t:"Uygulama verisi",ic:'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>'},
   {id:"veri",t:"Veri güveni",ic:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'}
 ];
@@ -851,6 +852,73 @@ function vDegisiklik(){const t=F("t","hepsi");let h=`<div class="ph"><h1>Değiş
   else h+=`<div class="empty"><b>Backend deploy verisi yok.</b> Bu uygulamanın Render konektörü açık değil.</div>`;
   return h+card("Zaman çizelgesi",t==="hepsi"?"tüm türler":t,changesHtml(+F("lim",60),t));}
 
+/* ── AI asistan: para nereye gidiyor + cevap kalitesi ──
+   Kaynak: uygulama backend'inin `ai_*` katalog metrikleri (Spendy panel-export.catalog.ai.ts).
+   Günlük seriler pencereye (7/28/90) göre toplanır; yüzdelikler toplanamadığı için backend'in
+   kendi kesin kesitinden (son 7 / önceki 7 / son 30 gün) okunur ve öyle etiketlenir. */
+const AI_KIND={add_expense:"İşlem ekleme",settings_action:"Ayar değişikliği",why_change:"Neden değişti",query:"Esnek sorgu",spending_review:"Harcama karnesi",find_transactions:"İşlem bulma",transaction_context:"İşlem bağlamı",spending_breakdown:"Kategori dağılımı",cash_flow:"Nakit akışı",budget:"Bütçe",net_worth:"Net değer",trend:"Aylık trend",household_context:"Hane bilgisi",guide:"Uygulama rehberi",support:"Destek",premium_request:"Premium isteği",invalid_tool:"Geçersiz araç",no_tool:"Araçsız",quick:"Hazır cevap",bilinmiyor:"Bilinmiyor"};
+const aiD=m=>((IDX.catD[S.app]||{})["app_export_d_"+m]||[]);
+const aiX=m=>((IDX.cat[S.app]||{})["app_export_x_"+m]||[]);
+const aiIn=(rows,a,b)=>rows.filter(r=>r.day>=a&&r.day<=b);
+const aiMatch=(r,want)=>Object.entries(want||{}).every(([k,v])=>Array.isArray(v)?v.includes(String((r.dims||{})[k])):String((r.dims||{})[k])===String(v));
+const aiSum=(rows,want)=>rows.reduce((s,r)=>s+(aiMatch(r,want)?Number(r.v??r.value??0):0),0);
+function aiBy(rows,dim,want){const m=new Map();rows.forEach(r=>{if(!aiMatch(r,want))return;const k=String((r.dims||{})[dim]??"(yok)");m.set(k,(m.get(k)||0)+Number(r.v??r.value??0));});return m;}
+function aiStack(rows,dim,dd,top){const tot=aiBy(rows,dim);const keys=[...tot.entries()].sort((a,b)=>b[1]-a[1]).map(x=>x[0]);const main=keys.slice(0,top||6),rest=keys.slice(top||6);
+  const ser=main.map((k,i)=>({n:k,c:PAL[i%PAL.length],map:new Map(),tot:tot.get(k)}));if(rest.length)ser.push({n:"diğer",c:"#94A3B8",map:new Map(),tot:rest.reduce((s,k)=>s+tot.get(k),0)});
+  rows.forEach(r=>{const k=String((r.dims||{})[dim]??"(yok)");const s=ser.find(x=>x.n===k)||(rest.includes(k)?ser[ser.length-1]:null);if(s)s.map.set(r.day,(s.map.get(r.day)||0)+Number(r.v||0));});return ser.filter(s=>dd.length&&s.tot>0);}
+const AI_TRIED=["cevaplandı","kurtarılarak cevaplandı","cevaplayamadı","sağlayıcı yok","sunucu hatası","yalnız kart"];
+const AI_FAILED=["cevaplayamadı","sağlayıcı yok","sunucu hatası"];
+function aiQual(rows,want){const q=k=>aiSum(rows,{...want,sonuç:k});const ok=q("cevaplandı"),rec=q("kurtarılarak cevaplandı"),bad=AI_FAILED.reduce((s,k)=>s+q(k),0),tried=AI_TRIED.reduce((s,k)=>s+q(k),0);return{ok,rec,bad,tried,turns:aiSum(rows,want)-q("hazır cevap")};}
+const aiRate=(n,d)=>d>=MIN_N?fPct(n/d):(d?`n=${fN(d)} <${MIN_N}`:"–");
+const aiMicro=v=>v==null||isNaN(v)?"–":fN(v)+" µ$";
+const aiUsd=v=>v==null?"–":"$"+(v/1e6).toLocaleString("tr-TR",{minimumFractionDigits:v<1e6?4:2,maximumFractionDigits:v<1e6?4:2});
+function aiTbl(head,rows){return rows.length?`<div class="tw"><table class="tbl resp"><thead><tr>${head.map((h,i)=>`<th${i?' class="n"':""}>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>i?`<td class="n" data-l="${esc(head[i])}">${c}</td>`:`<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`:'<div class="empty">Ölçülmedi.</div>';}
+function aiSnap(m,want){const r=aiX(m).find(x=>aiMatch(x,want));return r?Number(r.value):null;}
+function vAi(){
+  let h=`<div class="ph"><h1>AI asistan</h1><p>Model ne yakıyor, cevaplar ne kadar iyi · ${esc(win().label)} · gün = UTC, bugün yazılmaz (gün bitmedi) · tanımlar: Uygulama verisi → "ai_" · haftalık rapor: Spendy <code>npm run ai:weekly</code></p></div>`;
+  const spendAll=aiD("ai_spend_daily");
+  if(!spendAll.length)return h+`<div class="empty"><b>AI telemetrisi ölçülmedi.</b> Uygulamanın backend'i bu metrikleri (ai_spend_daily, ai_turns_daily…) henüz göndermiyor — telemetri sürümü yayında değil ya da Senkron basılmadı. ${isLiveNote()}</div>`;
+  const w=win(),dd=days(w.start,w.end),n=dd.length,pw={start:addD(w.start,-n),end:addD(w.start,-1)};
+  const spend=aiIn(spendAll,w.start,w.end),spendP=aiIn(spendAll,pw.start,pw.end),turnsAll=aiD("ai_turns_daily"),turns=aiIn(turnsAll,w.start,w.end),cost=aiIn(aiD("ai_turn_cost_daily"),w.start,w.end);
+  const S1=aiSum(spend),S0=aiSum(spendP),q=aiQual(turns),qp=aiQual(aiIn(turnsAll,pw.start,pw.end)),rec=aiSum(spend,{amaç:"kurtarma"});
+  const ansCost=aiSum(cost,{sonuç:["cevaplandı","kurtarılarak cevaplandı"]}),ansN=q.ok+q.rec;
+  const tok=aiIn(aiD("ai_tokens_daily"),w.start,w.end),cached=aiSum(tok,{tür:"girdi (önbellekten)"}),unc=aiSum(tok,{tür:"girdi (önbelleksiz)"});
+  const perDay=m=>dd.map(d=>aiSum(m.filter(r=>r.day===d)));
+  const people=aiSnap("ai_spend_concentration",{pencere:"son 7 gün",grup:"5 · tümü",ölçü:"kişi"});
+  h+=`<div class="g4">`+
+    kpi({c:"blue",lb:"AI harcaması",v:aiUsd(S1),u:fD(w.start)+"–"+fD(w.end),spark:perDay(spend),bar:1,chip:new Set(spendP.map(r=>r.day)).size===n&&S0?(S1>=S0?"↑ ":"↓ ")+fPct(Math.abs(S1-S0)/S0,0)+" önceki döneme göre":"önceki dönem eksik",dim:"kurtarma "+(S1?fPct(rec/S1):"–"),def:"Tüm model çağrıları (cevap, kurtarma, özet, fiş, premium kapısı), sağlayıcının bildirdiği ücret. DeepInfra faturasıyla gün gün karşılaştırılır.",rows:dd.map(d=>[d,aiSum(spend.filter(r=>r.day===d))])})+
+    kpi({c:"green",lb:"Soru (serbest metin)",v:fN(q.turns),u:"tur",spark:perDay(turns),bar:1,chip:"ilk deneme "+aiRate(q.ok,q.tried),dim:"cevaplayamadı "+aiRate(q.bad,q.tried),def:"Tur = bir soru (ilk deneme + varsa ücretsiz T2 kurtarma). İlk deneme = cevaplandı / (cevaplandı + kurtarılarak + cevaplayamadı + yalnız kart). Taban < 30 ise oran yazılmaz."})+
+    kpi({c:"amber",lb:"Cevap başı maliyet",v:ansN?fN(ansCost/ansN):"–",u:"µ$ ortalama",chip:"p95 "+aiMicro(aiSnap("ai_turn_cost_pct_30d",{pencere:"son 7 gün",plan:"tümü",ölçü:"p95"})),dim:"son 7 tam gün · kesin",def:"Cevaplanan bir sorunun iki koşusunun tüm çağrıları. Ortalama seçili pencereden; p95 backend'in son 7 tamamlanmış gün kesitinden (yüzdelik günlerden toplanamaz)."})+
+    kpi({c:"violet",lb:"Önbellek payı",v:cached+unc?fPct(cached/(cached+unc)):"–",u:"girdi token",chip:people!=null?fN(people)+" aktif kişi (7g)":"kişi ölçülmedi",dim:people&&aiSnap("ai_spend_concentration",{pencere:"son 7 gün",grup:"5 · tümü",ölçü:"µ$"})!=null?"kişi başı "+aiUsd(aiSnap("ai_spend_concentration",{pencere:"son 7 gün",grup:"5 · tümü",ölçü:"µ$"})/people)+"/hafta":"",def:"Sağlayıcının önbelleğinden sunulan girdi token'ı / (önbellekten + önbelleksiz). Önbellek girdisi ~0,2–0,25× fiyatlanır; düşükse prompt'un sabit öneki bozulmuştur."})+`</div>`;
+  // harcama, kırılımlı
+  const ab=F("ab","plan"),ser=aiStack(spend,ab,dd);
+  const leg=`<div class="legend">${ser.map(s=>`<button><i style="background:${s.c}"></i><span>${esc(s.n)}<b class="t">${aiUsd(s.tot)}</b></span></button>`).join("")}</div>`;
+  h+=`<div class="g3">`+card("Harcama, gün gün",`$ · kırılım: ${esc(ab)} (filtre çubuğundan değiştir) · bugün yazılmaz`,leg+chartSpec("cAiSp",{days:dd,series:ser.map(s=>({n:s.n,c:s.c,map:new Map([...s.map].map(([d,v])=>[d,v/1e6]))})),stack:1,usd:1,aria:"AI harcaması"})+`<div class="foot">kaynak = estimate satırları liste fiyatıyla tahmindir (sağlayıcı ücret bildirmedi). 2026-10-07 öncesi plan/amaç "bilinmiyor".</div>`,"","span2")+
+    card("Para nereye — amaç","Seçili pencere · pay",barRows([...aiBy(spend,"amaç").entries()].sort((a,b)=>b[1]-a[1]).map(([k,v])=>({k,v})),{share:1,d:0})+`<div class="foot">kurtarma = ilk denemesi topraklanamayan cevaba ödenen ücretsiz T2 · özet ve fiş kişinin sorusu değil</div>`)+`</div>`;
+  // sonuçlar
+  const os=aiStack(turns,"sonuç",dd,7);
+  h+=`<div class="g3">`+card("Sorular ve sonuçları",`tur/gün · ilk deneme ${aiRate(q.ok,q.tried)} (önceki ${aiRate(qp.ok,qp.tried)}) · kurtarma başarısı ${aiRate(q.rec,q.rec+q.bad)}`,`<div class="legend">${os.map(s=>`<button><i style="background:${s.c}"></i><span>${esc(s.n)}<b class="t">${fN(s.tot)}</b></span></button>`).join("")}</div>`+chartSpec("cAiTu",{days:dd,series:os.map(s=>({n:s.n,c:s.c,map:s.map})),stack:1,int:1,aria:"AI soru sonuçları"}),"","span2")+
+    card("Grounding reddi sınıfı","Reddedilen cevap metni · seçili pencere",(()=>{const g=aiIn(aiD("ai_grounding_fail_daily"),w.start,w.end);const r=[...aiBy(g,"sınıf").entries()].sort((a,b)=>b[1]-a[1]);return r.length?barRows(r.map(([k,v])=>({k,v,sub:"ilk "+fN(aiSum(g,{sınıf:k,koşu:"ilk"}))+" · kurtarma "+fN(aiSum(g,{sınıf:k,koşu:"kurtarma"}))})))+`<div class="foot">empty boş · unknown_key yanlış anahtar · unmarked_money çıplak tutar · unmarked_pct çıplak yüzde · stray_number uydurma sayı</div>`:'<div class="empty">Bu pencerede grounding reddi yok.</div>';})())+`</div>`;
+  // soru türü tablosu
+  const up=aiBy(aiIn(aiD("ai_feedback_by_kind_daily"),w.start,w.end),"tür",{oy:"olumlu"}),dn=aiBy(aiIn(aiD("ai_feedback_by_kind_daily"),w.start,w.end),"tür",{oy:"olumsuz"}),kc=aiBy(cost,"tür");
+  const kinds=[...aiBy(turns,"tür").keys()].map(k=>({k,q:aiQual(turns,{tür:k}),c:kc.get(k)||0})).sort((a,b)=>b.c-a.c);
+  h+=card("Soru türüne göre","Tür = turun çağırdığı araçlar (soru metni değil) · seçili pencere · p95 süre son 30 tam gün",kinds.length?`<div class="tw"><table class="tbl resp"><thead><tr><th>Tür</th><th class="n">Soru</th><th class="n">$ payı</th><th class="n">Soru başı</th><th class="n">İlk deneme</th><th class="n">Cevaplayamadı</th><th class="n">👍 / 👎</th><th class="n">p95 süre</th></tr></thead><tbody>${kinds.map(x=>{const p95=aiSnap("ai_kind_quality_30d",{tür:x.k,ölçü:"7 · p95 süre ms"});return `<tr><td>${esc(AI_KIND[x.k]||x.k)}</td><td class="n" data-l="soru">${fN(x.q.turns)}</td><td class="n" data-l="$ payı">${S1?fPct(x.c/S1):"–"}</td><td class="n" data-l="soru başı">${x.q.turns?aiMicro(x.c/x.q.turns):"–"}</td><td class="n" data-l="ilk deneme">${aiRate(x.q.ok,x.q.tried)}</td><td class="n" data-l="cevaplayamadı">${aiRate(x.q.bad,x.q.tried)}</td><td class="n" data-l="👍 / 👎">${fN(up.get(x.k)||0)} / ${fN(dn.get(x.k)||0)}</td><td class="n" data-l="p95 süre">${p95==null?"–":fN(p95/1000,1)+" sn"}</td></tr>`;}).join("")}</tbody></table></div>`:'<div class="empty">Bu pencerede tür bilgisi olan soru yok (2026-10-07 öncesi turlar ölçülmedi).</div>');
+  // dağılım + süre + yoğunlaşma
+  const hist=aiIn(aiD("ai_turn_cost_hist_daily"),w.start,w.end),hb=[...aiBy(hist,"kova").entries()].map(([k,v])=>({k:k+" µ$",v,lo:Number(((hist.find(r=>String((r.dims||{}).kova)===k)||{}).dims||{}).alt||0)})).sort((a,b)=>a.lo-b.lo);
+  const pc=aiX("ai_turn_cost_pct_30d").filter(r=>(r.dims||{}).plan==="tümü");
+  const pens=["son 7 gün","önceki 7 gün","son 30 gün"];
+  h+=`<div class="g2">`+card("Cevap başı maliyet dağılımı","Cevap sayısı / kova · seçili pencere · altta kesin yüzdelikler",(hb.length?barRows(hb):'<div class="empty">Cevap yok.</div>')+(pc.length?aiTbl(["Pencere (µ$)","p50","p95","max"],pens.map(p=>[p,...["p50","p95","max"].map(q=>aiMicro(aiSnap("ai_turn_cost_pct_30d",{pencere:p,plan:"tümü",ölçü:q})))])):""))+
+    card("Süre (kesin)","Son 7 tamamlanmış gün · sn",(()=>{const l=aiX("ai_latency_pct_30d").filter(r=>(r.dims||{}).pencere==="son 7 gün");const gs=[...new Set(l.map(r=>String((r.dims||{}).grup)))].sort();const v=(g,o,y)=>{const x=aiSnap("ai_latency_pct_30d",{pencere:"son 7 gün",grup:g,ölçü:o,yüzdelik:y});return x==null?"–":fN(x/1000,1);};return aiTbl(["Grup","Cevap p50","Cevap p95","İlk kelime p95"],gs.map(g=>[g,v(g,"cevap süresi","p50"),v(g,"cevap süresi","p95"),v(g,"ilk kelime","p95")]));})()+
+      `<h2 style="margin:18px 0 8px;font-size:15px">En ağır kullanıcılar</h2>`+(()=>{const t=p=>aiSnap("ai_spend_concentration",{pencere:p,grup:"5 · tümü",ölçü:"µ$"});const gr=["1 · en çok 1","2 · 2–5.","3 · 6–10.","4 · 11.+"];return aiTbl(["Sıra grubu (% harcama)","Son 7 gün","Önceki 7 gün","Son 30 gün"],gr.map(g=>[g.slice(4),...pens.map(p=>{const v=aiSnap("ai_spend_concentration",{pencere:p,grup:g,ölçü:"µ$"});return v==null||!t(p)?"–":fPct(v/t(p));})]));})()+`<div class="foot">Kimlik yok, yalnız sıra grubu. Kişi sayısı: Uygulama verisi → ai_spend_concentration.</div>`)+`</div>`;
+  // havuz, retler, paywall, token
+  const pool=aiIn(aiD("ai_pool_free_hourly"),w.start,w.end),refH=aiIn(aiD("ai_refusals_hourly"),w.start,w.end),pf=aiX("ai_paywall_from_ai_30d");
+  const ts=aiStack(tok,"tür",dd);
+  h+=`<div class="g2">`+card("Ücretsiz havuz — saat (UTC)","µ$ toplamı ve bütçe retleri, seçili pencere",(()=>{const hrs=[...new Set([...pool,...refH].map(r=>String((r.dims||{}).saat)))].sort();if(!hrs.length)return '<div class="empty">Havuz kullanımı yok.</div>';const pm=aiBy(pool,"saat");return `<div class="tw"><table class="tbl resp"><thead><tr><th>Saat</th><th class="n">Havuz µ$</th><th class="n">Havuz dolu ret</th><th class="n">Kişi sınırı ret</th></tr></thead><tbody>${hrs.map(hh=>`<tr><td>${esc(hh)}:00</td><td class="n" data-l="havuz µ$">${fN(pm.get(hh)||0)}</td><td class="n" data-l="havuz dolu">${fN(aiSum(refH,{saat:hh,sebep:"POOL_EXHAUSTED"}))}</td><td class="n" data-l="kişi sınırı">${fN(aiSum(refH,{saat:hh,sebep:"AI_BUDGET_EXHAUSTED"}))}</td></tr>`).join("")}</tbody></table></div>`;})())+
+    card("AI'dan paywall'a","Son 30 gün · tekil kişi · kapı → paywall → satın alma",aiTbl(["Kaynak","Kapı/duvar","Paywall","Satın alma"],[...new Set(pf.map(r=>String((r.dims||{}).kaynak)))].map(k=>[k,...["1 · kapı/duvar gördü","2 · paywall açıldı","3 · satın aldı"].map(a=>{const v=aiSnap("ai_paywall_from_ai_30d",{kaynak:k,adım:a});return v==null?"ölçülmüyor":fN(v);})])))+`</div>`+
+    card("Token, gün gün","Bin token · önbellekten / önbelleksiz / çıktı",`<div class="legend">${ts.map(s=>`<button><i style="background:${s.c}"></i><span>${esc(s.n)}<b class="t">${fN(s.tot)}</b></span></button>`).join("")}</div>`+chartSpec("cAiTk",{days:dd,series:ts.map(s=>({n:s.n,c:s.c,map:new Map([...s.map].map(([d,v])=>[d,v/1000]))})),stack:1,aria:"AI token (bin)"})+`<div class="foot">$ payı ölçülmez: sağlayıcı çağrı başına tek ücret bildiriyor.</div>`);
+  return h;
+}
+
 /* ── Uygulama verisi (katalog gezgini) ── */
 function vKatalog(){
   const cat=IDX.cat[S.app]||{},defs=((D.catalogDefs||[]).find(r=>r.slug===S.app)||{}).payload||{};const dd=defs.definitions||{};
@@ -894,6 +962,7 @@ function fbar(){
   if(v==="kalite"){h+=sel("who","Yorum",[["self","Kendi"],["rival","Rakip"],["hepsi","Hepsi"]],F("who","self"))+sel("rating","Puan",[["hepsi","Tüm puanlar"],["1","1★"],["2","2★"],["3","3★"],["4","4★"],["5","5★"]],F("rating","hepsi"))+sel("cc","Ülke",ccOpts((D.reviews||[]).filter(r=>r.slug===S.app).map(r=>r.country)),F("cc",""));}
   if(v==="aso"){const g=(D.gaps||[]).filter(r=>r.slug===S.app);h+=sel("cc","Ülke",ccOpts(g.map(r=>r.country)),F("cc",""))+sel("vd","Durum",[["hepsi","Tüm durumlar"]].concat(Array.from(new Set(g.map(r=>r.verdict))).sort().map(x=>[x,x])),F("vd","hepsi"))+`<label>Terim<input type="search" data-f="q" value="${esc(F("q",""))}" placeholder="ör. budget"></label>`;}
   if(v==="degisiklik"){h+=sel("t","Tür",[["hepsi","Tüm türler"],["sürüm","Sürüm"],["metadata","Metadata"],["rakip","Rakip"],["etki","Sürüm etkisi"],["backend","Backend deploy"]],F("t","hepsi"));}
+  if(v==="ai"){h+=sel("ab","Harcama kırılımı",[["plan","Plan"],["model","Model"],["amaç","Amaç"],["tier","Kademe"],["kaynak","Ücret kaynağı"]],F("ab","plan"));}
   if(v==="katalog"){h+=`<label>Ölçüm ara<input type="search" data-f="q" value="${esc(F("q",""))}" placeholder="ör. paywall"></label>`;}
   if(v==="veri"){h+=sel("bad","Göster",[["1","Yalnız kırmızı"],["0","Tümü"]],F("bad","1"));}
   const act=Object.keys(S.f[v]||{}).length||S.from;
@@ -916,7 +985,7 @@ function render(){
   $("sideAsof").textContent="Veri "+fD((D.generatedAt||"").slice(0,10))+" "+(D.generatedAt||"").slice(11,16)+" · App Store 2 gün geride";
   CHARTS.length=0;for(const k in METRIC_INFO)delete METRIC_INFO[k];
   fbar();
-  const fn={huni:vHuni,surum:vSurum,ozet:vOzet,gelir:vGelir,magaza:vMagaza,kullanici:vKullanici,kalite:vKalite,aso:vAso,seo:vSeo,degisiklik:vDegisiklik,katalog:vKatalog,veri:vVeri}[S.view];
+  const fn={huni:vHuni,surum:vSurum,ozet:vOzet,gelir:vGelir,magaza:vMagaza,kullanici:vKullanici,kalite:vKalite,aso:vAso,seo:vSeo,degisiklik:vDegisiklik,katalog:vKatalog,ai:vAi,veri:vVeri}[S.view];
   try{$("page").innerHTML=fn();}catch(e){console.error(e);$("page").innerHTML=`<div class="warnbox"><b>Bu ekran çizilemedi:</b> ${esc(e.message)}</div>`;}
   requestAnimationFrame(drawCharts);
 }
