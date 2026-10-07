@@ -382,7 +382,7 @@ function drawChart(box,spec){
   const dd=spec.days,k=dd.length;if(!k){box.innerHTML='<div class="empty">Bu aralıkta ölçüm yok.</div>';return;}
   const series=spec.series.filter(s=>!s.off);let mx=0;series.forEach(s=>dd.forEach(d=>{const v=s.map.get(d);if(v!=null&&v>mx)mx=v;}));
   if(spec.stack){mx=0;dd.forEach(d=>{let t=0;series.forEach(s=>{t+=s.map.get(d)||0;});if(t>mx)mx=t;});}
-  mx=mx||1;const pw=Math.pow(10,Math.floor(Math.log10(mx)));let st=pw;if(mx/st<3)st=pw/2;if(mx/st>8)st=pw*2;const top=Math.ceil(mx/st)*st;
+  mx=mx||1;const pw=Math.pow(10,Math.floor(Math.log10(mx)));let st=pw;if(mx/st<3)st=pw/2;if(mx/st>8)st=pw*2;if(spec.int)st=Math.max(1,Math.round(st));const top=Math.ceil(mx/st)*st;
   const x=i=>L+(W-L-R)*(k===1?.5:i/(k-1)),y=v=>T+(H-T-B)*(1-v/top);
   let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-label="${esc(spec.aria||"grafik")}"><defs>`;
   series.forEach((sr,j)=>{s+=`<linearGradient id="g${box.id}${j}" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="${sr.c}" stop-opacity=".28"/><stop offset="100%" stop-color="${sr.c}" stop-opacity="0"/></linearGradient>`;});
@@ -689,7 +689,7 @@ function vSeo(){
   }
   const dd=days(w.start,w.end),fi=FL("gsc_impressions")||new Map(),fc=FL("gsc_clicks")||new Map();
   const mi=new Map(),mc=new Map();dd.forEach(d=>{if(fi.has(d))mi.set(d,fi.get(d));if(fc.has(d))mc.set(d,fc.get(d));});
-  h+=`<div class="g3">`+card("Gösterim",`günlük · ${esc(w.label)} · son tamamlanmış gün ${fD(w.end)}`,chartSpec("chSeo",{days:dd,bars:true,series:[{n:"Gösterim",c:"#3B82F6",map:mi}],marks:Array.from(mc).filter(([,v])=>v>0).map(([d,v])=>({d,t:`${fD(d)}: ${fN(v)} tık`})),aria:"Günlük gösterim, tık olan günler işaretli"})+`<div class="foot">Çubuk = günlük gösterim · kesikli çizgi = tık gelen gün (dokun: kaç tık). Boş gün = ölçülmedi.</div>`,"","span2");
+  h+=`<div class="g3">`+card("Gösterim",`günlük · ${esc(w.label)} · son tamamlanmış gün ${fD(w.end)}`,chartSpec("chSeo",{days:dd,bars:true,int:true,series:[{n:"Gösterim",c:"#3B82F6",map:mi}],marks:Array.from(mc).filter(([,v])=>v>0).map(([d,v])=>({d,t:`${fD(d)}: ${fN(v)} tık`})),aria:"Günlük gösterim, tık olan günler işaretli"})+`<div class="foot">Çubuk = günlük gösterim · kesikli çizgi = tık gelen gün (dokun: kaç tık). Boş gün = ölçülmedi.</div>`,"","span2");
   /* Dizin kartı */
   const sm=gscNow("gsc_sitemap_pending"),se=gscNow("gsc_sitemap_errors");
   const smTxt=sm.length?sm.map(r=>`${esc((r.dims||{}).sitemap||"sitemap")}: ${num(r.value)?'<span class="tag" style="margin:0;background:#FFFBEB;color:#B45309">◷ işlenmedi</span>':'<span class="tag" style="margin:0;background:#ECFDF5;color:#047857">✓ işlendi</span>'}`).join("<br>"):"ölçülmedi";
