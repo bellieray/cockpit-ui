@@ -308,6 +308,7 @@ const VIEWS=[
   {id:"huni",t:"Huniler",ic:'<path d="M3 4h18l-7 8v6l-4 2v-8z"/>'},
   {id:"kalite",t:"Kalite & yorumlar",ic:'<path d="M13 2L3 14h9l-1 8 10-12h-9z"/>'},
   {id:"aso",t:"ASO & kelimeler",ic:'<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/>'},
+  {id:"seo",t:"Web sitesi (SEO)",ic:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/>'},
   {id:"degisiklik",t:"Değişiklikler",ic:'<path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/>'},
   {id:"surum",t:"Sürüm karnesi",ic:'<path d="M20 12V8H6a2 2 0 010-4h12v4M4 6v12a2 2 0 002 2h14v-4"/><circle cx="18" cy="14" r="2"/>'},
   {id:"katalog",t:"Uygulama verisi",ic:'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>'},
@@ -538,6 +539,9 @@ function vGelir(){
   // paywall hunisi (katalog)
   const pw=(IDX.cat[S.app]||{}).app_export_x_events_paywall_funnel||[];
   h+=card("Paywall hunisi","Uygulama backend'inden · anlık kesit",pw.length?barRows(pw.slice().sort(dimSort).map(r=>({k:dimLabel(r.dims),v:Number(r.value)}))):'<div class="empty"><b>Ölçülmedi.</b> Paywall olayları 1.0.5 ile gelmeye başlar.</div>');
+  // Premium+ yükseltme kohortu: ilk-satın-alma hunisinden ayrı payda (backend variant=upgrade).
+  const pwUp=(IDX.cat[S.app]||{}).app_export_x_events_paywall_upgrade_funnel||[];
+  if(pwUp.some(r=>Number(r.value)>0))h+=card("Paywall hunisi · Premium+ yükseltme","Premium abonesine gösterilen yükseltme · ilk satın alma hunisiyle toplanmaz",barRows(pwUp.slice().sort(dimSort).map(r=>({k:dimLabel(r.dims),v:Number(r.value)}))));
   return h;
 }
 
@@ -648,6 +652,75 @@ function vAso(){
   return h;
 }
 
+/* ═══ Web sitesi (SEO) — Google Search Console ═══════════════════════════════
+   Kırılımlar (sayfa/sorgu/ülke) site toplamına TOPLANAMAZ: bir aramada iki sayfa
+   görünürse ikisi de gösterim alır, Google nadir sorguları gizler. Bu yüzden
+   toplam her zaman kırılımsız seriden; kırılım tablosu yalnız kendi içinde
+   sıralanır. Sıra = Σ(sıra×gösterim)/Σgösterim (saklanmış ortalamanın ortalaması
+   alınmaz). Dizin durumunun geçmişi yok: Google yalnız bugünü söylüyor, panel
+   ilk konektör koşusundan beri biriktiriyor. */
+function gscKeyAgg(metric,w){const o=new Map();(D.gscDaily||[]).forEach(r=>{if(r.slug!==S.app||r.metric!==metric||r.day<w.start||r.day>w.end)return;o.set(r.key,(o.get(r.key)||0)+num(r.v));});return o;}
+function gscNow(metric){return (D.gscNow||[]).filter(r=>r.slug===S.app&&r.metric===metric);}
+function vSeo(){
+  const imp=flowAgg("gsc_impressions");
+  let h=`<div class="ph"><h1>Web sitesi (SEO)</h1><p>Google Search Console · Google verisi ~3 gün gecikmeli, pencere son tamamlanmış güne hizalı</p></div>`;
+  const idx=gscNow("gsc_index_urls"),hasIdx=idx.length>0;
+  if(imp.status!=="measured"&&!hasIdx){
+    return h+`<div class="empty"><b>Bu uygulamanın web sitesi bağlı değil.</b> Site varsa <code>scripts/new-app.sh --site &lt;adres&gt;</code> ile bağlanır; servis hesabı Search Console mülkünde kullanıcı olarak ekli olmalı. Site yoksa bu ekran boş kalır — "veri yok" değil, uygulamada yok.</div>`;
+  }
+  const w=imp.w||win();
+  const clk=flowAgg("gsc_clicks",w),pos=flowAgg("gsc_position_impr",w);
+  const avgPos=imp.status==="measured"&&imp.v>0&&pos.status==="measured"?pos.v/imp.v:null;
+  const ctr=imp.status==="measured"&&clk.status==="measured"&&imp.v>=MIN_N?clk.v/imp.v:null;
+  const cnt={dizinde:0,bilinmiyor:0,diger:0};idx.forEach(r=>{const k=(r.dims||{}).durum;if(k in cnt)cnt[k]=num(r.value);});
+  const tot=cnt.dizinde+cnt.bilinmiyor+cnt.diger,idxDay=idx.length?idx[0].day:null;
+  const pages=gscNow("gsc_index_page").map(r=>({p:(r.dims||{}).sayfa,ok:num(r.value)===1})).sort((a,b)=>a.p.localeCompare(b.p));
+  const missing=pages.filter(x=>!x.ok);
+  const sp=flowSeries("gsc_impressions");
+  h+=`<div class="g4">`
+    +kpi({c:"blue",lb:"Gösterim",v:imp.status==="measured"?fN(imp.v):"–",chip:pctChip(imp)||w.label,dim:deltaTxt(imp),spark:Array.from(sp.values()),bar:true,metric:"gsc_impressions"})
+    +kpi({c:"green",lb:"Tık",v:clk.status==="measured"?fN(clk.v):"–",chip:ctr!=null?"tık oranı "+fPct(ctr,1):`oran için ≥${MIN_N} gösterim`,dim:deltaTxt(clk),metric:"gsc_clicks"})
+    +kpi({c:"violet",lb:"Ortalama sıra",v:avgPos!=null?fN(avgPos,1):"–",chip:"düşük = iyi",dim:"gösterim ağırlıklı",metric:"gsc_position_impr"})
+    +(hasIdx?kpi({c:cnt.bilinmiyor?"amber":"cyan",lb:"Google'da",v:`${fN(cnt.dizinde)}<span class="u">/ ${fN(tot)}</span>`,chip:cnt.bilinmiyor?`${fN(cnt.bilinmiyor)} sayfa yok`:"hepsi dizinde",dim:"ölçüm "+fD(idxDay),metric:"gsc_index_urls"}):kpi({none:true,lb:"Google'da",chip:"dizin ölçülmedi"}))
+    +`</div>`;
+  if(missing.length){
+    const byLang={};missing.forEach(x=>{const l=x.p.startsWith("/tr")?"Türkçe":"İngilizce";byLang[l]=(byLang[l]||0)+1;});
+    h+=`<div class="warnbox"><b>⚠ Alarm · ${fN(missing.length)} sayfa Google'da yok</b> (${Object.entries(byLang).map(([k,v])=>`${k} ${v}`).join(", ")}) — Google bu adresleri hiç taramamış; aramada çıkamazlar.<br>Ne yapılır: Search Console → URL denetimi → "Dizine eklenmesini iste" (günde ~10). Sitemap'te oldukları için kendiliğinden de bulunabilirler; bir sonraki ölçümde bu liste kısalmalı.</div>`;
+  }
+  const dd=days(w.start,w.end),fi=FL("gsc_impressions")||new Map(),fc=FL("gsc_clicks")||new Map();
+  const mi=new Map(),mc=new Map();dd.forEach(d=>{if(fi.has(d))mi.set(d,fi.get(d));if(fc.has(d))mc.set(d,fc.get(d));});
+  h+=`<div class="g3">`+card("Gösterim",`günlük · ${esc(w.label)} · son tamamlanmış gün ${fD(w.end)}`,chartSpec("chSeo",{days:dd,bars:true,series:[{n:"Gösterim",c:"#3B82F6",map:mi}],marks:Array.from(mc).filter(([,v])=>v>0).map(([d,v])=>({d,t:`${fD(d)}: ${fN(v)} tık`})),aria:"Günlük gösterim, tık olan günler işaretli"})+`<div class="foot">Çubuk = günlük gösterim · kesikli çizgi = tık gelen gün (dokun: kaç tık). Boş gün = ölçülmedi.</div>`,"","span2");
+  /* Dizin kartı */
+  const sm=gscNow("gsc_sitemap_pending"),se=gscNow("gsc_sitemap_errors");
+  const smTxt=sm.length?sm.map(r=>`${esc((r.dims||{}).sitemap||"sitemap")}: ${num(r.value)?'<span class="tag" style="margin:0;background:#FFFBEB;color:#B45309">◷ işlenmedi</span>':'<span class="tag" style="margin:0;background:#ECFDF5;color:#047857">✓ işlendi</span>'}`).join("<br>"):"ölçülmedi";
+  const errN=se.reduce((a,r)=>a+num(r.value),0);
+  h+=card("Dizin durumu",hasIdx?`sitemap'teki ${fN(tot)} adres · ölçüm ${fD(idxDay)}`:"ölçülmedi",hasIdx?`<div class="stack">
+    <div class="row"><div class="rt"><span>✓ Dizinde</span><b>${fN(cnt.dizinde)}</b></div><div class="bar"><i style="width:${tot?cnt.dizinde/tot*100:0}%;background:var(--em)"></i></div></div>
+    <div class="row"><div class="rt"><span>⚠ Google bilmiyor</span><b>${fN(cnt.bilinmiyor)}</b></div><div class="bar"><i style="width:${tot?cnt.bilinmiyor/tot*100:0}%;background:var(--am)"></i></div></div>
+    <div class="row"><div class="rt"><span>• Diğer (taranmış, alınmamış)</span><b>${fN(cnt.diger)}</b></div><div class="bar"><i style="width:${tot?cnt.diger/tot*100:0}%;background:#94A3B8"></i></div></div>
+    <div style="font-size:12.5px;line-height:1.6">Sitemap · ${smTxt}${errN?` · <b style="color:var(--rd)">${fN(errN)} hata</b>`:""}</div>
+    ${missing.length?`<details><summary style="cursor:pointer;font-size:12.5px;font-weight:600;min-height:32px">Google'da olmayan ${fN(missing.length)} sayfa</summary><div style="font-size:12px;color:var(--tx-2);overflow-wrap:anywhere;line-height:1.7;margin-top:6px">${missing.map(x=>esc(x.p)).join("<br>")}</div></details>`:""}
+  </div><div class="foot">Geçmiş yok: Google yalnız bugünü söylüyor, panel ${fD((D.gscIndexHistory||[]).filter(r=>r.slug===S.app).map(r=>r.day).sort()[0])} tarihinden beri biriktiriyor.</div>`:'<div class="empty">Dizin durumu henüz ölçülmedi.</div>');
+  h+=`</div>`;
+  /* Sayfalar */
+  const pi=gscKeyAgg("gsc_page_impressions",w),pc=gscKeyAgg("gsc_page_clicks",w),pp=gscKeyAgg("gsc_page_position_impr",w);
+  const okMap=new Map(pages.map(x=>[x.p,x.ok]));
+  const prow=Array.from(pi,([k,v])=>({k,v,c:pc.get(k)||0,p:v?(pp.get(k)||0)/v:null})).sort((a,b)=>b.v-a.v);
+  h+=card("Sayfalar",`aramada görünen ${fN(prow.length)} sayfa · ${esc(w.label)}`,prow.length?`<div class="tw"><table class="tbl resp"><thead><tr><th>Sayfa</th><th class="n">Gösterim</th><th class="n">Tık</th><th class="n">Sıra</th><th>Dizin</th></tr></thead><tbody>${prow.slice(0,15).map(r=>`<tr><td style="overflow-wrap:anywhere">${esc(r.k)}</td><td class="n t" data-l="gösterim">${fN(r.v)}</td><td class="n t" data-l="tık">${fN(r.c)}</td><td class="n t" data-l="sıra">${r.p!=null?fN(r.p,1):"–"}</td><td data-l="dizin">${okMap.has(r.k)?(okMap.get(r.k)?"✓ var":"⚠ yok"):'<span style="color:var(--mu)">sitemap dışı</span>'}</td></tr>`).join("")}</tbody></table></div><div class="foot">Sayfa satırlarının toplamı site toplamından büyük olabilir: bir aramada iki sayfa çıkarsa ikisi de gösterim alır.</div>`:'<div class="empty">Bu aralıkta hiçbir sayfa aramada görünmedi.</div>');
+  /* Sorgular + marka payı */
+  const qi=gscKeyAgg("gsc_query_impressions",w),qc=gscKeyAgg("gsc_query_clicks",w),qp=gscKeyAgg("gsc_query_position_impr",w);
+  const qrow=Array.from(qi,([k,v])=>({k,v,c:qc.get(k)||0,p:v?(qp.get(k)||0)/v:null})).sort((a,b)=>b.v-a.v);
+  const qSum=qrow.reduce((a,r)=>a+r.v,0),brand=appName().toLowerCase().split(/[\s:]/)[0];
+  const bSum=qrow.filter(r=>r.k.toLowerCase().includes(brand)).reduce((a,r)=>a+r.v,0);
+  const siteImp=imp.status==="measured"?imp.v:0;
+  const qNote=qSum?`Görünen sorgular ${fN(qSum)} / ${fN(siteImp)} gösterim — kalanını Google gizliyor (nadir aramalar). Görünenlerin ${fPct(bSum/qSum,0)}'i marka adı ("${esc(brand)}")${bSum===qSum?": kategori kelimesiyle gelen arama henüz yok.":"."}`:"Görünen sorgu yok — Google nadir aramaları gizliyor.";
+  h+=`<div class="g2">`+card("Aramalar",esc(w.label),`<div style="font-size:12.5px;margin-bottom:10px;line-height:1.5">${qNote}</div>`+(qrow.length?barRows(qrow.slice(0,10).map(r=>({k:r.k,v:r.v,pre:r.k.toLowerCase().includes(brand)?'<span class="tag" style="margin:0 6px 0 0;background:#EFF6FF;color:#1D4ED8">marka</span>':""}))):""));
+  /* Ülkeler */
+  const ci=gscKeyAgg("gsc_country_impressions",w),cc2=gscKeyAgg("gsc_country_clicks",w);
+  const crow=Array.from(ci,([k,v])=>({k,v,c:cc2.get(k)||0})).sort((a,b)=>b.v-a.v);
+  h+=card("Ülkeler",`gösterime göre · ${esc(w.label)} · Google'ın üç harfli ülke kodu`,crow.length?barRows(crow.slice(0,6).map(r=>({k:`${r.k}${r.c?` · ${fN(r.c)} tık`:""}`,v:r.v}))):'<div class="empty">Bu aralıkta ülke verisi yok.</div>')+`</div>`;
+  return h;
+}
 /* ═══ Sürüm karnesi ═══════════════════════════════════════════════════════
    Her sürüm için: yayın günü, o sürümle görünen metadata değişikliği, ve yayın
    ÖNCESİ 14 gün ↔ SONRASI 14 gün aynı ölçüler. Bu bir öncesi/sonrası
@@ -843,7 +916,7 @@ function render(){
   $("sideAsof").textContent="Veri "+fD((D.generatedAt||"").slice(0,10))+" "+(D.generatedAt||"").slice(11,16)+" · App Store 2 gün geride";
   CHARTS.length=0;for(const k in METRIC_INFO)delete METRIC_INFO[k];
   fbar();
-  const fn={huni:vHuni,surum:vSurum,ozet:vOzet,gelir:vGelir,magaza:vMagaza,kullanici:vKullanici,kalite:vKalite,aso:vAso,degisiklik:vDegisiklik,katalog:vKatalog,veri:vVeri}[S.view];
+  const fn={huni:vHuni,surum:vSurum,ozet:vOzet,gelir:vGelir,magaza:vMagaza,kullanici:vKullanici,kalite:vKalite,aso:vAso,seo:vSeo,degisiklik:vDegisiklik,katalog:vKatalog,veri:vVeri}[S.view];
   try{$("page").innerHTML=fn();}catch(e){console.error(e);$("page").innerHTML=`<div class="warnbox"><b>Bu ekran çizilemedi:</b> ${esc(e.message)}</div>`;}
   requestAnimationFrame(drawCharts);
 }
