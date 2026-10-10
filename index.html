@@ -788,7 +788,7 @@ function vSurum(){
 }
 
 /* ═══ ASO fırsatları: sınıflar vw_keyword_gap'ten (0012), burada yeniden hesaplanmaz ═══ */
-const VERDICT_TXT={GAP:"talep var, keyword alanında yok",COVERED:"talep var ve alanda",DEAD_WEIGHT:"alanda ama talep tabanda (≤5) — karakter israfı",NO_DEMAND:"talep tabanda, alanda da yok",UNMEASURED:"talep hiç ölçülmedi — 'talep yok' DEĞİL"};
+const VERDICT_TXT={GAP:"talep var, keyword alanında yok",COVERED:"talep var ve alanda",DEAD_WEIGHT:"resmî kaynak tabanda (≤5) diyor — karakter israfı",NO_DEMAND:"resmî kaynak tabanda diyor, alanda da yok",BELOW_CUTOFF:"resmî listenin kesim çizgisinin altında — az aranıyor, ölü DEĞİL",UNMEASURED:"talep hiç ölçülmedi — 'talep yok' DEĞİL"};
 function asoOpps(g){
   const gp=g.filter(r=>r.verdict==="GAP").sort((a,b)=>Number(b.demand)-Number(a.demand));
   const rising=g.filter(r=>Number(r.demand_delta)>=5).sort((a,b)=>Number(b.demand_delta)-Number(a.demand_delta));
